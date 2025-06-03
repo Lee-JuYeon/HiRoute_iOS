@@ -16,24 +16,20 @@ struct MainScreen: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            NavigationView {
-                HomeView(
-                    onNavigateToScheduleCreate: onNavigateToScheduleCreate,
-                    onNavigateToScheduleGacha: onNavigateToScheduleGacha
-                )
-            }
+            HomeView(
+                onNavigateToScheduleCreate: onNavigateToScheduleCreate,
+                onNavigateToScheduleGacha: onNavigateToScheduleGacha
+            )
             .tabItem {
                 Image(systemName: MainDestination.home.icon)
                 Text(MainDestination.home.title)
             }
             .tag(MainDestination.home)
             
-            NavigationView {
-                FeedView(
-                    onNavigateToFeedCreate: onNavigateToFeedCreate,
-                    onNavigateToFeedDetail: onNavigateToFeedDetail
-                )
-            }
+            FeedView(
+                onNavigateToFeedCreate: onNavigateToFeedCreate,
+                onNavigateToFeedDetail: onNavigateToFeedDetail
+            )
             .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
                 Image(systemName: MainDestination.feed.icon)
@@ -41,9 +37,7 @@ struct MainScreen: View {
             }
             .tag(MainDestination.feed)
             
-            NavigationView {
-                ScheduleView()
-            }
+            ScheduleView()
             .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
                 Image(systemName: MainDestination.schedule.icon)
@@ -51,9 +45,7 @@ struct MainScreen: View {
             }
             .tag(MainDestination.schedule)
             
-            NavigationView {
-                MyPageView()
-            }
+            MyPageView()
             .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
                 Image(systemName: MainDestination.myPage.icon)
