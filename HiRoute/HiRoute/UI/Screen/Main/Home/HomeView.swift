@@ -12,9 +12,9 @@ struct HomeView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: 0) {
                 // 상단 버튼들
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     Button(action: onNavigateToScheduleCreate) {
                         VStack {
                             Image(systemName: "plus.circle.fill")
@@ -48,9 +48,13 @@ struct HomeView: View {
                     }
                 }
                 .padding(.horizontal)
+                .padding(.top, 10)  // <- 여기에 이 줄 추가
+
                 
                 // 인기 장소 섹션
-                VStack(alignment: .leading) {
+                VStack(
+                    alignment: .leading
+                ) {
                     HStack {
                         Text("지금 인기있는 장소")
                             .font(.title2)
@@ -59,6 +63,7 @@ struct HomeView: View {
                     }
                     .padding(.horizontal)
                     
+                
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(samplePlaces, id: \.id) { place in
@@ -68,6 +73,7 @@ struct HomeView: View {
                         .padding(.horizontal)
                     }
                 }
+                .padding(EdgeInsets(top: 30, leading: 0, bottom: 0, trailing: 0))
                 
                 // 인기 루트 섹션
                 VStack(alignment: .leading) {
@@ -86,9 +92,14 @@ struct HomeView: View {
                     }
                     .padding(.horizontal)
                 }
+                .padding(EdgeInsets(top: 30, leading: 0, bottom: 0, trailing: 0))
+
             }
+
         }
-        .navigationTitle("홈")
+        .navigationBarHidden(true) 
+
     }
+    
 }
 

@@ -65,7 +65,8 @@ struct FeedView: View {
                 .padding()
             }
         }
-        .navigationTitle("일정피드")
+        .navigationBarHidden(true)  // 이 줄 추가
+
     }
 }
 

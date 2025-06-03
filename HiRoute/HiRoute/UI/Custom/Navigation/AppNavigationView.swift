@@ -40,16 +40,16 @@ struct AppNavigationView: View {
         }
         .navigationViewStyle(StackNavigationViewStyle())
         .sheet(isPresented: $showingFeedCreate) {
-            FeedCreateView()
+            FeedCreateScreen()
         }
         .sheet(isPresented: $showingFeedDetail) {
-            FeedDetailView()
+            FeedDetailScreen()
         }
         .sheet(isPresented: $showingScheduleCreate) {
-            ScheduleCreateView()
+            ScheduleCreateScreen()
         }
         .sheet(isPresented: $showingScheduleGacha) {
-            ScheduleGachaView()
+            ScheduleGachaScreen()
         }
     }
 }

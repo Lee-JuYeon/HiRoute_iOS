@@ -22,7 +22,6 @@ struct MainScreen: View {
                     onNavigateToScheduleGacha: onNavigateToScheduleGacha
                 )
             }
-            .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
                 Image(systemName: MainDestination.home.icon)
                 Text(MainDestination.home.title)
