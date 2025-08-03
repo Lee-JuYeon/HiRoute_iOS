@@ -9,8 +9,7 @@ enum AppDestination: String, CaseIterable {
     case splash = "Splash"
     case auth = "Auth"
     case main = "Main"
-    case feedDetail = "FeedDetail"
-    case feedCreate = "FeedCreate"
-    case scheduleCreate = "ScheduleCreate"
-    case scheduleGacha = "ScheduleGacha"
+    case planDetail = "PlanDetail"
+    case planCreate = "PlanCreate"
+    case search = "search"
 }

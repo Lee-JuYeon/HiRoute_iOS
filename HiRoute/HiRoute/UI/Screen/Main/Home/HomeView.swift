@@ -7,96 +7,104 @@
 import SwiftUI
 
 struct HomeView: View {
-    let onNavigateToScheduleCreate: () -> Void
-    let onNavigateToScheduleGacha: () -> Void
+   
+    @EnvironmentObject private var planVM : PlanViewModel
+    @EnvironmentObject private var naviVM : NavigationVM
+    
+    @ViewBuilder
+    private func routeButton() -> some View {
+        Button(action: {
+            naviVM.navigateTo(setDestination: AppDestination.planDetail)
+        }) {
+            Image("img_route_create")
+                .resizable() // 이 부분이 핵심!
+                .aspectRatio(contentMode: ContentMode.fit)
+                .frame(
+                    maxWidth: .infinity
+                )
+                .frame(height: 113)
+                .clipped()
+                .background(Color.white)
+                .cornerRadius(12)
+
+        }
+        .padding(
+            EdgeInsets(top: 16, leading: 0, bottom: 0, trailing: 0)
+        )
+        .customElevation(.normal)
+    }
+    
+    @ViewBuilder
+    private func search() -> some View {
+        HStack(alignment: VerticalAlignment.center){
+            Button {
+                print("검색버튼 눌림")
+            } label: {
+                Image("icon_search")
+                    .renderingMode(.template)
+                    .resizable()
+                    .aspectRatio(contentMode: ContentMode.fit)
+                    .foregroundColor(Color.getColour(.label_strong))
+                   
+            }
+            .padding(10)
+            .frame(width: 44, height: 44)
+        }
+        .frame(
+            maxWidth: .infinity,
+            alignment: Alignment.trailing
+        )
+    }
+    
+   
+  
+   
+    private let hotPlaceTitle : String = "지금 인기 있는 장소"
+    private let placetitle : String = "지역 맞춤 장소"
     
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // 상단 버튼들
-                HStack(spacing: 10) {
-                    Button(action: onNavigateToScheduleCreate) {
-                        VStack {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title)
-                                .foregroundColor(.blue)
-                            Text("일정 만들기")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(.primary)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(12)
-                    }
-                    
-                    Button(action: onNavigateToScheduleGacha) {
-                        VStack {
-                            Image(systemName: "calendar.circle.fill")
-                                .font(.title)
-                                .foregroundColor(.green)
-                            Text("일정 뽑기")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(.primary)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.green.opacity(0.1))
-                        .cornerRadius(12)
-                    }
+                
+               
+                search()
+                
+                RouteButton {
+                    naviVM.navigateTo(setDestination: AppDestination.planDetail)
                 }
-                .padding(.horizontal)
-                .padding(.top, 10)  // <- 여기에 이 줄 추가
-
                 
-                // 인기 장소 섹션
-                VStack(
-                    alignment: .leading
-                ) {
-                    HStack {
-                        Text("지금 인기있는 장소")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        Spacer()
+                TrendPlaceSection(
+                    setTitle: hotPlaceTitle,
+                    setList: planVM.trendRoutes,
+                    setOnClickCell: { routeModel in
+                       
+                    },
+                    setOnClickBookMark: { routeUid in
+                        
                     }
-                    .padding(.horizontal)
-                    
-                
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(samplePlaces, id: \.id) { place in
-                                PlaceCard(place: place)
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                }
-                .padding(EdgeInsets(top: 30, leading: 0, bottom: 0, trailing: 0))
-                
+                )
+               
                 // 인기 루트 섹션
-                VStack(alignment: .leading) {
-                    HStack {
-                        Text("인기 루트")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        Spacer()
+                LocalisedPlaceSection(
+                    getTitle: placetitle,
+                    getOnClickTotal: {
+                        
+                    },
+                    getList: planVM.localisedRoutes,
+                    getOnClickCell: { placeModel in
+                       
+                    },
+                    getOnClickBookMark: { isBookMarked in
+                        
                     }
-                    .padding(.horizontal)
-                    
-                    LazyVStack(spacing: 12) {
-                        ForEach(sampleRoutes, id: \.id) { route in
-                            RouteCard(route: route)
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                .padding(EdgeInsets(top: 30, leading: 0, bottom: 0, trailing: 0))
-
+                )
+              
             }
 
         }
+        .padding(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
+        .background(Color.getColour(.background_yellow_white))
+       
 
     }
     
