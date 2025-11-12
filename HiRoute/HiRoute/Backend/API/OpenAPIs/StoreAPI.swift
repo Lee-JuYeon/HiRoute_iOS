@@ -9,6 +9,8 @@
 import Foundation
 import CoreLocation
 import SwiftUI
+import MapKit
+import Combine
 
 // MARK: - 데이터 모델
 struct StoreResponse: Codable {
@@ -276,7 +278,7 @@ class OpenAPIVM: ObservableObject {
 
 
 // MARK: - 통합된 ViewModel
-class SearchViewModel: ObservableObject {
+class SearchViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
     // 위치 관련
     @Published var currentLocation: CLLocationCoordinate2D?
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
@@ -304,7 +306,8 @@ class SearchViewModel: ObservableObject {
     private let apiService = StoreAPIService()
     private var cancellables = Set<AnyCancellable>()
     
-    init() {
+    override init() {
+        super.init()
         setupLocationManager()
         setupRegionObserver()
     }

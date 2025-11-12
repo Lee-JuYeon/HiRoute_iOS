@@ -410,7 +410,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HiRoute/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "하이루트";
+				INFOPLIST_KEY_CFBundleDisplayName = "하이서울";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "실시간 경로 추적 및 위치 기반 알림을 위해 백그라운드 위치 접근이 필요합니다.";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "지속적인 위치 추적 서비스를 위해 위치 정보 접근이 필요합니다.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "지도에서 현재 위치를 확인하기 위해 위치 정보가 필요합니다.";
@@ -454,7 +454,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HiRoute/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "하이루트";
+				INFOPLIST_KEY_CFBundleDisplayName = "하이서울";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "실시간 경로 추적 및 위치 기반 알림을 위해 백그라운드 위치 접근이 필요합니다.";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "지속적인 위치 추적 서비스를 위해 위치 정보 접근이 필요합니다.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "지도에서 현재 위치를 확인하기 위해 위치 정보가 필요합니다.";

@@ -31,6 +31,7 @@ struct AppNavigationView: View {
         routeUseCase: RouteUseCase(repository: RouteRepository()),
         planUseCase: PlanUseCase(repository: PlanRepository())
     )
+    @StateObject private var searchVM = SearchViewModel()
 
     var body: some View {
         Group {
@@ -49,6 +50,7 @@ struct AppNavigationView: View {
                 MainScreen()
                     .environmentObject(planVM)
                     .environmentObject(navigationVM)
+                    .environmentObject(searchVM)
             case .search:
                 RootSearchView()
                     .environmentObject(planVM)

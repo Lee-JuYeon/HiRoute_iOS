@@ -11,7 +11,7 @@ import MapKit
 import Combine
 
 // MARK: - 통합된 ViewModel
-class SearchVM: ObservableObject {
+class SearchVM:  NSObject, ObservableObject {
     // 위치 관련
     @Published var currentLocation: CLLocationCoordinate2D?
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
@@ -39,7 +39,8 @@ class SearchVM: ObservableObject {
     private let apiService = StoreAPIService()
     private var cancellables = Set<AnyCancellable>()
     
-    init() {
+    override init() {
+        super.init() 
         setupLocationManager()
         setupRegionObserver()
     }
