@@ -9,15 +9,11 @@ import SwiftUI
 struct MainScreen: View {
     @State private var selectedTab: MainDestination = .home
     @EnvironmentObject private var navigationVM : NavigationVM
-    @EnvironmentObject private var planVM : PlanViewModel
-    @EnvironmentObject private var searchVM : SearchViewModel
     
     var body: some View {
         TabView(selection: $selectedTab) {
             HomeView()
                 .environmentObject(navigationVM)
-                .environmentObject(planVM)
-                .environmentObject(searchVM)
                 .tabItem {
 //                    Image(systemName: MainDestination.home.icon)
 //                    Text(MainDestination.home.title)
@@ -52,7 +48,6 @@ struct MainScreen: View {
                 .tag(MainDestination.myPage)
         }
         .onAppear {
-            planVM.loadInitialData()
         }
     }
 }

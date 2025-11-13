@@ -10,39 +10,61 @@ import MapKit
 
 class MapCoordinator: ObservableObject {
   
-    
     @Published var mapRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780), // 위도 경도를 나타내는 구조체
+        center: CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780),
         span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
     )
     @Published var searchResults: [MKMapItem] = []
     @Published var selectedHotPlaceIds: Set<String> = ["yeonmujang_gil", "garosu_gil", "hongdae"]
-    @Published var hotPlaces: [HotPlaceModel] = HotPlaceView.sampleList
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    private let useCase: MapUseCase
+    
+    init(useCase: MapUseCase) {
+        self.useCase = useCase
+        loadInitialData()
+    }
+    
+    @Published var annotations: [AnnotationModel] = []
+    @Published var hotPlaces: [HotPlaceModel] = []
+    private func loadInitialData() {
+        annotations = useCase.getAnnotations()
+        hotPlaces = useCase.getHotPlaces()
+    }
+      
     
     // 검색 기능
+    @Published var searchText: String = ""
     func searchLocation(_ query: String) {
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = query
-        request.region = mapRegion
+        guard !query.isEmpty else { return }
         
-        let search = MKLocalSearch(request: request)
-        search.start { [weak self] response, error in
-            guard let response = response else { return }
-            
-            DispatchQueue.main.async {
-                self?.searchResults = response.mapItems
+        searchText = query
+        isLoading = true
+        errorMessage = nil
+        
+        Task { @MainActor in
+            do {
+                let result = try await useCase.searchLocation(query, currentRegion: mapRegion)
                 
-                if let firstResult = response.mapItems.first {
+                searchResults = result.mapItems
+                
+                if let newRegion = result.newRegion {
                     withAnimation(.easeInOut(duration: 1.0)) {
-                        self?.mapRegion = MKCoordinateRegion(
-                            center: firstResult.placemark.coordinate,
-                            span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
-                        )
+                        mapRegion = newRegion
                     }
                 }
+                
+                isLoading = false
+            } catch {
+                errorMessage = error.localizedDescription
+                isLoading = false
             }
         }
     }
+    
+   
+    
     
     // HotPlace 관리 기능들
     func toggleHotPlace(_ id: String) {

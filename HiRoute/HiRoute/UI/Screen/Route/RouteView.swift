@@ -8,7 +8,6 @@ import SwiftUI
 
 struct RouteView : View {
     
-    @EnvironmentObject private var planVM : PlanViewModel
     @EnvironmentObject private var naviVM : NavigationVM
     
 

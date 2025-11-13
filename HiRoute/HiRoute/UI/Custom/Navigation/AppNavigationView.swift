@@ -26,44 +26,33 @@ struct AppNavigationView: View {
   
 
     @StateObject private var navigationVM = NavigationVM()
-    @StateObject private var planVM = PlanViewModel(
-        userUID: DummyPack.shared.myDataUID,
-        routeUseCase: RouteUseCase(repository: RouteRepository()),
-        planUseCase: PlanUseCase(repository: PlanRepository())
-    )
-    @StateObject private var searchVM = SearchViewModel()
+    
 
     var body: some View {
-        Group {
-            switch navigationVM.destination {
-            case .splash:
-                SplashScreen()
-                    .onAppear {
-                        // 2초 후 자동으로 인증 화면으로 이동
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            navigationVM.navigateTo(setDestination: AppDestination.auth)
-                        }
+        switch navigationVM.destination {
+        case .splash:
+            SplashScreen()
+                .onAppear {
+                    // 2초 후 자동으로 인증 화면으로 이동
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        navigationVM.navigateTo(setDestination: AppDestination.auth)
                     }
-            case .auth:
-                AuthNavigationView()
-            case .main:
-                MainScreen()
-                    .environmentObject(planVM)
-                    .environmentObject(navigationVM)
-                    .environmentObject(searchVM)
-            case .search:
-                RootSearchView()
-                    .environmentObject(planVM)
-                    .environmentObject(navigationVM)
-            case .planDetail:
-                RootDetailView()
-                    .environmentObject(planVM)
-                    .environmentObject(navigationVM)
-            case .planCreate:
-                RouteView()
-                    .environmentObject(planVM)
-                    .environmentObject(navigationVM)
-            }
+                }
+        case .auth:
+            MainScreen()
+                .environmentObject(navigationVM)
+        case .main:
+            MainScreen()
+                .environmentObject(navigationVM)
+        case .search:
+            MainScreen()
+                .environmentObject(navigationVM)
+        case .planDetail:
+            MainScreen()
+                .environmentObject(navigationVM)
+        case .planCreate:
+            MainScreen()
+                .environmentObject(navigationVM)
         }
     }
 }
