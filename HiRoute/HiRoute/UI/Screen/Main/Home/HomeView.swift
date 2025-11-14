@@ -26,13 +26,20 @@ struct HomeView: View {
     }
            
     @State private var isShowAnnotationSheet = false
-    @State private var selectedModel : AnnotationModel? = nil
-    private func onClickAnnotation(_ model: AnnotationModel) {
+    @State private var selectedModel : PlaceModel? = nil
+    private func onClickAnnotation(_ model: PlaceModel) {
         isShowAnnotationSheet = true
         selectedModel = model
     }
            
   
+    private func onClickBookMark(_ uid : String){
+        
+    }
+    
+    private func onCLickRecommendPlace(_ model : PlaceModel){
+        
+    }
    
     var body: some View {
         ZStack(alignment: .top) {
@@ -63,6 +70,16 @@ struct HomeView: View {
                 )
                 
                 Spacer()
+                
+                RecommendPlaceList(
+                    setList: coordinator.recommendPlaces,
+                    setOnClickCell: { model in
+                        onCLickRecommendPlace(model)
+                    },
+                    setOnClickBookMark: { uid in
+                        onClickBookMark(uid)
+                    }
+                )
             }
         }
         .bottomSheet(isOpen: $isShowAnnotationSheet) {

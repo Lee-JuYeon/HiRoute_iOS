@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SheetTravelSpotView : View {
     
-    let model: AnnotationModel
+    let model: PlaceModel
     let onClose: () -> Void
     
     var body: some View {
@@ -53,25 +53,7 @@ struct SheetTravelSpotView : View {
             Divider()
             
             // 상세 정보
-            VStack(alignment: .leading, spacing: 12) {
-                InfoRow(title: "위치", value: "\(String(format: "%.4f", model.coordinate.latitude)), \(String(format: "%.4f", model.coordinate.longitude))")
-                
-                InfoRow(title: "카테고리", value: getTypeDescription(model.type))
-                
-                if model.type == .hospital {
-                    InfoRow(title: "진료시간", value: "09:00 - 18:00")
-                    InfoRow(title: "응급실", value: "24시간 운영")
-                } else if model.type == .store {
-                    InfoRow(title: "운영시간", value: "24시간")
-                    InfoRow(title: "결제방법", value: "현금, 카드, 페이 가능")
-                } else if model.type == .cafe {
-                    InfoRow(title: "운영시간", value: "07:00 - 22:00")
-                    InfoRow(title: "특징", value: "WiFi, 콘센트 제공")
-                } else if model.type == .restaurant {
-                    InfoRow(title: "운영시간", value: "11:00 - 21:00")
-                    InfoRow(title: "주요메뉴", value: "한식, 양식")
-                }
-            }
+           
             
             Divider()
             

@@ -26,11 +26,13 @@ class MapCoordinator: ObservableObject {
         loadInitialData()
     }
     
-    @Published var annotations: [AnnotationModel] = []
+    @Published var annotations: [PlaceModel] = []
     @Published var hotPlaces: [HotPlaceModel] = []
+    @Published var recommendPlaces: [PlaceModel] = []
     private func loadInitialData() {
         annotations = useCase.getAnnotations()
         hotPlaces = useCase.getHotPlaces()
+        recommendPlaces = useCase.getRecommendPlaces()
     }
       
     

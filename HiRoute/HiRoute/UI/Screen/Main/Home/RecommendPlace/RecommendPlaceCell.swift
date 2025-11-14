@@ -7,37 +7,38 @@
 
 import SwiftUI
 
-
-
-struct RecyclableRouteCell : View {
+struct RecommendPlaceCell : View {
     
-    let model: RouteModel
-    let type: RouteCellType
-    let onCellClickEvent: (RouteModel) -> Void
+    let model: PlaceModel
+    let onCellClickEvent: (PlaceModel) -> Void
     let onBookMarkClickEvent: (String) -> Bool
     
     init(
-        model: RouteModel,
-        type: RouteCellType = .trendingRoute,
-        onCellClickEvent: @escaping (RouteModel) -> Void,
+        model: PlaceModel,
+        onCellClickEvent: @escaping (PlaceModel) -> Void,
         onBookMarkClickEvent: @escaping (String) -> Bool
     ) {
         self.model = model
-        self.type = type
         self.onCellClickEvent = onCellClickEvent
         self.onBookMarkClickEvent = onBookMarkClickEvent
     }
     
+    private let imageSize: CGFloat = 120
+    private var cellHeight: CGFloat {
+        return imageSize + 80 // 이미지 + 텍스트 영역 + 패딩
+    }
+      
+    
     @ViewBuilder
     private func bookMarkButton() -> some View {
         Button {
-            let newState = onBookMarkClickEvent(model.routeUID)
+            let newState = onBookMarkClickEvent(model.uid)
             
             // 햅틱 피드백
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.impactOccurred()
             
-            print("🔖 북마크 \(newState ? "추가" : "제거"): \(model.routeTitle)")
+            print("🔖 북마크 \(newState ? "추가" : "제거"): \(model.title)")
         } label: {
             Image(model.isBookmarkedLocally ? "icon_bookmark_on" : "icon_bookmark_off")
                 .resizable()
@@ -46,28 +47,34 @@ struct RecyclableRouteCell : View {
                 .customElevation(.normal)
 
         }
-        .offset(x: type.bookmarkOffset.x, y: type.bookmarkOffset.y)
         .scaleEffect(model.isBookmarkedLocally ? 1.1 : 1.0)
         .animation(.spring(response: 0.3), value: model.isBookmarkedLocally)
+        .padding([.top, .trailing], 5) // 우측 상단에서 5dp 띄우기
     }
     
     @ViewBuilder
     private func placeContent() -> some View {
         VStack(spacing: 0) {
-            ServerHeightImageView(
-                setImageURL: model.thumbNailImageURL,
-                setImageHeight: type.imageHeight
+            ServerImageView(
+                setImageURL: model.thumbanilImageURL ?? "",
+                setImageSize: imageSize,
+                setPlaceHolder: "",
+                setCornerRadius: 20
             )
             
-            VStack(alignment: .leading, spacing: type.contentSpacing) {
-                Text(model.routeType)
-                    .font(.system(size: type.categoryFontSize))
-                    .foregroundColor(type.categoryColor)
-                
-                Text(model.routeTitle)
-                    .font(.system(size: type.titleFontSize))
-                    .foregroundColor(type.titleColor)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(model.type.displayText)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+
+                Text(model.title)
+                    .font(.system(size: 14))
+                    .foregroundColor(.primary)
                     .fontWeight(.bold)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+
                 
                 HStack(
                     alignment: VerticalAlignment.center,
@@ -79,17 +86,18 @@ struct RecyclableRouteCell : View {
                         .frame(width: 12, height: 12)
                     
                     Text("\(model.totalStarCount)・\(model.address.sido)")
-                        .font(.system(size: type.infoFontSize))
-                        .foregroundColor(type.infoColor)
+                        .font(.system(size: 12))
+                        .foregroundColor(Color.secondary)
                 }
                 
                 Spacer()
             }
+            .frame(height: 60)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, type.horizontalPadding)
-            .padding(.vertical, type.verticalPadding)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
         }
-        .background(type.backgroundColor)
+        .background(Color(UIColor.systemBackground))
         .cornerRadius(12)
         .customElevation(.normal)
         .onTapGesture {
@@ -102,5 +110,6 @@ struct RecyclableRouteCell : View {
             placeContent()
             bookMarkButton()
         }
+        .frame(width: 150, height: cellHeight) 
     }
 }

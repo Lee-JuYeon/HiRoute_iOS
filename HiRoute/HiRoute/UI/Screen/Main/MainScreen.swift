@@ -7,7 +7,7 @@
 import SwiftUI
 
 struct MainScreen: View {
-    @State private var selectedTab: MainDestination = .home
+    @State private var selectedTab: MainDestination = .map
     @EnvironmentObject private var navigationVM : NavigationVM
     
     var body: some View {
@@ -15,21 +15,19 @@ struct MainScreen: View {
             HomeView()
                 .environmentObject(navigationVM)
                 .tabItem {
-//                    Image(systemName: MainDestination.home.icon)
-//                    Text(MainDestination.home.title)
-                    Image(systemName: "map.fill")
-                    Text("지도")
+                    Image(systemName: MainDestination.map.icon)
+                    Text(MainDestination.map.title)
                 }
-                .tag(MainDestination.home)
+                .tag(MainDestination.map)
             
-//            ScheduleView()
-//                .environmentObject(navigationVM)
-//                .navigationViewStyle(StackNavigationViewStyle())
-//                .tabItem {
-//                    Image(systemName: MainDestination.feed.icon)
-//                    Text(MainDestination.feed.title)
-//                }
-//                .tag(MainDestination.feed)
+            ScheduleView()
+                .environmentObject(navigationVM)
+                .navigationViewStyle(StackNavigationViewStyle())
+                .tabItem {
+                    Image(systemName: MainDestination.route.icon)
+                    Text(MainDestination.route.title)
+                }
+                .tag(MainDestination.route)
 //            
 //            ScheduleView()
 //                .navigationViewStyle(StackNavigationViewStyle())

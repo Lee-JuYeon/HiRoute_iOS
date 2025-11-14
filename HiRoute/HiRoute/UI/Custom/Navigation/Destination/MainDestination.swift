@@ -6,15 +6,15 @@
 //
 
 enum MainDestination: String, CaseIterable {
-    case home = "Home"
-    case feed = "Feed"
+    case map = "Map"
+    case route = "Route"
     case schedule = "Schedule"
     case myPage = "MyPage"
     
     var title: String {
         switch self {
-        case .home: return "홈"
-        case .feed: return "일정피드"
+        case .map: return "지도"
+        case .route: return "일정"
         case .schedule: return "일정관리"
         case .myPage: return "마이페이지"
         }
@@ -22,8 +22,8 @@ enum MainDestination: String, CaseIterable {
     
     var icon: String {
         switch self {
-        case .home: return "house"
-        case .feed: return "list.bullet"
+        case .map: return "map.fill"
+        case .route: return "list.bullet"
         case .schedule: return "calendar"
         case .myPage: return "person"
         }

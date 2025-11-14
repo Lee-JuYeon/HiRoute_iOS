@@ -45,16 +45,23 @@ struct CustomMapView : View {
         }
     }
     
-    let listAnnotations: [AnnotationModel]
-    let onClickAnnotation: (AnnotationModel) -> Void
+    let listAnnotations: [PlaceModel]
+    let onClickAnnotation: (PlaceModel) -> Void
     @ViewBuilder
     private func overlayAnnotations() -> some View {
-        ForEach(listAnnotations) { annotation in
+        ForEach(listAnnotations, id: \.uid) { annotation in
             AnnotationView(
                 model: annotation,
                 onClick: onClickAnnotation
             )
-            .position(coordinateToScreenPoint(annotation.coordinate))
+            .position(
+                coordinateToScreenPoint(
+                    CLLocationCoordinate2D(
+                        latitude: annotation.address.addressLat,
+                        longitude: annotation.address.addressLon
+                    )
+                )
+            )
         }
     }
    

@@ -8,8 +8,8 @@ import SwiftUI
 import MapKit
 
 struct AnnotationView: View {
-    let model: AnnotationModel
-    let onClick: (AnnotationModel) -> Void
+    let model: PlaceModel
+    let onClick: (PlaceModel) -> Void
     
     var body: some View {
         Button(action: {
