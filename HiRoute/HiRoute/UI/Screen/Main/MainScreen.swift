@@ -20,15 +20,18 @@ struct MainScreen: View {
                 }
                 .tag(MainDestination.map)
             
-            ScheduleView()
-                .environmentObject(navigationVM)
-                .navigationViewStyle(StackNavigationViewStyle())
-                .tabItem {
-                    Image(systemName: MainDestination.route.icon)
-                    Text(MainDestination.route.title)
-                }
-                .tag(MainDestination.route)
-//            
+            ScheduleView(
+                setScheduleList: DummyPack.sampleSchedules,
+                setNationalityType: .japan
+            )
+            .environmentObject(navigationVM)
+            .navigationViewStyle(StackNavigationViewStyle())
+            .tabItem {
+                Image(systemName: MainDestination.schedule.icon)
+                Text(MainDestination.schedule.title)
+            }
+            .tag(MainDestination.schedule)
+//
 //            ScheduleView()
 //                .navigationViewStyle(StackNavigationViewStyle())
 //                .tabItem {

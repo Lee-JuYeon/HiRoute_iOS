@@ -7,137 +7,67 @@
 
 import SwiftUI
 import Foundation
+import CoreLocation
 
 struct TimeLineListView : View {
     
-    private var planModel : PlanModel
-    private var onClickRouteEdit : () -> Void
-    private var onClickRouteAdd : () -> Void
+    private var getPlaceList : [VisitPlaceModel]
+    private var onClickCell : (VisitPlaceModel) -> Void
     init(
-        setPlanModel : PlanModel,
-        setOnClickRouteEdit : @escaping () -> Void,
-        setOnClickRouteAdd : @escaping () -> Void
+        setPlanModel : [VisitPlaceModel],
+        setOnClickCell : @escaping (VisitPlaceModel) -> Void
     ){
-        self.planModel = setPlanModel
-        self.onClickRouteAdd = setOnClickRouteAdd
-        self.onClickRouteEdit = setOnClickRouteEdit
+        self.getPlaceList = setPlanModel
+        self.onClickCell = setOnClickCell
     }
   
-
-    // 날짜 포맷팅 함수
-    private let formatter = DateFormatter()
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MM월 dd일"
-        formatter.locale = Locale(identifier: "ko_KR")  // 한국어 설정
-        return formatter.string(from: date)
-    }
     
-    
-    @ViewBuilder
-    private func dateChip() -> some View {
-        let horizontalInnerPadding: CGFloat = 12
-        let verticalInnerPadding: CGFloat = 8
-        let cornerRadius: CGFloat = 41
-        let fontSize: CGFloat = 14
-        let marginTop : CGFloat = 24
-        
-        let formattedDate = formatDate(planModel.meetingDate)
-        Text(formattedDate)
-            .font(.system(size: fontSize))
-            .foregroundColor(Color.getColour(.label_strong))
-            .fontWeight(.bold)
-            .lineLimit(1)
-            .padding(EdgeInsets(
-                top: verticalInnerPadding,
-                leading: horizontalInnerPadding,
-                bottom: verticalInnerPadding,
-                trailing: horizontalInnerPadding
-            ))
-            .background(Color.getColour(.background_white))
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.getColour(.line_alternative), lineWidth: 1)
-            )
-            .customElevation(.normal)
-            .padding(EdgeInsets(top: marginTop, leading: 0, bottom: 0, trailing: 0))
-    }
-    
-    @ViewBuilder
-    private func buttons() -> some View {
-        let horizontalSpacing : CGFloat = 8
-        let marginHorizontal : CGFloat = 16
-        let verticalInnerPadding : CGFloat = 14
-        let fontSize : CGFloat = 16
-        let cornerRadius : CGFloat = 8
-        HStack(alignment: VerticalAlignment.center, spacing: horizontalSpacing){
-            Button {
-                //action
-            } label: {
-                Text("장소 편집")
-                    .font(.system(size: fontSize))
-                    .foregroundColor(Color.getColour(.label_strong))
-                    .fontWeight(.bold)
-                    .background(Color.getColour(.background_white))
-                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .stroke(Color.getColour(.label_strong), lineWidth: 1)
-                    )
-                    .padding(.vertical, verticalInnerPadding)
-                    .onTapGesture {
-                        onClickRouteEdit()
-                    }
-            }
-
-            Button {
-                //action
-            } label: {
-                Text("장소 추가")
-                    .font(.system(size: fontSize))
-                    .foregroundColor(Color.getColour(.background_white))
-                    .fontWeight(.bold)
-                    .padding(EdgeInsets(top: verticalInnerPadding, leading: verticalInnerPadding/2, bottom: verticalInnerPadding, trailing: verticalInnerPadding/2))
-                    .background(
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .fill(Color.getColour(.label_strong))
-                    )
-                    .onTapGesture {
-                        onClickRouteAdd()
-                    }
-            }
-        }
-        .padding(
-            EdgeInsets(
-                top: 0,
-                leading: marginHorizontal,
-                bottom: 0,
-                trailing: marginHorizontal
-            )
+    private func calculateDistance(from: VisitPlaceModel, to: VisitPlaceModel) -> Double {
+        let fromLocation = CLLocation(
+            latitude: from.placeModel.address.addressLat,
+            longitude: from.placeModel.address.addressLon
         )
+        let toLocation = CLLocation(
+            latitude: to.placeModel.address.addressLat,
+            longitude: to.placeModel.address.addressLon
+        )
+        
+        return fromLocation.distance(from: toLocation)
+    }
+       
+    private func getTimelinePositionType(_ index: Int) -> TimeLinePositionType {
+        if index == 0 {
+            return .FIRST
+        } else if index == getPlaceList.count - 1 {
+            return .LAST
+        } else {
+            return .MIDDLE
+        }
     }
     
     var body: some View {
-        VStack(alignment: HorizontalAlignment.center){
-            dateChip()
-            
-            if planModel.visitRoutes.count == 0 {
-                // 장소가 비어있어요
-            }else{
-                // list
+        ScrollView(.vertical) {
+            VStack(alignment: HorizontalAlignment.leading, spacing: 0){
+                ForEach(Array(getPlaceList.enumerated()), id: \.element.uid) { index, visitPlaceModel in
+                    TimeLineCell(
+                        setModel: visitPlaceModel,
+                        setType: getTimelinePositionType(index),
+                        setOnClickCell: { clickedVisitPlaceModel in
+                            print("클릭된거 : \(clickedVisitPlaceModel)")
+                        }
+                    )
+                    
+                    if index < getPlaceList.count - 1 {
+                        let nextPlace = getPlaceList[index + 1]
+                        let distance = calculateDistance(from: visitPlaceModel, to: nextPlace)
+                        
+                        DistanceGapCell(distance: distance)
+                    }
+                }
             }
-            
-            buttons()
-            
+            .background(Color.clear)
+            .padding(EdgeInsets(top: 8, leading: 0, bottom: 0, trailing: 8))
         }
-        .frame(
-            minWidth: 0,
-            maxWidth: .infinity,
-            minHeight: 0,
-            maxHeight: .infinity,
-            alignment: .top
-        )
     }
     
 }

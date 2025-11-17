@@ -16,6 +16,159 @@ class DummyPack {
     
     // MARK: - Sample Data
     
+    static let sampleSchedules: [ScheduleModel] = [
+        ScheduleModel(
+            uid: "schedule_001",
+            index: 1,
+            title: "제주도 여행",
+            memo: "친구들과 함께하는 2박3일 제주도 여행",
+            editDate: Calendar.current.date(from: DateComponents(year: 2025, month: 11, day: 10))!,
+            d_day: Calendar.current.date(from: DateComponents(year: 2025, month: 12, day: 15))!,
+            visitPlaceList: [
+                VisitPlaceModel(
+                    uid: "visit_001_01",
+                    index: 1,
+                    memo: "공항에서 렌터카 픽업 후 첫 번째 목적지",
+                    placeModel: PlaceModel(
+                        uid: "jeju_cafe_001",
+                        address: AddressModel(
+                            addressUID: "jeju_addr_001",
+                            addressLat: 33.4996,
+                            addressLon: 126.5312,
+                            addressTitle: "제주공항 근처 카페",
+                            sido: "제주특별자치도",
+                            gungu: "제주시",
+                            dong: "용담동",
+                            fullAddress: "제주특별자치도 제주시 용담동 123"
+                        ),
+                        type: .cafe,
+                        title: "제주 공항 카페",
+                        subtitle: "공항 근처 • WiFi 무료",
+                        thumbanilImageURL: "https://example.com/jeju_cafe.jpg",
+                        imageURLs: [],
+                        workingTimes: [],
+                        reviews: [],
+                        totalStarCount: 250,
+                        totalBookmarkCount: 45,
+                        isBookmarkedLocally: false
+                    ),
+                    files: ["jeju_map.pdf", "flight_ticket.jpg"]
+                ),
+                VisitPlaceModel(
+                    uid: "visit_001_02",
+                    index: 2,
+                    memo: "점심식사 장소, 흑돼지 맛집",
+                    placeModel: PlaceModel(
+                        uid: "jeju_restaurant_001",
+                        address: AddressModel(
+                            addressUID: "jeju_addr_002",
+                            addressLat: 33.5102,
+                            addressLon: 126.5211,
+                            addressTitle: "제주 흑돼지 맛집",
+                            sido: "제주특별자치도",
+                            gungu: "제주시",
+                            dong: "이도동",
+                            fullAddress: "제주특별자치도 제주시 이도동 456"
+                        ),
+                        type: .restaurant,
+                        title: "제주 흑돼지 맛집",
+                        subtitle: "흑돼지 전문점 • 현지 맛집",
+                        thumbanilImageURL: "https://example.com/jeju_pork.jpg",
+                        imageURLs: [],
+                        workingTimes: [],
+                        reviews: [],
+                        totalStarCount: 420,
+                        totalBookmarkCount: 89,
+                        isBookmarkedLocally: true
+                    ),
+                    files: ["restaurant_menu.jpg"]
+                ),
+                VisitPlaceModel(
+                    uid: "visit_001_03",
+                    index: 3,
+                    memo: "숙소 체크인 및 휴식",
+                    placeModel: PlaceModel(
+                        uid: "jeju_hotel_001",
+                        address: AddressModel(
+                            addressUID: "jeju_addr_003",
+                            addressLat: 33.4890,
+                            addressLon: 126.4983,
+                            addressTitle: "제주 리조트",
+                            sido: "제주특별자치도",
+                            gungu: "제주시",
+                            dong: "연동",
+                            fullAddress: "제주특별자치도 제주시 연동 789"
+                        ),
+                        type: .hospital, // 임시로 hospital 사용 (숙박시설 타입이 없어서)
+                        title: "제주 오션뷰 리조트",
+                        subtitle: "바다 전망 • 수영장",
+                        thumbanilImageURL: "https://example.com/jeju_resort.jpg",
+                        imageURLs: [],
+                        workingTimes: [],
+                        reviews: [],
+                        totalStarCount: 380,
+                        totalBookmarkCount: 67,
+                        isBookmarkedLocally: true
+                    ),
+                    files: ["reservation_confirm.pdf", "resort_info.jpg"]
+                )
+            ]
+        ),
+        
+        ScheduleModel(
+            uid: "schedule_002",
+            index: 2,
+            title: "부모님 생신",
+            memo: "아버지 70세 생신 가족 모임",
+            editDate: Calendar.current.date(from: DateComponents(year: 2025, month: 11, day: 12))!,
+            d_day: Calendar.current.date(from: DateComponents(year: 2025, month: 12, day: 3))!,
+            visitPlaceList: [
+                VisitPlaceModel(
+                    uid: "visit_002_01",
+                    index: 1,
+                    memo: "가족 모임 식사 장소",
+                    placeModel: samplePlaces[3], // 노모어 피자 홍대점 재사용
+                    files: ["family_photo.jpg"]
+                ),
+                VisitPlaceModel(
+                    uid: "visit_002_02",
+                    index: 2,
+                    memo: "생신케이크 픽업",
+                    placeModel: samplePlaces[2], // 스타벅스 홍대역점 재사용
+                    files: ["cake_order.pdf"]
+                )
+            ]
+        ),
+        
+        ScheduleModel(
+            uid: "schedule_003",
+            index: 3,
+            title: "회사 송년회",
+            memo: "팀 전체 송년회 및 회식",
+            editDate: Calendar.current.date(from: DateComponents(year: 2025, month: 11, day: 8))!,
+            d_day: Calendar.current.date(from: DateComponents(year: 2025, month: 12, day: 20))!,
+            visitPlaceList: [
+                VisitPlaceModel(
+                    uid: "visit_003_01",
+                    index: 1,
+                    memo: "회식 장소, 회사 근처",
+                    placeModel: samplePlaces[3], // 노모어 피자 홍대점
+                    files: []
+                )
+            ]
+        ),
+        
+        // 나머지 ScheduleModel들은 기존과 동일하게 빈 배열로 유지
+        ScheduleModel(
+            uid: "schedule_004",
+            index: 4,
+            title: "대학교 동창회",
+            memo: "졸업 후 첫 동창회 모임",
+            editDate: Calendar.current.date(from: DateComponents(year: 2025, month: 11, day: 14))!,
+            d_day: Calendar.current.date(from: DateComponents(year: 2025, month: 12, day: 28))!,
+            visitPlaceList: []
+        )
+    ]
     static let sampleAnnotations: [PlaceModel] = [
             // 병원 데이터
             PlaceModel(
@@ -33,7 +186,6 @@ class DummyPack {
                 type: .hospital,
                 title: "서울대학교병원",
                 subtitle: "종합병원 • 24시간 응급실",
-                memo: "응급실이 24시간 운영되는 대형병원",
                 thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20190417_78%2F1555465116063h8kKu_JPEG%2FuZNobeKCumi2ws8sEcbdsKX6.jpg",
                 imageURLs: [
                     "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20190417_78%2F1555465116063h8kKu_JPEG%2FuZNobeKCumi2ws8sEcbdsKX6.jpg"
@@ -79,7 +231,6 @@ class DummyPack {
                 type: .store,
                 title: "세븐일레븐 홍대점",
                 subtitle: "편의점 • 24시간 운영",
-                memo: "밤늦게도 이용할 수 있는 편의점",
                 thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20200826_105%2F1598427446074FhQeY_JPEG%2FJJsBaMWXYwpkdDEvKmZKIKgJ.jpg",
                 imageURLs: [
                     "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20200826_105%2F1598427446074FhQeY_JPEG%2FJJsBaMWXYwpkdDEvKmZKIKgJ.jpg"
@@ -125,7 +276,6 @@ class DummyPack {
                 type: .cafe,
                 title: "스타벅스 홍대역점",
                 subtitle: "카페 • WiFi 무료",
-                memo: "공부하기 좋은 스타벅스 매장",
                 thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240116_3%2F1705376556071Xe3sT_JPEG%2F%25B4%25D9%25BF%25EE%25B7%25CE%25B5%25E5.jpg",
                 imageURLs: [
                     "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20250110_79%2F1736478428509Eg9Fr_JPEG%2F%25B9%25E8%25B4%25DE%25C0%25C7-%25B9%25CE%25C1%25B7-%25BB%25F3%25B4%25DC%25C0%25CC%25B9%25CC%25C1%25F6_250109-1.jpg",
@@ -174,7 +324,6 @@ class DummyPack {
                 type: .restaurant,
                 title: "노모어 피자 홍대점",
                 subtitle: "이탈리안 레스토랑 • 피자 전문점",
-                memo: "반반 피자가 유명한 맛집",
                 thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240116_3%2F1705376556071Xe3sT_JPEG%2F%25B4%25D9%25BF%25EE%25B7%25CE%25B5%25E5.jpg",
                 imageURLs: [
                     "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20250110_79%2F1736478428509Eg9Fr_JPEG%2F%25B9%25E8%25B4%25DE%25C0%25C7-%25B9%25CE%25C1%25B7-%25BB%25F3%25B4%25DC%25C0%25CC%25B9%25CC%25C1%25F6_250109-1.jpg",
@@ -224,7 +373,6 @@ class DummyPack {
                 type: .hospital,
                 title: "서울대학교병원",
                 subtitle: "종합병원 • 24시간 응급실",
-                memo: "응급실이 24시간 운영되는 대형병원",
                 thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20190417_78%2F1555465116063h8kKu_JPEG%2FuZNobeKCumi2ws8sEcbdsKX6.jpg",
                 imageURLs: [
                     "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20190417_78%2F1555465116063h8kKu_JPEG%2FuZNobeKCumi2ws8sEcbdsKX6.jpg"
@@ -270,7 +418,6 @@ class DummyPack {
                 type: .store,
                 title: "세븐일레븐 홍대점",
                 subtitle: "편의점 • 24시간 운영",
-                memo: "밤늦게도 이용할 수 있는 편의점",
                 thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20200826_105%2F1598427446074FhQeY_JPEG%2FJJsBaMWXYwpkdDEvKmZKIKgJ.jpg",
                 imageURLs: [
                     "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20200826_105%2F1598427446074FhQeY_JPEG%2FJJsBaMWXYwpkdDEvKmZKIKgJ.jpg"
@@ -316,7 +463,6 @@ class DummyPack {
                 type: .cafe,
                 title: "스타벅스 홍대역점",
                 subtitle: "카페 • WiFi 무료",
-                memo: "공부하기 좋은 스타벅스 매장",
                 thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240116_3%2F1705376556071Xe3sT_JPEG%2F%25B4%25D9%25BF%25EE%25B7%25CE%25B5%25E5.jpg",
                 imageURLs: [
                     "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20250110_79%2F1736478428509Eg9Fr_JPEG%2F%25B9%25E8%25B4%25DE%25C0%25C7-%25B9%25CE%25C1%25B7-%25BB%25F3%25B4%25DC%25C0%25CC%25B9%25CC%25C1%25F6_250109-1.jpg",
@@ -365,7 +511,6 @@ class DummyPack {
                 type: .restaurant,
                 title: "노모어 피자 홍대점",
                 subtitle: "이탈리안 레스토랑 • 피자 전문점",
-                memo: "반반 피자가 유명한 맛집",
                 thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240116_3%2F1705376556071Xe3sT_JPEG%2F%25B4%25D9%25BF%25EE%25B7%25CE%25B5%25E5.jpg",
                 imageURLs: [
                     "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20250110_79%2F1736478428509Eg9Fr_JPEG%2F%25B9%25E8%25B4%25DE%25C0%25C7-%25B9%25CE%25C1%25B7-%25BB%25F3%25B4%25DC%25C0%25CC%25B9%25CC%25C1%25F6_250109-1.jpg",

@@ -82,9 +82,10 @@ struct RecommendPlaceCell : View {
                 ) {
                     Image("icon_star_fill")
                         .resizable()
+                        .foregroundColor(Color.yellow) // 시스템 노란색
                         .aspectRatio(contentMode: ContentMode.fit)
                         .frame(width: 12, height: 12)
-                    
+
                     Text("\(model.totalStarCount)・\(model.address.sido)")
                         .font(.system(size: 12))
                         .foregroundColor(Color.secondary)
@@ -110,6 +111,6 @@ struct RecommendPlaceCell : View {
             placeContent()
             bookMarkButton()
         }
-        .frame(width: 150, height: cellHeight) 
+        .frame(width: 150, height: cellHeight)
     }
 }
