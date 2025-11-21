@@ -29,19 +29,19 @@ struct ScheduleCell : View {
         VStack(alignment:HorizontalAlignment.leading, spacing: verticalSpacing){
             Text(model.title)
                 .font(.system(size: 16))
-                .foregroundColor(.primary)
+                .foregroundColor(Color.getColour(.label_strong))
                 .fontWeight(.bold)
                 .lineLimit(1)
                 .multilineTextAlignment(.leading)
             
             Text(model.memo)
                 .font(.system(size: 14))
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.getColour(.label_neutral))
                 .lineLimit(3)
             
             Text(model.d_day.toLocalizedDateString(region: getUserNationality))
                 .font(.system(size: 14))
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.getColour(.label_alternative))
                 .lineLimit(1)
                 .multilineTextAlignment(.leading)
         }
@@ -50,13 +50,13 @@ struct ScheduleCell : View {
             maxWidth: .infinity,
             alignment: Alignment.leading
         )
-        .background(Color(UIColor.systemBackground))
+        .background(Color.getColour(.background_white))
         .cornerRadius(12)
         .customElevation(.normal)
         .overlay(
             // ✅ 1dp 회색 보더 추가
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.lineAlternative, lineWidth: 1)
+                .stroke(Color.getColour(.label_alternative), lineWidth: 1)
         )
         .onTapGesture {
             onClickCell(model)

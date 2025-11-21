@@ -48,7 +48,7 @@ struct BottomSheetView<GetView: View>: ViewModifier {
                     .padding(
                         EdgeInsets(top: 10, leading: 5, bottom: 0, trailing: 5)
                     )
-                    .background(Color.clear)
+                    .background(Color.getColour(.background_white)) 
                     .clipShape(TopRoundedRectangle(radius: 20, corners: [.topLeft, .topRight]))
                     .overlay(
                         TopRoundedRectangle(radius: 20, corners: [.topLeft, .topRight])

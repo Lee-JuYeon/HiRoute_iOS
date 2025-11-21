@@ -58,8 +58,16 @@ struct PlanView : View {
         }
         .background(Color.getColour(.background_yellow_white))
         .bottomSheet(isOpen: $isShowOptionSheet) {
-            <#code#>
+            SheetPlanOptionView(
+                setOnClickDeleteOption: {
+                    isShowOptionSheet = false
+                    print("일정 삭제 확정")
+                },
+                setOnClickEditOption: {
+                    isShowOptionSheet = false
+                    print("일정 수정 확정")
+                }
+            )
         }
-
     }
 }

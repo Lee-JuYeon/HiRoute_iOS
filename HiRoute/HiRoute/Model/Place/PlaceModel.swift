@@ -10,7 +10,7 @@ import CoreLocation
 struct PlaceModel: Codable {
     let uid: String
     let address: AddressModel // 주소
-    let type: AnnotationType
+    let type: PlaceType
     let title: String // api 제공
     let subtitle: String? // api제공
     let thumbanilImageURL : String? // 썸네일 이미지 주소
@@ -19,11 +19,8 @@ struct PlaceModel: Codable {
     var workingTimes : [WorkingTimeModel] // 운영시간
     var reviews : [ReviewModel] // 리뷰
     
-    var totalStarCount: Int        // 총 별점 수만 저장
-    var totalBookmarkCount: Int    // 총 북마크 수만 저장
-    
-    var isBookmarkedLocally: Bool = false  // UI에서 사용할 북마크 상태 (로컬 전용)
-    
+    var bookMarks : [BookMarkModel] // 북마크한 유저 uid리스트
+    var stars : [StarModel] // 별점 리스트
     
     var iconName: String {
         switch type {

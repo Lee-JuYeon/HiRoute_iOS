@@ -10,22 +10,11 @@ import SwiftUI
 struct ServerImageView : View {
     
     let imageURL : String
-    let imageSize : CGFloat
-    let placeHolder : String
-    let cornerRadius : CGFloat
-    
-    
+
     init(
         setImageURL: String,
-        setImageSize : CGFloat,
-        setPlaceHolder : String,
-        setCornerRadius : CGFloat?
     ) {
         self.imageURL = setImageURL
-        self.imageSize = setImageSize
-        self.placeHolder = setPlaceHolder
-        
-        self.cornerRadius = setCornerRadius ?? 0
     }
     
     // URLSession + Combine 사용
@@ -77,7 +66,12 @@ struct ServerImageView : View {
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: imageSize, height: imageSize)
+                        .frame(
+                            minWidth: 0,
+                            maxWidth: .infinity,
+                            minHeight: 0,
+                            maxHeight: .infinity
+                        )
                 case .failure(_):
                     errorView
                 case .empty:
@@ -110,8 +104,12 @@ struct ServerImageView : View {
     private var loadingView: some View {
         Rectangle()
             .fill(Color.gray.opacity(0.3))
-            .frame(width: imageSize, height: imageSize)
-            .cornerRadius(cornerRadius)
+            .frame(
+                minWidth: 0,
+                maxWidth: .infinity,
+                minHeight: 0,
+                maxHeight: .infinity
+            )
             .overlay(
                 ProgressView()
                     .progressViewStyle(CircularProgressViewStyle())
@@ -123,16 +121,25 @@ struct ServerImageView : View {
         Image(uiImage: uiImage)
             .resizable()
             .aspectRatio(contentMode: .fill)
-            .frame(width: imageSize, height: imageSize)
+            .frame(
+                minWidth: 0,
+                maxWidth: .infinity,
+                minHeight: 0,
+                maxHeight: .infinity
+            )
             .clipped()
-            .cornerRadius(cornerRadius)
     }
     
+    private let placeHolder : String = ""
     private var errorView: some View {
         Image(placeHolder)
             .resizable()
             .aspectRatio(contentMode: .fill)
-            .frame(width: imageSize, height: imageSize)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .frame(
+                minWidth: 0,
+                maxWidth: .infinity,
+                minHeight: 0,
+                maxHeight: .infinity
+            )
     }
 }

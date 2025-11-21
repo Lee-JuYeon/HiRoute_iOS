@@ -99,7 +99,7 @@ struct SheetTravelSpotView : View {
         .background(Color.white)
     }
     
-    private func getTypeDescription(_ type: AnnotationType) -> String {
+    private func getTypeDescription(_ type: PlaceType) -> String {
         switch type {
         case .hospital: return "병원"
         case .store: return "편의점"
