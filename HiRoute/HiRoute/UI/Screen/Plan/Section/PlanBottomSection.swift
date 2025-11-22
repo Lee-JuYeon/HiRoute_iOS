@@ -6,6 +6,7 @@
 //
 import SwiftUI
 
+
 struct PlanBottomSection: View {
     private var getVisitPlaceList : [VisitPlaceModel]
     private var getOnClickCell : (VisitPlaceModel) -> Void
@@ -21,7 +22,7 @@ struct PlanBottomSection: View {
     }
     
     @State private var selectedTabIndex = 0
-    private let tabTitles = ["타임라인", "지도"]
+    private let tabTitles = ["타임라인", "지도", "문서"]
     
     @ViewBuilder
     private func tabHeader() -> some View {
@@ -34,14 +35,14 @@ struct PlanBottomSection: View {
                         .foregroundColor(selectedTabIndex == index ? Color.getColour(.label_strong) : Color.getColour(.label_alternative))
                         .padding(.vertical, 12)
                         .frame(maxWidth: .infinity)
-                        .onTapGesture {
-                            selectedTabIndex = index
-                        }
                     
                     // 인디케이터 밑줄
                     Rectangle()
                         .fill(selectedTabIndex == index ? Color.getColour(.label_strong) : Color.getColour(.line_alternative))
                         .frame(height: 2)
+                }
+                .onTapGesture {
+                    selectedTabIndex = index
                 }
             }
         }
@@ -67,8 +68,13 @@ struct PlanBottomSection: View {
                 }
             )
             .tag(1)
+            
+            FileView()
+                .tag(2)
           
         }
+        .allowsHitTesting(false) // 터치 비활성화 (스크롤 막힘)
+        .disabled(true)
         .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
         .animation(.easeInOut, value: selectedTabIndex)
     }
@@ -80,6 +86,53 @@ struct PlanBottomSection: View {
             
             // 컨텐츠 영역
             tabContent()
+        }
+    }
+}
+
+struct FileView : View {
+    
+    
+    
+    @State private var presentDocumentPicker : Bool = false
+    @ViewBuilder
+    private func addFileButton() -> some View {
+        Button {
+            presentDocumentPicker = true
+        } label: {
+            HStack(alignment: .center, spacing: 0){
+                Text("여행에 관한 문서를 추가해볼까요?")
+                    .font(.system(size: 20))
+                    .foregroundColor(Color.getColour(.background_white))
+                    .fontWeight(.light)
+                    .lineLimit(1)
+                    .multilineTextAlignment(.leading)
+                
+                Spacer()
+                
+                Image("icon_arrow")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaleEffect(x: -1, y: 1)
+                    .foregroundColor(Color.getColour(.background_white))
+                    .aspectRatio(contentMode: ContentMode.fit)
+                    .frame(width: 16, height: 16)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
+        .background(Color.getColour(.label_strong))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .padding(EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12))
+    }
+    
+    var body: some View {
+        VStack(alignment: HorizontalAlignment.leading, spacing: 10){
+            addFileButton()
+            
+            FileListView(
+                isPresentDocumentPicker: $presentDocumentPicker
+            )
         }
     }
 }

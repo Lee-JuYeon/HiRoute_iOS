@@ -53,7 +53,7 @@ struct TimeLineListView : View {
                         setModel: visitPlaceModel,
                         setType: getTimelinePositionType(index),
                         setOnClickCell: { clickedVisitPlaceModel in
-                            print("클릭된거 : \(clickedVisitPlaceModel)")
+                            onClickCell(clickedVisitPlaceModel)
                         }
                     )
                     

@@ -11,29 +11,29 @@ struct PlanView : View {
     private var getScheduleModel : ScheduleModel
     private var getViewType : PlanViewType
     private var getNationalityType : NationalityType
-    @Binding private var isShowPlanView : Bool
+    @Environment(\.presentationMode) var presentationMode
     init(
         setScheduleModel : ScheduleModel,
         setViewType : PlanViewType,
-        setNationalityType : NationalityType,
-        setPlanViewVisibiltiy : Binding<Bool>
+        setNationalityType : NationalityType
     ){
         self.getScheduleModel = setScheduleModel
         self.getViewType = setViewType
         self.getNationalityType = setNationalityType
-        self._isShowPlanView = setPlanViewVisibiltiy
     }
 
     
     @State private var memoText : String = "토마토 크림파스타가 맛있다 해서 가볼 예정. 성수역 3번 출구에서 도보 5분 거리. 내부는 조용하고 자리 넓다 함. 주차는 불가하고 애견동반 가능한 매장. 노키즈존이라 안시끄러울듯토마토 크림파스타가 맛있다 해서 가볼 예정. 성수역 3번 출구에서 도보 5분 거리. 내부는 조용하고 자리 넓다 함. 주차는 불가하고 애견동반 가능한 매장. 노키즈존이라 안시끄러울듯토마토 크림파스타가 맛있다 해서 가볼 예정. 성수역 3번 출구에서 도보 5분 거리. 내부는 조용하고 자리 넓다 함. 주차는 불가하고 애견동반 가능한 매장. 노키즈존이라 안시끄러울듯"
     
     @State private var isShowOptionSheet = false
-    @State private var isShowPlanDetailView = false
+    @State private var isShowPlaceDetailView = false
+    @State private var selectedVisitPlaceModel : VisitPlaceModel?
+    
     var body: some View {
         VStack(alignment: HorizontalAlignment.leading){
             PlanToolBar(
                 setOnClickBack: {
-                    isShowPlanView = false
+                    presentationMode.wrappedValue.dismiss()
                 },
                 setOnClickSettings: {
                     isShowOptionSheet = true
@@ -49,10 +49,12 @@ struct PlanView : View {
             PlanBottomSection(
                 setVisitPlaceList: getScheduleModel.visitPlaceList,
                 onClickCell: { clickedVisitPlaceModel in
-                    isShowPlanDetailView = true
+                    isShowPlaceDetailView = true
+                    selectedVisitPlaceModel = clickedVisitPlaceModel
+                    print("placeview 보여주기1")
                 },
                 onClickAnnotation: { selectedVisitPlaceModel in
-                    print("클릭된 핀 : \(selectedVisitPlaceModel)")
+                    print("클릭된 핀 : \(selectedVisitPlaceModel.placeModel.title)")
                 }
             )
         }
@@ -67,6 +69,12 @@ struct PlanView : View {
                     isShowOptionSheet = false
                     print("일정 수정 확정")
                 }
+            )
+        }
+        .fullScreenCover(item: $selectedVisitPlaceModel) { visitPlaceModel in
+            PlaceView(
+                setPlaceModel: visitPlaceModel.placeModel,
+                setNationalityType: getNationalityType
             )
         }
     }

@@ -18,13 +18,14 @@ struct PlaceStarReviewBookMarkCountView : View {
            spacing: 0
        ) {
            Image("icon_star_fill")
+               .renderingMode(.template)
                .resizable()
-               .foregroundColor(Color.getColour(.label_neutral)) // 시스템 노란색
+               .foregroundColor(Color.getColour(.label_strong)) // 시스템 노란색
                .aspectRatio(contentMode: ContentMode.fit)
-               .frame(width: 12, height: 12)
+               .frame(width: 14, height: 14)
 
            Text("\(starCount) ・ 리뷰 \(reviewCount)개 ・ 북마크 \(bookMarkCount)회")
-               .font(.system(size: 12))
+               .font(.system(size: 14))
                .foregroundColor(Color.getColour(.label_neutral))
        }
        .padding(

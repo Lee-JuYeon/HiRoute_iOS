@@ -12,7 +12,7 @@ struct PlaceTypeView: View {
     
     var body: some View {
         Text(type)
-            .font(.system(size: 14))
+            .font(.system(size: 16))
             .foregroundColor(Color.getColour(.label_alternative))
             .fontWeight(.light)
             .lineLimit(1)

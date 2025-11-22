@@ -12,3 +12,5 @@ struct ReviewImageModel : Hashable, Codable {
     var date : Date
     var imageURL : String
 }
+
+

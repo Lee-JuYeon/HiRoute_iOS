@@ -27,6 +27,7 @@ struct PlanTopSection : View {
     private func dateView(_ date : Date) -> some View {
         return HStack(alignment:VerticalAlignment.center, spacing: 6) {
             Image("icon_calendar")
+                .renderingMode(.template)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 16, height: 16)

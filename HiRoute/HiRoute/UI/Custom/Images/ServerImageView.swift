@@ -65,13 +65,8 @@ struct ServerImageView : View {
                 case .success(let image):
                     image
                         .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(
-                            minWidth: 0,
-                            maxWidth: .infinity,
-                            minHeight: 0,
-                            maxHeight: .infinity
-                        )
+                        .aspectRatio(contentMode: .fit)
+                        .clipped()
                 case .failure(_):
                     errorView
                 case .empty:
@@ -104,12 +99,6 @@ struct ServerImageView : View {
     private var loadingView: some View {
         Rectangle()
             .fill(Color.gray.opacity(0.3))
-            .frame(
-                minWidth: 0,
-                maxWidth: .infinity,
-                minHeight: 0,
-                maxHeight: .infinity
-            )
             .overlay(
                 ProgressView()
                     .progressViewStyle(CircularProgressViewStyle())
@@ -120,13 +109,7 @@ struct ServerImageView : View {
     private func successView(_ uiImage: UIImage) -> some View {
         Image(uiImage: uiImage)
             .resizable()
-            .aspectRatio(contentMode: .fill)
-            .frame(
-                minWidth: 0,
-                maxWidth: .infinity,
-                minHeight: 0,
-                maxHeight: .infinity
-            )
+            .aspectRatio(contentMode: .fit)
             .clipped()
     }
     
@@ -135,11 +118,7 @@ struct ServerImageView : View {
         Image(placeHolder)
             .resizable()
             .aspectRatio(contentMode: .fill)
-            .frame(
-                minWidth: 0,
-                maxWidth: .infinity,
-                minHeight: 0,
-                maxHeight: .infinity
-            )
+            .clipped()
+
     }
 }

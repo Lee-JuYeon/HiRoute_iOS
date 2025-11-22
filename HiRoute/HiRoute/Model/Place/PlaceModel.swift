@@ -14,7 +14,6 @@ struct PlaceModel: Codable {
     let title: String // api 제공
     let subtitle: String? // api제공
     let thumbanilImageURL : String? // 썸네일 이미지 주소
-    let imageURLs : [String] // 이미지 최대 5장
     
     var workingTimes : [WorkingTimeModel] // 운영시간
     var reviews : [ReviewModel] // 리뷰

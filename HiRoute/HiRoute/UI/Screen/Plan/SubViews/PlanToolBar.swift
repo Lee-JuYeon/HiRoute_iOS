@@ -21,16 +21,18 @@ struct PlanToolBar : View {
     
     var body: some View {
         HStack(){
-            Image("icon_arrow_right")
+            
+            Image("icon_arrow")
                 .renderingMode(.template)
                 .resizable()
                 .aspectRatio(contentMode: ContentMode.fit)
-                .scaleEffect(x: -1, y: 1) // 수평 반전
-                .foregroundColor(Color.getColour(.label_strong))
+//                .scaleEffect(x: -1, y: 1) // 수평 반전
+                .foregroundColor(Color.getColour(.label_normal))
                 .frame(
-                    width: 40,
-                    height: 40
+                    width: 20,
+                    height: 20
                 )
+                .padding(EdgeInsets(top: 10, leading: 0, bottom: 0, trailing: 0))
                 .onTapGesture {
                     getOnClickBack()
                 }

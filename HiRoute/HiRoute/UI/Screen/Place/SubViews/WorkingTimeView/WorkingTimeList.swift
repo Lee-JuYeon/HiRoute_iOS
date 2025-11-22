@@ -71,47 +71,60 @@ struct WorkingTimeList : View {
     @State private var expandableWorkingTimeList = false
     @State private var rotationAngle: Double = 0
     var body: some View {
-        VStack(){
-           HStack(
-               alignment: VerticalAlignment.center,
-               spacing: 4
-           ) {
-               Image("icon_clock")
-                   .resizable()
-                   .foregroundColor(Color.getColour(.label_strong)) // 시스템 노란색
-                   .aspectRatio(contentMode: ContentMode.fit)
-                   .frame(width: 12, height: 12)
-
-               Text(getTodayWorkingTime())
-                   .font(.system(size: 12))
-                   .foregroundColor(Color.getColour(.label_normal))
-               
-               Image("icon_arrow_down")
-                   .resizable()
-                   .foregroundColor(Color.getColour(.label_alternative))
-                   .aspectRatio(contentMode: ContentMode.fit)
-                   .frame(width: 12, height: 12)
-                   .rotationEffect(.degrees(rotationAngle))
-                   .animation(.easeInOut(duration: 0.5), value: rotationAngle)
-                   .onTapGesture {
-                       withAnimation(.easeInOut(duration: 0.3)) {
-                           expandableWorkingTimeList.toggle()
-                           rotationAngle = expandableWorkingTimeList ? 180 : 0
-                       }
-                   }
-           }
-           
-           if expandableWorkingTimeList {
-               ForEach(getOtherDaysWorkingTimes(), id: \.id) { workingTimeModel in
-                   WorkingTimeCell(
-                    setModel: workingTimeModel,
-                    setPlaceType: placeType
+        VStack(alignment: HorizontalAlignment.leading, spacing: 0){
+            HStack(
+                alignment: VerticalAlignment.top,
+                spacing: 4
+            ) {
+                Image("icon_clock")
+                    .renderingMode(.template)
+                    .resizable()
+                    .foregroundColor(Color.getColour(.label_strong))
+                    .aspectRatio(contentMode: ContentMode.fit)
+                    .frame(width: 14, height: 14)
+                
+                Text(getTodayWorkingTime())
+                    .font(.system(size: 14))
+                    .foregroundColor(Color.getColour(.label_strong))
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .multilineTextAlignment(.leading)
+                    .padding(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+                
+                Image("icon_arrow")
+                    .renderingMode(.template)
+                    .resizable()
+                    .foregroundColor(Color.getColour(.label_strong))
+                    .aspectRatio(contentMode: ContentMode.fit)
+                    .frame(width: 16, height: 16)
+                    .rotationEffect(.degrees(90))
+                    .rotationEffect(.degrees(expandableWorkingTimeList ? 0 : 180))
+                    .animation(.easeInOut(duration: 0.3), value: expandableWorkingTimeList)
+            }
+            
+            if expandableWorkingTimeList {
+                ForEach(getOtherDaysWorkingTimes(), id: \.id) { workingTimeModel in
+                    WorkingTimeCell(
+                        setModel: workingTimeModel,
+                        setPlaceType: placeType
+                    )
+                }
+                .padding(
+                    EdgeInsets(top: 8, leading: 18, bottom: 0, trailing: 0)
                 )
-               }
-           }
-       }
-       .padding(
-           EdgeInsets(top: 0, leading: 12, bottom: 16, trailing: 12)
-       )
+            }
+                
+        }
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                expandableWorkingTimeList.toggle()
+            }
+        }
+        .padding(
+            EdgeInsets(top: 0, leading: 12, bottom: 16, trailing: 0)
+        )
+        .frame(
+            alignment: .topLeading
+        )
     }
 }

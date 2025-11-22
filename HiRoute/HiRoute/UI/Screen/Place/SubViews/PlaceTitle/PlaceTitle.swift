@@ -12,7 +12,7 @@ struct PlaceTitle: View {
     
     var body: some View {
         Text(title)
-            .font(.system(size: 16))
+            .font(.system(size: 18))
             .foregroundColor(Color.getColour(.label_strong))
             .fontWeight(.bold)
             .lineLimit(1)

@@ -41,15 +41,21 @@ struct RecommendPlaceCell : View {
             
             print("🔖 북마크 \(newState ? "추가" : "제거"): \(model.title)")
         } label: {
-            Image(model.isBookmarkedLocally ? "icon_bookmark_on" : "icon_bookmark_off")
+            Image(model.bookMarks.contains(where: { bookMarkModel in
+                bookMarkModel.userUID == DummyPack.shared.myDataUID
+            }) ? "icon_bookmark_on" : "icon_bookmark_off")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 24, height: 24)
                 .customElevation(.normal)
 
         }
-        .scaleEffect(model.isBookmarkedLocally ? 1.1 : 1.0)
-        .animation(.spring(response: 0.3), value: model.isBookmarkedLocally)
+        .scaleEffect(model.bookMarks.contains(where: { bookMarkModel in
+            bookMarkModel.userUID == DummyPack.shared.myDataUID
+        }) ? 1.1 : 1.0)
+        .animation(.spring(response: 0.3), value: model.bookMarks.contains(where: { bookMarkModel in
+            bookMarkModel.userUID == DummyPack.shared.myDataUID
+        }))
         .padding([.top, .trailing], 5) // 우측 상단에서 5dp 띄우기
     }
     
@@ -90,7 +96,7 @@ struct RecommendPlaceCell : View {
                         .aspectRatio(contentMode: ContentMode.fit)
                         .frame(width: 12, height: 12)
 
-                    Text("\(model.totalStarCount)・\(model.address.sido)")
+                    Text("\(model.stars.count)・\(model.address.sido)")
                         .font(.system(size: 12))
                         .foregroundColor(Color.secondary)
                 }

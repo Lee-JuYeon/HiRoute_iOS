@@ -37,9 +37,10 @@ struct WorkingTimeCell : View {
     
     var body: some View {
         Text(formatWorkingTimeDisplay(model))
-            .font(.system(size: 12))
-            .foregroundColor(Color.getColour(.label_normal))
-            .padding(.leading, 16)
+            .font(.system(size: 14))
+            .foregroundColor(Color.getColour(.label_neutral))
+            .lineLimit(1)
+            .multilineTextAlignment(.leading)
     }
 }
 

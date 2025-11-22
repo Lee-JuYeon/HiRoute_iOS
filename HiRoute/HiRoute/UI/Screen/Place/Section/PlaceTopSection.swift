@@ -36,9 +36,14 @@ struct PlaceTopSection : View {
         ServerImageView(
             setImageURL: imageURL
         )
+        .background(Color.getColour(.background_alternative))
         .frame(
-            maxWidth: .infinity
+            maxWidth: .infinity,
+            minHeight: 0,
+            idealHeight: 200,
+            maxHeight: 200
         )
+        .clipped()
     }
     
     @ViewBuilder
@@ -57,13 +62,12 @@ struct PlaceTopSection : View {
    
     private let cornerRadius : CGFloat = 20
     var body: some View {
-        VStack(){
+        VStack(alignment: HorizontalAlignment.leading, spacing: 0){
             placeThumbNailImage(imageURL: model.thumbanilImageURL ?? "")
             placeTitleWithType(
                 title: model.title,
                 type: model.type.displayText
             )
-            
             
             PlaceStarReviewBookMarkCountView(
                 starCount: model.stars.count,
@@ -108,7 +112,7 @@ struct PlaceTopSection : View {
         .padding(
             EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16)
         )
-        
+        .customElevation(.normal)
 
     }
 }

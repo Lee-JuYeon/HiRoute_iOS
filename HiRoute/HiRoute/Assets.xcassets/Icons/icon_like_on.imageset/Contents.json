@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "S_Arrow7.png",
+      "filename" : "fill24.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "S_Arrow14.png",
+      "filename" : "fill48.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "S_Arrow21.png",
+      "filename" : "fill72.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

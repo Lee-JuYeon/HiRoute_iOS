@@ -6,7 +6,8 @@
 //
 import Foundation
 
-struct ReviewModel : Hashable, Codable {
+struct ReviewModel : Hashable, Codable, Identifiable {
+    var id : String { reviewUID }
     var reviewUID : String // 리뷰 고유 uid
     var reviewText : String // 리뷰 내용
     var userUID : String // 리뷰 작성자 uid

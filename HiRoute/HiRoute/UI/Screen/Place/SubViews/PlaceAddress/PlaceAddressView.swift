@@ -17,14 +17,18 @@ struct PlaceAddressView: View {
             spacing: 4
         ) {
             Image("icon_pin")
+                .renderingMode(.template)
                 .resizable()
                 .foregroundColor(Color.getColour(.label_strong))
                 .aspectRatio(contentMode: ContentMode.fit)
-                .frame(width: 12, height: 12)
+                .frame(width: 20, height: 20)
 
             Text(address.fullAddress)
-                .font(.system(size: 12))
-                .foregroundColor(Color.getColour(.label_normal))
+                .font(.system(size: 14))
+                .foregroundColor(Color.getColour(.label_strong))
+                .fontWeight(.bold)
+                .lineLimit(1)
+                .multilineTextAlignment(.leading)
             
             Button {
                 onCallBackCopyAddress(address)
@@ -32,6 +36,9 @@ struct PlaceAddressView: View {
                 Text("주소 복사")
                     .font(.system(size: 12))
                     .foregroundColor(Color.getColour(.status_positive))
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .multilineTextAlignment(.leading)
             }
         }
         .padding(

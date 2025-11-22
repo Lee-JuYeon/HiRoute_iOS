@@ -20,6 +20,7 @@ struct PlaceButtons : View {
         } label: {
             VStack(alignment: HorizontalAlignment.center, spacing: 8) {
                 Image("icon_pin")
+                    .renderingMode(.template)
                     .resizable()
                     .foregroundColor(Color.getColour(.label_strong))
                     .aspectRatio(contentMode: ContentMode.fit)
@@ -40,6 +41,7 @@ struct PlaceButtons : View {
         } label: {
             VStack(alignment: HorizontalAlignment.center, spacing: 8) {
                 Image("icon_pin")
+                    .renderingMode(.template)
                     .resizable()
                     .foregroundColor(Color.getColour(.label_strong))
                     .aspectRatio(contentMode: ContentMode.fit)
@@ -61,6 +63,7 @@ struct PlaceButtons : View {
         } label: {
             VStack(alignment: HorizontalAlignment.center, spacing: 8) {
                 Image("icon_bookmark_off")
+                    .renderingMode(.template)
                     .resizable()
                     .foregroundColor(Color.getColour(.label_strong))
                     .aspectRatio(contentMode: ContentMode.fit)
@@ -76,11 +79,23 @@ struct PlaceButtons : View {
     }
     
     var body: some View {
-        HStack(alignment: VerticalAlignment.center, spacing: 0){
-            navigationButton()
-            addPlaceButton()
-            bookMarkButton()
+        VStack(alignment: HorizontalAlignment.center, spacing: 0){
+            Rectangle()
+                .fill(Color.getColour(.line_alternative))
+                .frame(
+                    maxWidth: .infinity,
+                    idealHeight: 1
+                )
+                
+            HStack(alignment: VerticalAlignment.center, spacing: 0){
+                navigationButton()
+                addPlaceButton()
+                bookMarkButton()
+            }
+            .padding(
+                EdgeInsets(top: 16, leading: 0, bottom: 16, trailing: 0)
+            )
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
     }
 }
