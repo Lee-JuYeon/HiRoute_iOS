@@ -73,8 +73,8 @@ struct PlanBottomSection: View {
                 .tag(2)
           
         }
-        .allowsHitTesting(false) // 터치 비활성화 (스크롤 막힘)
-        .disabled(true)
+//        .allowsHitTesting(false) // 터치 비활성화 (스크롤 막힘)
+//        .disabled(true)
         .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
         .animation(.easeInOut, value: selectedTabIndex)
     }

@@ -6,6 +6,10 @@
 //
 import SwiftUI
 import Combine
+//
+//문서추가버튼 안눌림 v
+//pdf뷰어 추가 해야함
+//미리보기클릭하면 확대기능 추가 + 다운로드기능추가
 
 struct FileListView: View {
     

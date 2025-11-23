@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-// MARK: - FileModel
 struct FileModel: Hashable, Identifiable, Codable {
     var id: String
     var fileName: String
