@@ -6,10 +6,11 @@
 //
 import SwiftUI
 import Combine
+import PDFKit
 //
 //문서추가버튼 안눌림 v
-//pdf뷰어 추가 해야함
-//미리보기클릭하면 확대기능 추가 + 다운로드기능추가
+//pdf뷰어 추가 해야함 v
+//미리보기클릭하면 확대기능 추가 + 다운로드기능추가 v
 
 struct FileListView: View {
     
@@ -24,63 +25,135 @@ struct FileListView: View {
     @State private var fileList: [FileModel] = []
     @State private var currentIndex = 0
     @State private var selectedFileURL: URL?
+    @State private var showFileDetail = false
+    @State private var selectedFileModel: FileModel?
+       
+    
+    @ViewBuilder
+    private func fileContentView(_ fileModel: FileModel) -> some View {
+        let fileType = fileModel.fileType.lowercased()
+        
+        switch fileType {
+        case "pdf":
+            if let data = FileCacheManager.shared.loadFile(fileModel: fileModel) {
+                PDFViewWrapper(data: data) // scale 파라미터 제거 (기본값 사용)
+                    .cornerRadius(12)
+            } else {
+                defaultFileIcon(fileModel.fileType)
+            }
+        case "jpg", "jpeg", "png", "gif":
+            if let data = FileCacheManager.shared.loadFile(fileModel: fileModel),
+               let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+                    .cornerRadius(12)
+            } else {
+                defaultFileIcon(fileModel.fileType)
+            }
+        case "txt":
+            if let data = FileCacheManager.shared.loadFile(fileModel: fileModel),
+               let text = String(data: data, encoding: .utf8) {
+                VStack {
+                    Text(text.prefix(100) + (text.count > 100 ? "..." : ""))
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(Color.getColour(.label_normal))
+                        .multilineTextAlignment(.leading)
+                        .frame(
+                            maxWidth: .infinity,
+                            maxHeight: .infinity,
+                            alignment: .topLeading
+                        )
+                        .padding(8)
+                }
+                .background(Color.getColour(.fill_alternative))
+                .cornerRadius(12)
+            } else {
+                defaultFileIcon(fileModel.fileType)
+            }
+        default:
+            defaultFileIcon(fileModel.fileType)
+        }
+    }
+    
+    @ViewBuilder
+    private func defaultFileIcon(_ fileType: String) -> some View {
+        VStack {
+            Image(systemName: getFileIcon(for: fileType))
+                .font(.system(size: 40))
+                .foregroundColor(Color.getColour(.label_strong))
+            Text(fileType.uppercased())
+                .font(.caption)
+                .foregroundColor(Color.getColour(.label_alternative))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.getColour(.fill_alternative))
+        .cornerRadius(12)
+    }
     
     
     @ViewBuilder
     private func fileViewer(_ fileModel: FileModel) -> some View {
-        ZStack(alignment: .topLeading){
-            Rectangle()
-                .fill(Color.getColour(.label_alternative))
-                .frame(
-                    maxWidth: .infinity,
-                    maxHeight: .infinity
-                )
-                .overlay(
-                    VStack {
-                        Image(systemName: getFileIcon(for: fileModel.fileType))
-                            .font(.system(size: 50))
-                            .foregroundColor(Color.getColour(.label_strong))
+        VStack(spacing: 8) {
+            // 파일 내용 미리보기
+            fileContentView(fileModel)
+                .frame(height: 200) // 고정 높이 설정
+                .onTapGesture {
+                    selectedFileModel = fileModel
+                    showFileDetail = true
+                }
+            
+            HStack(alignment: .center, spacing: 0) {
+                // 파일 정보
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(fileModel.fileName)
+                        .font(.system(size: 16))
+                        .foregroundColor(Color.getColour(.label_strong))
+                        .fontWeight(.bold)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    
+                    HStack {
+                        Text("크기: \(ByteCountFormatter.string(fromByteCount: fileModel.fileSize, countStyle: .file))")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color.getColour(.label_alternative))
                         
-                        Text("파일 미리보기")
-                            .foregroundColor(Color.getColour(.label_strong))
+                        Text(fileModel.fileType.uppercased())
+                            .font(.system(size: 12))
+                            .foregroundColor(Color.getColour(.label_alternative))
+                            .padding(.horizontal, 6)
                     }
-                )
-                .cornerRadius(12)
-            
-            
-            // 파일 정보
-            VStack(alignment: .leading, spacing: 4) {
-                Text(fileModel.fileName)
-                    .font(.system(size: 16))
-                    .foregroundColor(Color.getColour(.label_strong))
-                    .fontWeight(.bold)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
+                }
                 
-                Text("크기: \(ByteCountFormatter.string(fromByteCount: fileModel.fileSize, countStyle: .file))")
-                    .font(.system(size: 14))
-                    .foregroundColor(Color.getColour(.label_strong))
-                    .fontWeight(.light)
-                    .lineLimit(1)
-                    .multilineTextAlignment(.leading)
+                Spacer()
                 
-                Text("타입: \(fileModel.fileType.uppercased())")
-                    .font(.system(size: 14))
-                    .foregroundColor(Color.getColour(.label_strong))
-                    .fontWeight(.light)
-                    .lineLimit(1)
-                    .multilineTextAlignment(.leading)
+                // 삭제버튼
+                Button(action: {
+                    deleteFile(fileModel)
+                }) {
+                    Image(systemName: "trash")
+                        .renderingMode(.template)
+                        .font(.system(size: 16))
+                        .foregroundColor(Color.getColour(.status_destructive))
+                        .frame(width: 32, height: 32)
+                        .background(Color.getColour(.status_destructive).opacity(0.1))
+                        .clipShape(Circle())
+                }
             }
-            .padding(EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4))
-            .background(BlurView(effect: .light))
-            .cornerRadius(8)
-            .padding(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
         }
-        .frame(
-            maxWidth: .infinity,
-            maxHeight: .infinity
+        .padding(
+            EdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 10)
         )
-        .padding(EdgeInsets(top: 0, leading: 8, bottom: 8, trailing: 8))
+    }
+    
+    private func deleteFile(_ fileModel: FileModel) {
+        FileCacheManager.shared.deleteFile(fileModel: fileModel)
+        fileList.removeAll { $0.id == fileModel.id }
+        if currentIndex >= fileList.count && !fileList.isEmpty {
+            currentIndex = fileList.count - 1
+        }
     }
     
     private func getFileIcon(for fileType: String) -> String {
@@ -108,55 +181,52 @@ struct FileListView: View {
                         .foregroundColor(.gray)
                         .font(.body)
                 }
-                .padding(0)
-                .padding(
-                    EdgeInsets(top: 0, leading: 8, bottom: 16, trailing: 8)
-                )
-                .frame(
-                    maxWidth: .infinity,
-                    maxHeight: .infinity,
-                    alignment: .center
-                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             } else {
-                // iOS 13+ 호환 TabView
-                if #available(iOS 14.0, *) {
-                    TabView(selection: $currentIndex) {
-                        ForEach(Array(fileList.enumerated()), id: \.element.id) { index, fileModel in
-                            fileViewer(fileModel)
-                                .tag(index)
-                        }
+                VStack {
+                    // 파일 네비게이션
+                    if fileList.count > 1 {
+                        Text("\(currentIndex + 1) / \(fileList.count)")
+                            .font(.caption)
+                            .foregroundColor(Color.getColour(.label_alternative))
                     }
-                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
-                } else {
-                    // iOS 13용 대체 방법
-                    VStack {
-                        if currentIndex < fileList.count {
-                            fileViewer(fileList[currentIndex])
-                        }
-                        
-                        HStack {
-                            Button("이전") {
-                                if currentIndex > 0 {
-                                    currentIndex -= 1
-                                }
+                    
+                    // 파일 뷰어
+                    if #available(iOS 14.0, *) {
+                        TabView(selection: $currentIndex) {
+                            ForEach(Array(fileList.enumerated()), id: \.element.id) { index, fileModel in
+                                fileViewer(fileModel)
+                                    .tag(index)
                             }
-                            .disabled(currentIndex == 0)
-                            
-                            Spacer()
-                            
-                            Text("\(currentIndex + 1) / \(fileList.count)")
-                                .font(.caption)
-                            
-                            Spacer()
-                            
-                            Button("다음") {
-                                if currentIndex < fileList.count - 1 {
-                                    currentIndex += 1
-                                }
-                            }
-                            .disabled(currentIndex == fileList.count - 1)
                         }
-                        .padding()
+                        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                    } else {
+                        VStack {
+                            if currentIndex < fileList.count {
+                                fileViewer(fileList[currentIndex])
+                            }
+                            
+                            if fileList.count > 1 {
+                                HStack {
+                                    Button("이전") {
+                                        if currentIndex > 0 {
+                                            currentIndex -= 1
+                                        }
+                                    }
+                                    .disabled(currentIndex == 0)
+                                    
+                                    Spacer()
+                                    
+                                    Button("다음") {
+                                        if currentIndex < fileList.count - 1 {
+                                            currentIndex += 1
+                                        }
+                                    }
+                                    .disabled(currentIndex == fileList.count - 1)
+                                }
+                                .padding()
+                            }
+                        }
                     }
                 }
             }
@@ -164,12 +234,25 @@ struct FileListView: View {
         .sheet(isPresented: $presentDocumentPicker) {
             DocumentPickerView(selectedFileURL: $selectedFileURL)
         }
+        .fullScreenCover(item: $selectedFileModel) { fileModel in
+            FileDetailView(
+                fileModel: fileModel,
+                isPresented: Binding(
+                    get: { selectedFileModel != nil },
+                    set: { _ in selectedFileModel = nil }
+                )
+            )
+        }
         .onReceive(Just(selectedFileURL)) { newURL in
             if let url = newURL,
                let fileModel = FileCacheManager.shared.saveFile(from: url) {
                 fileList.append(fileModel)
+                currentIndex = fileList.count - 1
                 selectedFileURL = nil
             }
         }
     }
 }
+
+
+

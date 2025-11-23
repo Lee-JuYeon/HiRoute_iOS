@@ -92,9 +92,8 @@ struct PlanBottomSection: View {
 
 struct FileView : View {
     
-    
-    
     @State private var presentDocumentPicker : Bool = false
+    
     @ViewBuilder
     private func addFileButton() -> some View {
         Button {

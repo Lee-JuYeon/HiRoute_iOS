@@ -12,33 +12,35 @@ class FileCacheManager {
     
     private let cacheDirectory: URL
     
-    init() {
+    private init() {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         cacheDirectory = documentsPath.appendingPathComponent("FileCache")
         
         if !FileManager.default.fileExists(atPath: cacheDirectory.path) {
-            try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true, attributes: nil)
+            try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
         }
     }
     
-    func saveFile(from sourceURL: URL) -> FileModel? {
-        guard sourceURL.startAccessingSecurityScopedResource() else { return nil }
-        defer { sourceURL.stopAccessingSecurityScopedResource() }
-        
-        let fileName = sourceURL.lastPathComponent
-        let fileID = UUID().uuidString
-        let destinationURL = cacheDirectory.appendingPathComponent("\(fileID)_\(fileName)")
+    func saveFile(from url: URL) -> FileModel? {
+        guard url.startAccessingSecurityScopedResource() else { return nil }
+        defer { url.stopAccessingSecurityScopedResource() }
         
         do {
-            let fileData = try Data(contentsOf: sourceURL)
-            try fileData.write(to: destinationURL)
+            let data = try Data(contentsOf: url)
+            let fileName = url.lastPathComponent
+            let fileExtension = url.pathExtension.lowercased()
+            let uniqueFileName = "\(UUID().uuidString)_\(fileName)"
+            let destinationURL = cacheDirectory.appendingPathComponent(uniqueFileName)
+            
+            try data.write(to: destinationURL)
+            
+            let fileSize = try FileManager.default.attributesOfItem(atPath: destinationURL.path)[.size] as? Int64 ?? 0
             
             return FileModel(
-                id: fileID,
                 fileName: fileName,
+                fileType: fileExtension,
+                fileSize: fileSize,
                 filePath: destinationURL.path,
-                fileSize: Int64(fileData.count),
-                fileType: sourceURL.pathExtension,
                 createdDate: Date()
             )
         } catch {
@@ -48,7 +50,10 @@ class FileCacheManager {
     }
     
     func loadFile(fileModel: FileModel) -> Data? {
-        let fileURL = URL(fileURLWithPath: fileModel.filePath)
-        return try? Data(contentsOf: fileURL)
+        return try? Data(contentsOf: URL(fileURLWithPath: fileModel.filePath))
+    }
+    
+    func deleteFile(fileModel: FileModel) {
+        try? FileManager.default.removeItem(atPath: fileModel.filePath)
     }
 }

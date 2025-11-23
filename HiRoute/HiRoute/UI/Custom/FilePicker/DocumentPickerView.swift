@@ -11,24 +11,10 @@ struct DocumentPickerView: UIViewControllerRepresentable {
     @Binding var selectedFileURL: URL?
     
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        if #available(iOS 14.0, *) {
-            let picker = UIDocumentPickerViewController(forOpeningContentTypes: [
-                .pdf, .image, .text, .data
-            ])
-            picker.delegate = context.coordinator
-            picker.allowsMultipleSelection = false
-            return picker
-        } else {
-            let picker = UIDocumentPickerViewController(documentTypes: [
-                "com.adobe.pdf",
-                "public.image",
-                "public.text",
-                "public.data"
-            ], in: .import)
-            picker.delegate = context.coordinator
-            picker.allowsMultipleSelection = false
-            return picker
-        }
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.item])
+        picker.delegate = context.coordinator
+        picker.allowsMultipleSelection = false
+        return picker
     }
     
     func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
