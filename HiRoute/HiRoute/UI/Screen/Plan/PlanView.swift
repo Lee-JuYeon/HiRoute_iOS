@@ -8,55 +8,55 @@ import SwiftUI
 
 struct PlanView : View {
     
-    private var getScheduleModel : ScheduleModel
-    private var getViewType : PlanViewType
+    private var getModeType : ModeType
     private var getNationalityType : NationalityType
-    @Environment(\.presentationMode) var presentationMode
+ 
     init(
-        setScheduleModel : ScheduleModel,
-        setViewType : PlanViewType,
+        setModeType : ModeType,
         setNationalityType : NationalityType
     ){
-        self.getScheduleModel = setScheduleModel
-        self.getViewType = setViewType
+        self.getModeType = setModeType
         self.getNationalityType = setNationalityType
     }
+   
+    @Environment(\.presentationMode) var presentationMode
+    @EnvironmentObject var scheduleVM: ScheduleViewModel
 
-    
-    @State private var memoText : String = "토마토 크림파스타가 맛있다 해서 가볼 예정. 성수역 3번 출구에서 도보 5분 거리. 내부는 조용하고 자리 넓다 함. 주차는 불가하고 애견동반 가능한 매장. 노키즈존이라 안시끄러울듯토마토 크림파스타가 맛있다 해서 가볼 예정. 성수역 3번 출구에서 도보 5분 거리. 내부는 조용하고 자리 넓다 함. 주차는 불가하고 애견동반 가능한 매장. 노키즈존이라 안시끄러울듯토마토 크림파스타가 맛있다 해서 가볼 예정. 성수역 3번 출구에서 도보 5분 거리. 내부는 조용하고 자리 넓다 함. 주차는 불가하고 애견동반 가능한 매장. 노키즈존이라 안시끄러울듯"
-    
     @State private var isShowOptionSheet = false
     @State private var isShowPlaceDetailView = false
-    @State private var selectedVisitPlaceModel : VisitPlaceModel?
     
     var body: some View {
         VStack(alignment: HorizontalAlignment.leading){
             PlanToolBar(
                 setOnClickBack: {
+                    scheduleVM.clearAllModels()
                     presentationMode.wrappedValue.dismiss()
                 },
                 setOnClickSettings: {
                     isShowOptionSheet = true
                 }
             )
-          
-            PlanTopSection(
-                setScheduleModel: getScheduleModel,
-                setNationalityType: getNationalityType,
-                setMemoText: $memoText
-            )
             
-            PlanBottomSection(
-                setVisitPlaceList: getScheduleModel.visitPlaceList,
-                onClickCell: { clickedVisitPlaceModel in
-                    isShowPlaceDetailView = true
-                    selectedVisitPlaceModel = clickedVisitPlaceModel
-                    print("placeview 보여주기1")
-                },
-                onClickAnnotation: { selectedVisitPlaceModel in
-                    print("클릭된 핀 : \(selectedVisitPlaceModel.placeModel.title)")
-                }
+            PlanTopSection(
+                setNationalityType: getNationalityType,
             )
+          
+            if let selectedSchedule = scheduleVM.selectedSchedule {
+                PlanBottomSection(
+                    setVisitPlaceList: selectedSchedule.visitPlaceList,
+                    onClickCell: { clickedVisitPlaceModel in
+                        scheduleVM.selectVisitPlace(clickedVisitPlaceModel)
+                    },
+                    onClickAnnotation: { selectedVisitPlaceModel in
+                        print("클릭된 핀 : \(selectedVisitPlaceModel.placeModel.title)")
+                    }
+                )
+            } else {
+                // ✅ 선택된 스케줄이 없을 때 처리
+                Text("스케줄을 불러올 수 없습니다.")
+                    .foregroundColor(.gray)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
         .background(Color.getColour(.background_yellow_white))
         .bottomSheet(isOpen: $isShowOptionSheet) {
@@ -71,11 +71,14 @@ struct PlanView : View {
                 }
             )
         }
-        .fullScreenCover(item: $selectedVisitPlaceModel) { visitPlaceModel in
+        .fullScreenCover(item: $scheduleVM.selectedVisitPlace) { visitPlaceModel in
             PlaceView(
                 setPlaceModel: visitPlaceModel.placeModel,
                 setNationalityType: getNationalityType
             )
+        }
+        .onDisappear {
+            scheduleVM.clearAllModels()
         }
     }
 }

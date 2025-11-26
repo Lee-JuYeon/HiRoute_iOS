@@ -16,4 +16,16 @@ struct ScheduleModel: Codable, Identifiable {
     let editDate: Date
     let d_day: Date
     let visitPlaceList: [VisitPlaceModel]
+    
+    func updateModel(_ newModel : ScheduleModel) -> ScheduleModel {
+        return ScheduleModel(
+            uid: newModel.uid,
+            index: newModel.index,
+            title: newModel.title,
+            memo: newModel.memo,  // 새로운 값
+            editDate: newModel.editDate,
+            d_day: newModel.d_day,
+            visitPlaceList: newModel.visitPlaceList
+        )
+    }
 }

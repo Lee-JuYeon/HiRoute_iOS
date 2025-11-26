@@ -9,19 +9,15 @@ import SwiftUI
 
 struct PlanTopSection : View {
     
-    private var getScheduleModel : ScheduleModel
     private var getNationalityType : NationalityType
-    @Binding private var getMemoText : String
     
     init(
-        setScheduleModel: ScheduleModel,
         setNationalityType : NationalityType,
-        setMemoText: Binding<String>
     ) {
-        self.getScheduleModel = setScheduleModel
         self.getNationalityType = setNationalityType
-        self._getMemoText = setMemoText
     }
+    
+    @EnvironmentObject var scheduleVM: ScheduleViewModel
 
     @ViewBuilder
     private func dateView(_ date : Date) -> some View {
@@ -42,27 +38,32 @@ struct PlanTopSection : View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            
-            DdayCountingView(setDdayDate: getScheduleModel.d_day)
-                .padding(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
-            
-            
+            if let selectedSchedule = scheduleVM.selectedSchedule {
+                
+                DdayCountingView(setDdayDate: selectedSchedule.d_day)
+                    .padding(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
 
-            PlanTitleView(title: getScheduleModel.title)
+                PlanTitleView(title: selectedSchedule.title)
+                    .padding(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
+
+                PlanMemoView(
+                    setHint: "메모를 입력하세요",
+                    setText: .constant(selectedSchedule.memo),
+                    setOnClick: { newMemo in
+                        scheduleVM.updateSchedule(<#T##schedule: ScheduleModel##ScheduleModel#>)
+                        scheduleVM.updateSelectedScheduleMemo(newMemo)
+                    }
+                )
                 .padding(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
-
-            PlanMemoView(
-                setHint: "힌트입니다",
-                setText: $getMemoText,
-                setOnClick: { text in
-                    print("입력된 텍스트 : \(text)")
-                }
-            )
-            .padding(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
-            
-            dateView(getScheduleModel.d_day)
-
-
+                
+                dateView(selectedSchedule.d_day)
+                
+            } else {
+                // ✅ 선택된 스케줄이 없을 때
+                Text("스케줄을 불러올 수 없습니다")
+                    .foregroundColor(.gray)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.clear)

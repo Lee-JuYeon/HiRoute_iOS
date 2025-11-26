@@ -7,10 +7,6 @@
 import SwiftUI
 import Combine
 import PDFKit
-//
-//문서추가버튼 안눌림 v
-//pdf뷰어 추가 해야함 v
-//미리보기클릭하면 확대기능 추가 + 다운로드기능추가 v
 
 struct FileListView: View {
     

@@ -11,5 +11,5 @@ struct VisitPlaceModel : Codable, Identifiable {
     let index : Int
     let memo : String
     let placeModel : PlaceModel
-    let files : [String]
+    let files : [FileModel]
 }

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct FileModel: Identifiable, Codable, Hashable {
-    let id = UUID()
+    var id = UUID()
     let fileName: String
     let fileType: String
     let fileSize: Int64

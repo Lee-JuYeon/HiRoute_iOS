@@ -260,7 +260,7 @@ class DummyPack {
                             StarModel(userUID: "user_456", star: 5)
                         ]
                     ),
-                    files: ["jeju_map.pdf", "flight_ticket.jpg"]
+                    files: []
                 ),
                 
                 VisitPlaceModel(
@@ -322,7 +322,7 @@ class DummyPack {
                             StarModel(userUID: "user_123", star: 4)
                         ]
                     ),
-                    files: ["restaurant_menu.jpg"]
+                    files: []
                 )
             ]
         ),
@@ -368,7 +368,7 @@ class DummyPack {
                         bookMarks: [],
                         stars: []
                     ),
-                    files: ["family_photo.jpg"]
+                    files: []
                 )
             ]
         ),
