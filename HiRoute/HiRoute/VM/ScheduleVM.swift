@@ -41,6 +41,8 @@ class ScheduleViewModel: ObservableObject {
         loadInitialData()
     }
     
+    
+    
     // MARK: - Computed Properties
     var isSelectedPlaceBookmarked: Bool {
         guard let place = selectedPlace else { return false }
@@ -55,7 +57,6 @@ class ScheduleViewModel: ObservableObject {
         return selectedPlace?.reviews.count ?? 0
     }
     
-    // MARK: - Place Service Methods
     func createPlace(_ place: PlaceModel) {
         isLoading = true
         placeService.createPlace(place)
@@ -151,11 +152,21 @@ class ScheduleViewModel: ObservableObject {
             clearPlaceSelection()
         }
         
-        // schedules에서 해당 Place를 포함하는 VisitPlace 제거
+        // ✅ 방법 1: 인덱스 기반으로 새로운 schedules 생성
         for i in schedules.indices {
-            schedules[i].visitPlaceList.removeAll { visitPlace in
-                visitPlace.placeModel.uid == deletedPlace.uid
+            let filteredVisitPlaces = schedules[i].visitPlaceList.filter { visitPlace in
+                visitPlace.placeModel.uid != deletedPlace.uid
             }
+            
+            schedules[i] = ScheduleModel(
+                uid: schedules[i].uid,
+                index: schedules[i].index,
+                title: schedules[i].title,
+                memo: schedules[i].memo,
+                editDate: schedules[i].editDate,
+                d_day: schedules[i].d_day,
+                visitPlaceList: filteredVisitPlaces
+            )
         }
         
         // bookmarked places에서도 제거
@@ -278,10 +289,19 @@ class ScheduleViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func loadMyBookMarkedPlaces(page: Int = 1, itemsPerPage: Int = 50) {
+    func loadMyBookMarkedPlaces(page: Int = 1, itemsPerPage: Int = 10) {
         bookMarkService.getUserBookMarkPlaces(userUID: currentUserUID, page: page, itemsPerPage: itemsPerPage)
             .receive(on: DispatchQueue.main)
-            .assign(to: \.myBookMarkedPlaces, on: self)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        self?.errorMessage = error.localizedDescription
+                    }
+                },
+                receiveValue: { [weak self] places in
+                    self?.myBookMarkedPlaces = places
+                }
+            )
             .store(in: &cancellables)
     }
     
@@ -365,8 +385,11 @@ class ScheduleViewModel: ObservableObject {
         reviewService.readReviewList(placeUID: placeUID, page: page, itemsPerPage: itemsPerPage)
             .receive(on: DispatchQueue.main)
             .sink(
-                receiveCompletion: { [weak self] _ in
+                receiveCompletion: { [weak self] completion in
                     self?.isLoadingReviews = false
+                    if case .failure(let error) = completion {
+                        self?.errorMessage = error.localizedDescription
+                    }
                 },
                 receiveValue: { [weak self] reviews in
                     self?.placeReviews = reviews
@@ -378,7 +401,16 @@ class ScheduleViewModel: ObservableObject {
     func loadMyReviews(page: Int = 1, itemsPerPage: Int = 20) {
         reviewService.readMyReviewList(userUID: currentUserUID, page: page, itemsPerPage: itemsPerPage)
             .receive(on: DispatchQueue.main)
-            .assign(to: \.myReviews, on: self)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        self?.errorMessage = error.localizedDescription
+                    }
+                },
+                receiveValue: { [weak self] reviews in
+                    self?.myReviews = reviews
+                }
+            )
             .store(in: &cancellables)
     }
     
@@ -414,10 +446,19 @@ class ScheduleViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func loadReviewsWithSorting(placeUID: String, sortBy: ReviewSortType) {
+    func loadReviewsWithSorting(placeUID: String, sortBy: ReviewListFilterType) {
         reviewService.getReviewsWithSorting(placeUID: placeUID, sortBy: sortBy)
             .receive(on: DispatchQueue.main)
-            .assign(to: \.placeReviews, on: self)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        self?.errorMessage = error.localizedDescription
+                    }
+                },
+                receiveValue: { [weak self] reviews in
+                    self?.placeReviews = reviews
+                }
+            )
             .store(in: &cancellables)
     }
     
@@ -459,14 +500,32 @@ class ScheduleViewModel: ObservableObject {
     func loadAverageRating(placeUID: String) {
         starService.readAverageRate(placeUID: placeUID)
             .receive(on: DispatchQueue.main)
-            .assign(to: \.placeAverageRating, on: self)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        self?.errorMessage = error.localizedDescription
+                    }
+                },
+                receiveValue: { [weak self] rating in
+                    self?.placeAverageRating = rating
+                }
+            )
             .store(in: &cancellables)
     }
     
     func loadMyRating(placeUID: String) {
         starService.readMyRateList(placeUID: placeUID, userUID: currentUserUID)
             .receive(on: DispatchQueue.main)
-            .assign(to: \.currentUserRating, on: self)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        self?.errorMessage = error.localizedDescription
+                    }
+                },
+                receiveValue: { [weak self] rating in
+                    self?.currentUserRating = rating
+                }
+            )
             .store(in: &cancellables)
     }
     
@@ -588,18 +647,48 @@ class ScheduleViewModel: ObservableObject {
         
         // Update selectedVisitPlace.placeModel
         if let visitPlace = selectedVisitPlace, visitPlace.placeModel.uid == placeUID {
-            var updatedVisitPlace = visitPlace
-            updatedVisitPlace.placeModel = transform(visitPlace.placeModel)
-            selectedVisitPlace = updatedVisitPlace
+            selectedVisitPlace = VisitPlaceModel(
+                uid: visitPlace.uid,
+                index: visitPlace.index,
+                memo: visitPlace.memo,
+                placeModel: transform(visitPlace.placeModel),
+                files: visitPlace.files
+            )
         }
         
-        // Update schedules
-        for i in schedules.indices {
-            for j in schedules[i].visitPlaceList.indices {
-                if schedules[i].visitPlaceList[j].placeModel.uid == placeUID {
-                    schedules[i].visitPlaceList[j].placeModel = transform(schedules[i].visitPlaceList[j].placeModel)
-                }
+        // ✅ 방법 2: 변경이 필요한 schedule만 업데이트 (성능 최적화)
+        schedules = schedules.map { schedule in
+            // 먼저 해당 Place가 포함되어 있는지 확인
+            let hasTargetPlace = schedule.visitPlaceList.contains {
+                $0.placeModel.uid == placeUID
             }
+            
+            guard hasTargetPlace else {
+                return schedule // 변경 불필요하면 원본 schedule 반환
+            }
+            
+            // 변경이 필요한 경우에만 새 schedule 생성
+            return ScheduleModel(
+                uid: schedule.uid,
+                index: schedule.index,
+                title: schedule.title,
+                memo: schedule.memo,
+                editDate: schedule.editDate,
+                d_day: schedule.d_day,
+                visitPlaceList: schedule.visitPlaceList.map { visitPlace in
+                    guard visitPlace.placeModel.uid == placeUID else {
+                        return visitPlace
+                    }
+                    
+                    return VisitPlaceModel(
+                        uid: visitPlace.uid,
+                        index: visitPlace.index,
+                        memo: visitPlace.memo,
+                        placeModel: transform(visitPlace.placeModel),
+                        files: visitPlace.files
+                    )
+                }
+            )
         }
     }
     
@@ -644,5 +733,103 @@ class ScheduleViewModel: ObservableObject {
         schedules = DummyPack.sampleSchedules
         loadMyBookMarkedPlaces()
         loadMyReviews()
+    }
+}
+
+// MARK: - ScheduleViewModel에 추가할 메소드들
+extension ScheduleViewModel {
+    
+    // ✅ 선택된 스케줄의 메모 업데이트
+    func updateSelectedScheduleMemo(_ newMemo: String) {
+        guard var schedule = selectedSchedule else { return }
+        
+        // 새로운 스케줄 모델 생성 (메모만 변경)
+        let updatedSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: schedule.title,
+            memo: newMemo,
+            editDate: Date(), // 현재 시간으로 수정일 업데이트
+            d_day: schedule.d_day,
+            visitPlaceList: schedule.visitPlaceList
+        )
+        
+        updateSchedule(updatedSchedule)
+    }
+    
+    // ✅ 스케줄 업데이트 (일반적인 업데이트)
+    func updateSchedule(_ schedule: ScheduleModel) {
+        // 로컬 schedules 배열에서 해당 스케줄 업데이트
+        if let index = schedules.firstIndex(where: { $0.uid == schedule.uid }) {
+            schedules[index] = schedule
+            
+            // 현재 선택된 스케줄도 업데이트
+            if selectedSchedule?.uid == schedule.uid {
+                selectedSchedule = schedule
+            }
+        }
+        
+        // 실제 API 호출 (여기서는 시뮬레이션)
+        // 실제 앱에서는 Repository나 Service를 통해 서버에 업데이트
+        print("📝 Schedule updated: \(schedule.title)")
+    }
+    
+    // ✅ 스케줄 삭제
+    func deleteSchedule(scheduleUID: String) {
+        // 로컬에서 삭제
+        schedules.removeAll { $0.uid == scheduleUID }
+        
+        // 선택된 스케줄이 삭제된 스케줄이면 클리어
+        if selectedSchedule?.uid == scheduleUID {
+            clearAllModels()
+        }
+        
+        // 실제 API 호출 (여기서는 시뮬레이션)
+        print("🗑️ Schedule deleted: \(scheduleUID)")
+    }
+    
+    // ✅ 모든 선택된 모델 클리어
+    func clearAllModels() {
+        selectedSchedule = nil
+        selectedVisitPlace = nil
+        selectedPlace = nil
+        placeReviews = []
+        currentUserRating = nil
+        placeAverageRating = 0.0
+        clearBookmarkCache()
+    }
+    
+    // ✅ 스케줄 제목 업데이트
+    func updateSelectedScheduleTitle(_ newTitle: String) {
+        guard var schedule = selectedSchedule else { return }
+        
+        let updatedSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: newTitle,
+            memo: schedule.memo,
+            editDate: Date(),
+            d_day: schedule.d_day,
+            visitPlaceList: schedule.visitPlaceList
+        )
+        
+        updateSchedule(updatedSchedule)
+    }
+    
+    // ✅ 스케줄 D-Day 업데이트
+    func updateSelectedScheduleDDay(_ newDDay: Date) {
+        guard var schedule = selectedSchedule else { return }
+        
+        let updatedSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: schedule.title,
+            memo: schedule.memo,
+            editDate: Date(),
+            d_day: newDDay,
+            visitPlaceList: schedule.visitPlaceList
+        )
+        
+        updateSchedule(updatedSchedule)
     }
 }

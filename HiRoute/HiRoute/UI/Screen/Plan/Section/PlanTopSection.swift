@@ -10,11 +10,14 @@ import SwiftUI
 struct PlanTopSection : View {
     
     private var getNationalityType : NationalityType
+    private var getModeType : ModeType
     
     init(
         setNationalityType : NationalityType,
+        setModeType : ModeType
     ) {
         self.getNationalityType = setNationalityType
+        self.getModeType = setModeType
     }
     
     @EnvironmentObject var scheduleVM: ScheduleViewModel
@@ -49,8 +52,9 @@ struct PlanTopSection : View {
                 PlanMemoView(
                     setHint: "메모를 입력하세요",
                     setText: .constant(selectedSchedule.memo),
+                    setModeType : getModeType,
                     setOnClick: { newMemo in
-                        scheduleVM.updateSchedule(<#T##schedule: ScheduleModel##ScheduleModel#>)
+                        // ✅ ScheduleViewModel 메소드 사용
                         scheduleVM.updateSelectedScheduleMemo(newMemo)
                     }
                 )

@@ -24,6 +24,7 @@ struct PlanView : View {
 
     @State private var isShowOptionSheet = false
     @State private var isShowPlaceDetailView = false
+
     
     var body: some View {
         VStack(alignment: HorizontalAlignment.leading){
@@ -39,6 +40,7 @@ struct PlanView : View {
             
             PlanTopSection(
                 setNationalityType: getNationalityType,
+                setModeType : getModeType
             )
           
             if let selectedSchedule = scheduleVM.selectedSchedule {
@@ -49,6 +51,7 @@ struct PlanView : View {
                     },
                     onClickAnnotation: { selectedVisitPlaceModel in
                         print("클릭된 핀 : \(selectedVisitPlaceModel.placeModel.title)")
+//                        scheduleVM.selectPlace(selectedVisitPlaceModel.placeModel)
                     }
                 )
             } else {
@@ -63,7 +66,11 @@ struct PlanView : View {
             SheetPlanOptionView(
                 setOnClickDeleteOption: {
                     isShowOptionSheet = false
-                    print("일정 삭제 확정")
+                    if let scheduleUID = scheduleVM.selectedSchedule?.uid {
+                        // ✅ ScheduleViewModel 메소드 사용
+                        scheduleVM.deleteSchedule(scheduleUID: scheduleUID)
+                        presentationMode.wrappedValue.dismiss()
+                    }
                 },
                 setOnClickEditOption: {
                     isShowOptionSheet = false
