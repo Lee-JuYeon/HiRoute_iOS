@@ -6,82 +6,102 @@
 //
 import SwiftUI
 
+
 struct PlanView : View {
     
     private var getModeType : ModeType
-    private var getNationalityType : NationalityType
+    private var getScheduleModel : ScheduleModel
  
     init(
         setModeType : ModeType,
-        setNationalityType : NationalityType
+        setScheduleModel: ScheduleModel
     ){
         self.getModeType = setModeType
-        self.getNationalityType = setNationalityType
+        self.getScheduleModel = setScheduleModel
     }
    
-    @Environment(\.presentationMode) var presentationMode
-    @EnvironmentObject var scheduleVM: ScheduleViewModel
+    @Environment(\.presentationMode) private var presentationMode
+    @EnvironmentObject private var scheduleVM: ScheduleViewModel
+    @EnvironmentObject private var localVM : LocalVM
 
     @State private var isShowOptionSheet = false
-    @State private var isShowPlaceDetailView = false
-
+    @State private var placeModeType = PlaceModeType.MY
+    
+    private func handleBackButton(){
+        scheduleVM.clearAllModels()
+        presentationMode.wrappedValue.dismiss()
+    }
+    
+    private func handleOptionButton(){
+        isShowOptionSheet = true
+    }
+    
+    private func handleDeleteSchedule(){
+        isShowOptionSheet = false
+        
+        if let scheduleUID = scheduleVM.selectedSchedule?.uid {
+            scheduleVM.deleteSchedule(scheduleUID: scheduleUID)
+            presentationMode.wrappedValue.dismiss()
+        }
+    }
+    
+    private func handleCellClick(_ visitPlaceModel : VisitPlaceModel){
+        scheduleVM.selectVisitPlace(visitPlaceModel)
+    }
+    
+    private func handleAnnotationClick(_ visitPlaceModel : VisitPlaceModel){
+        print("클릭된 핀 : \(visitPlaceModel.placeModel.title)")
+        scheduleVM.selectPlace(visitPlaceModel.placeModel)
+    }
+    
+    private func handleEditSchedule(){
+        isShowOptionSheet = false
+        print("일정 수정 확정")
+    }
     
     var body: some View {
         VStack(alignment: HorizontalAlignment.leading){
             PlanToolBar(
                 setOnClickBack: {
-                    scheduleVM.clearAllModels()
-                    presentationMode.wrappedValue.dismiss()
+                   handleBackButton()
                 },
                 setOnClickSettings: {
-                    isShowOptionSheet = true
+                    handleOptionButton()
                 }
             )
             
             PlanTopSection(
-                setNationalityType: getNationalityType,
-                setModeType : getModeType
+                setNationalityType: localVM.nationality,
+                setModeType: getModeType,
             )
           
-            if let selectedSchedule = scheduleVM.selectedSchedule {
-                PlanBottomSection(
-                    setVisitPlaceList: selectedSchedule.visitPlaceList,
-                    onClickCell: { clickedVisitPlaceModel in
-                        scheduleVM.selectVisitPlace(clickedVisitPlaceModel)
-                    },
-                    onClickAnnotation: { selectedVisitPlaceModel in
-                        print("클릭된 핀 : \(selectedVisitPlaceModel.placeModel.title)")
-//                        scheduleVM.selectPlace(selectedVisitPlaceModel.placeModel)
-                    }
-                )
-            } else {
-                // ✅ 선택된 스케줄이 없을 때 처리
-                Text("스케줄을 불러올 수 없습니다.")
-                    .foregroundColor(.gray)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
+            PlanBottomSection(
+                setVisitPlaceList: getScheduleModel.visitPlaceList,
+                onClickCell: { clickedVisitPlaceModel in
+                    handleCellClick(clickedVisitPlaceModel)
+                },
+                onClickAnnotation: { selectedVisitPlaceModel in
+                    handleAnnotationClick(selectedVisitPlaceModel)
+                }
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
         }
         .background(Color.getColour(.background_yellow_white))
         .bottomSheet(isOpen: $isShowOptionSheet) {
             SheetPlanOptionView(
                 setOnClickDeleteOption: {
-                    isShowOptionSheet = false
-                    if let scheduleUID = scheduleVM.selectedSchedule?.uid {
-                        // ✅ ScheduleViewModel 메소드 사용
-                        scheduleVM.deleteSchedule(scheduleUID: scheduleUID)
-                        presentationMode.wrappedValue.dismiss()
-                    }
+                    handleDeleteSchedule()
                 },
                 setOnClickEditOption: {
-                    isShowOptionSheet = false
-                    print("일정 수정 확정")
+                    handleEditSchedule()
                 }
             )
         }
         .fullScreenCover(item: $scheduleVM.selectedVisitPlace) { visitPlaceModel in
             PlaceView(
-                setPlaceModel: visitPlaceModel.placeModel,
-                setNationalityType: getNationalityType
+                setVisitPlaceModel: visitPlaceModel,
+                setPlaceModeType : placeModeType
             )
         }
         .onDisappear {

@@ -7,6 +7,8 @@
 import SwiftUI
 import Combine
 
+
+
 class ScheduleViewModel: ObservableObject {
     
     // MARK: - Published Properties
@@ -728,7 +730,7 @@ class ScheduleViewModel: ObservableObject {
         }
     }
     
-    private func loadInitialData() {
+    func loadInitialData() {
         // 초기 데이터 로딩 로직
         schedules = DummyPack.sampleSchedules
         loadMyBookMarkedPlaces()
@@ -736,11 +738,504 @@ class ScheduleViewModel: ObservableObject {
     }
 }
 
-// MARK: - ScheduleViewModel에 추가할 메소드들
-extension ScheduleViewModel {
+// MARK: - VisitPlaceModel
+extension ScheduleViewModel{
+    // MARK: - Visit Place Management
+    func updateVisitPlaceMemo(_ newMemo: String) {
+        guard let model = selectedVisitPlace else { return }
+        
+        let updateModel = VisitPlaceModel(
+            uid: model.uid,
+            index: model.index,
+            memo: newMemo,
+            placeModel: model.placeModel,
+            files: model.files
+        )
+        updateVisitPlaceModel(updateModel)
+    }
     
-    // ✅ 선택된 스케줄의 메모 업데이트
-    func updateSelectedScheduleMemo(_ newMemo: String) {
+    func updateVisitPlaceModel(_ newModel: VisitPlaceModel) {
+        guard let selectedSchedule = selectedSchedule else { return }
+        
+        // 해당 스케줄에서 visitPlace 업데이트
+        if let scheduleIndex = schedules.firstIndex(where: { $0.uid == selectedSchedule.uid }) {
+            if let visitPlaceIndex = schedules[scheduleIndex].visitPlaceList.firstIndex(where: { $0.uid == newModel.uid }) {
+                
+                // 새로운 visitPlaceList 생성
+                var updatedVisitPlaceList = schedules[scheduleIndex].visitPlaceList
+                updatedVisitPlaceList[visitPlaceIndex] = newModel
+                
+                // 새로운 스케줄 모델 생성
+                let updatedSchedule = ScheduleModel(
+                    uid: selectedSchedule.uid,
+                    index: selectedSchedule.index,
+                    title: selectedSchedule.title,
+                    memo: selectedSchedule.memo,
+                    editDate: Date(),
+                    d_day: selectedSchedule.d_day,
+                    visitPlaceList: updatedVisitPlaceList
+                )
+                
+                updateSchedule(updatedSchedule)
+                
+                // selectedVisitPlace도 업데이트
+                if self.selectedVisitPlace?.uid == newModel.uid {
+                    self.selectedVisitPlace = newModel
+                }
+            }
+        }
+        
+        print("📝 VisitPlace updated: \(newModel.memo)")
+    }
+    
+    func createVisitPlace(_ place: PlaceModel, to schedule: ScheduleModel) {
+        let newVisitPlace = VisitPlaceModel(
+            uid: UUID().uuidString,
+            index: schedule.visitPlaceList.count,
+            memo: "",
+            placeModel: place,
+            files: []
+        )
+        
+        var updatedVisitPlaces = schedule.visitPlaceList
+        updatedVisitPlaces.append(newVisitPlace)
+        
+        let updatedSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: schedule.title,
+            memo: schedule.memo,
+            editDate: Date(),
+            d_day: schedule.d_day,
+            visitPlaceList: updatedVisitPlaces
+        )
+        
+        updateSchedule(updatedSchedule)
+    }
+    
+    func deleteVisitPlace(visitPlaceUID: String) {
+        guard let selectedSchedule = selectedSchedule else { return }
+        
+        let updatedVisitPlaces = selectedSchedule.visitPlaceList.filter { $0.uid != visitPlaceUID }
+        
+        let updatedSchedule = ScheduleModel(
+            uid: selectedSchedule.uid,
+            index: selectedSchedule.index,
+            title: selectedSchedule.title,
+            memo: selectedSchedule.memo,
+            editDate: Date(),
+            d_day: selectedSchedule.d_day,
+            visitPlaceList: updatedVisitPlaces
+        )
+        
+        updateSchedule(updatedSchedule)
+        
+        if self.selectedVisitPlace?.uid == visitPlaceUID {
+            self.selectedVisitPlace = nil
+        }
+    }
+    
+    // MARK: - memo Binding
+    var visitPlaceMemoBinding: Binding<String> {
+        Binding<String>(
+            get: { self.selectedVisitPlace?.memo ?? "" },
+            set: { newValue in
+                self.updateVisitPlaceMemo(newValue)
+            }
+        )
+    }
+}
+
+// MARK: - Place
+extension ScheduleViewModel{
+    func createPlace(_ place: PlaceModel) {
+        isLoading = true
+        placeService.createPlace(place)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { createdPlace in
+                    print("✅ Place created: \(createdPlace.title)")
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    func readPlace(placeUID: String) {
+        placeService.readPlace(placeUID: placeUID)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] place in
+                    self?.selectedPlace = place
+                    self?.loadPlaceDetails(place)
+                }
+            )
+            .store(in: &cancellables)
+    }
+       
+    func updatePlace(_ place: PlaceModel) {
+        placeService.updatePlace(place)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] updatedPlace in
+                    if self?.selectedPlace?.uid == updatedPlace.uid {
+                        self?.selectedPlace = updatedPlace
+                    }
+                    self?.updatePlaceInAllLocations(placeUID: updatedPlace.uid) { _ in updatedPlace }
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    func deletePlace(placeUID: String) {
+        placeService.deletePlace(placeUID: placeUID)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] deletedPlace in
+                    print("🗑️ Place deleted: \(deletedPlace.title)")
+                    self?.removeDeletedPlaceFromLocal(deletedPlace: deletedPlace)
+                }
+            )
+            .store(in: &cancellables)
+    }
+       
+       
+    func searchPlaces(query: String) {
+        placeService.searchPlaces(query: query)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { places in
+                    print("🔍 Found \(places.count) places for: \(query)")
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    func loadPlaceList(page: Int = 1, itemsPerPage: Int = 7) {
+        isLoading = true
+        placeService.readPlaceList(page: page, itemsPerPage: itemsPerPage)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { places in
+                    print("📍 Loaded \(places.count) places")
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    func loadPopularPlaces() {
+        placeService.getPopularPlaces(limit: 10)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { places in
+                    print("🔥 Loaded \(places.count) popular places")
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    func requestPlaceInfoEdit(placeUID: String, reportType: ReportType.RawValue, reason: String) {
+        placeService.requestPlaceInfoEdit(placeUID: placeUID, userUID: currentUserUID, reportType: reportType, reason: reason)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { _ in
+                    print("📝 Place edit request submitted")
+                }
+            )
+            .store(in: &cancellables)
+}
+
+// MARK: - Review
+extension ScheduleViewModel{
+    func createReview(placeUID: String, reviewModel : ReviewModel) {
+        let newReview = ReviewModel(
+            reviewUID: UUID().uuidString,
+            reviewText: reviewModel.reviewText,
+            userUID: currentUserUID,
+            userName: reviewModel.userName,
+            visitDate: reviewModel.visitDate,
+            usefulCount: reviewModel.usefulCount,
+            images: reviewModel.images,
+            usefulList: reviewModel.usefulList
+        )
+        
+        reviewService.createReview(placeUID: placeUID, reviewModel: newReview)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] createdReview in
+                    self?.addNewReviewToLocal(createdReview)
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    func updateReview(reviewModel : ReviewModel) {
+        let updatedReview = ReviewModel(
+            reviewUID: reviewModel.reviewUID,
+            reviewText: reviewModel.reviewText,
+            userUID: currentUserUID,
+            userName: "Current User",
+            visitDate: reviewModel.visitDate,
+            usefulCount: reviewModel.usefulCount,
+            images: reviewModel.images,
+            usefulList: reviewModel.usefulList
+        )
+        
+        reviewService.updateReview(reviewUID: reviewModel.reviewUID, reviewModel: updatedReview)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { updatedReview in
+                    print("✅ Review updated: \(updatedReview.reviewUID)")
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    func deleteReview(reviewUID: String) {
+        reviewService.deleteReview(reviewUID: reviewUID)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] _ in
+                    self?.removeReviewFromLocal(reviewUID: reviewUID)
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    func readReviews(placeUID: String, page: Int = 1, itemsPerPage: Int = 5) {
+        isLoadingReviews = true
+        reviewService.readReviewList(placeUID: placeUID, page: page, itemsPerPage: itemsPerPage)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    self?.isLoadingReviews = false
+                    self?.handleCompletion(completion)
+                },
+                receiveValue: { [weak self] reviews in
+                    self?.placeReviews = reviews
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    func readMyReviews(page: Int = 1, itemsPerPage: Int = 5) {
+        reviewService.readMyReviewList(userUID: currentUserUID, page: page, itemsPerPage: itemsPerPage)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] reviews in
+                    self?.myReviews = reviews
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    // 리뷰 리스트 정려하여 가져오기
+    func readReviewsWithSorting(placeUID: String, sortBy: ReviewListFilterType) {
+        reviewService.getReviewsWithSorting(placeUID: placeUID, sortBy: sortBy)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] reviews in
+                    self?.placeReviews = reviews
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    // 리뷰 도움되요 토글버튼
+    func toggleReviewUseful(reviewUID: String) {
+        reviewService.toggleReviewUseful(reviewUID: reviewUID, userUID: currentUserUID)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] newState in
+                    self?.updateLocalReviewUsefulState(reviewUID: reviewUID, isUseful: newState)
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    // 리뷰 신고
+    func reportReview(reviewUID: String, reportType: String, reportReason: String) {
+        reviewService.reportReview(reviewUID: reviewUID, reporterUID: currentUserUID, reportType: reportType, reportReason: reportReason)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { _ in
+                    print("🚨 Review reported: \(reviewUID)")
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    // 별점 주기
+    func ratePlace(placeUID: String, rating: Int) {
+        starService.createRate(placeUID: placeUID, userUID: currentUserUID, star: rating)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] star in
+                    self?.updateLocalStarRating(placeUID: placeUID, star: star)
+                    self?.currentUserRating = rating
+                }
+            )
+            .store(in: &cancellables)
+    }
+       
+    // 별점 삭제
+    func removeRating(placeUID: String) {
+        starService.removeRate(placeUID: placeUID, userUID: currentUserUID)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] _ in
+                    self?.currentUserRating = nil
+                    self?.updateLocalStarRemoval(placeUID: placeUID)
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    // 별점 평균값
+    func readAverageRating(placeUID: String) {
+        starService.readAverageRate(placeUID: placeUID)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] rating in
+                    self?.placeAverageRating = rating
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    // 현재 사용자가 이 장소에 준 별점을 가져옴
+    func readMyRating(placeUID: String) {
+        starService.readMyRateList(placeUID: placeUID, userUID: currentUserUID)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] rating in
+                    self?.currentUserRating = rating
+                }
+            )
+            .store(in: &cancellables)
+    }
+        
+    // 북마크 토글 버튼. 상태변경
+    func toggleBookMark(for place: PlaceModel) {
+        bookMarkService.toggleBookMark(placeUID: place.uid, userUID: currentUserUID)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] newState in
+                    self?.updateLocalBookmarkState(placeUID: place.uid, isBookmarked: newState)
+                    self?.refreshMyBookMarkedPlaces()
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    // 해당 장소에 내 북마크가 있는지? 
+    func checkBookmarkStatus(placeUID: String) {
+        bookMarkService.isPlaceBookMarked(placeUID: placeUID, userUID: currentUserUID)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { isBookmarked in
+                    print("📌 Bookmark status for \(placeUID): \(isBookmarked)")
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    // 북마크 갯수
+    func loadBookmarkCount(placeUID: String) {
+        bookMarkService.getPlaceBookMarkCount(placeUID: placeUID)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { count in
+                    print("📌 Bookmark count for \(placeUID): \(count)")
+                }
+            )
+            .store(in: &cancellables)
+    }
+        
+    // 내가 북마크한 장소들
+    func loadMyBookMarkedPlaces(page: Int = 1, itemsPerPage: Int = 10) {
+        bookMarkService.getUserBookMarkPlaces(userUID: currentUserUID, page: page, itemsPerPage: itemsPerPage)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: handleCompletion,
+                receiveValue: { [weak self] places in
+                    self?.myBookMarkedPlaces = places
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    func clearBookmarkCache() {
+        bookMarkService.clearBookmarkCache()
+    }
+    
+    private func refreshMyBookMarkedPlaces() {
+        loadMyBookMarkedPlaces()
+    }
+}
+
+
+// MARK: - ScheduleModel
+extension ScheduleViewModel {
+    var scheduleMemomBinding: Binding<String> {
+        Binding<String>(
+            get: { self.selectedSchedule?.memo ?? "" },
+            set: { newValue in
+                self.updateScheduleMemo(newValue)
+            }
+        )
+    }
+    
+    // MARK: - Schedule CRUD
+    func createEmptySchedule(model : ScheduleModel) -> ScheduleModel {
+        let newSchedule = ScheduleModel(
+            uid: UUID().uuidString,
+            index: schedules.count,
+            title: "",
+            memo: "",
+            editDate: Date(),
+            d_day: Date(),
+            visitPlaceList: []
+        )
+        return newSchedule
+    }
+    
+    func createSchedule(model : ScheduleModel) {
+        let newSchedule = ScheduleModel(
+            uid: UUID().uuidString,
+            index: schedules.count,
+            title: model.title,
+            memo: model.memo,
+            editDate: Date(),
+            d_day: Date(),
+            visitPlaceList: model.visitPlaceList
+        )
+        schedules.append(newSchedule)
+    }
+    
+    // 스케줄 메모 변경
+    func updateScheduleMemo(_ newMemo: String) {
         guard var schedule = selectedSchedule else { return }
         
         // 새로운 스케줄 모델 생성 (메모만 변경)
@@ -755,9 +1250,44 @@ extension ScheduleViewModel {
         )
         
         updateSchedule(updatedSchedule)
+        updateFilteredSchedules()
     }
     
-    // ✅ 스케줄 업데이트 (일반적인 업데이트)
+    // 스케줄 제목 변경
+    func updatecheduleTitle(_ newTitle: String) {
+        guard var schedule = selectedSchedule else { return }
+        
+        let updatedSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: newTitle,
+            memo: schedule.memo,
+            editDate: Date(),
+            d_day: schedule.d_day,
+            visitPlaceList: schedule.visitPlaceList
+        )
+        
+        updateSchedule(updatedSchedule)
+    }
+    
+    // 디데이 변경
+    func updateScheduleDDay(_ newDDay: Date) {
+        guard var schedule = selectedSchedule else { return }
+        
+        let updatedSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: schedule.title,
+            memo: schedule.memo,
+            editDate: Date(),
+            d_day: newDDay,
+            visitPlaceList: schedule.visitPlaceList
+        )
+        
+        updateSchedule(updatedSchedule)
+    }
+    
+    // 스케줄 업데이트
     func updateSchedule(_ schedule: ScheduleModel) {
         // 로컬 schedules 배열에서 해당 스케줄 업데이트
         if let index = schedules.firstIndex(where: { $0.uid == schedule.uid }) {
@@ -774,7 +1304,7 @@ extension ScheduleViewModel {
         print("📝 Schedule updated: \(schedule.title)")
     }
     
-    // ✅ 스케줄 삭제
+    // 스케줄 삭제
     func deleteSchedule(scheduleUID: String) {
         // 로컬에서 삭제
         schedules.removeAll { $0.uid == scheduleUID }
@@ -784,11 +1314,12 @@ extension ScheduleViewModel {
             clearAllModels()
         }
         
+        updateFilteredSchedules()
         // 실제 API 호출 (여기서는 시뮬레이션)
         print("🗑️ Schedule deleted: \(scheduleUID)")
     }
     
-    // ✅ 모든 선택된 모델 클리어
+    // 모든 선택된 모델 클리어
     func clearAllModels() {
         selectedSchedule = nil
         selectedVisitPlace = nil
@@ -798,38 +1329,132 @@ extension ScheduleViewModel {
         placeAverageRating = 0.0
         clearBookmarkCache()
     }
-    
-    // ✅ 스케줄 제목 업데이트
-    func updateSelectedScheduleTitle(_ newTitle: String) {
-        guard var schedule = selectedSchedule else { return }
-        
-        let updatedSchedule = ScheduleModel(
-            uid: schedule.uid,
-            index: schedule.index,
-            title: newTitle,
-            memo: schedule.memo,
-            editDate: Date(),
-            d_day: schedule.d_day,
-            visitPlaceList: schedule.visitPlaceList
-        )
-        
-        updateSchedule(updatedSchedule)
-    }
-    
-    // ✅ 스케줄 D-Day 업데이트
-    func updateSelectedScheduleDDay(_ newDDay: Date) {
-        guard var schedule = selectedSchedule else { return }
-        
-        let updatedSchedule = ScheduleModel(
-            uid: schedule.uid,
-            index: schedule.index,
-            title: schedule.title,
-            memo: schedule.memo,
-            editDate: Date(),
-            d_day: newDDay,
-            visitPlaceList: schedule.visitPlaceList
-        )
-        
-        updateSchedule(updatedSchedule)
-    }
 }
+
+    // MARK: - Selection Management
+    extension ScheduleViewModel {
+        
+        func selectSchedule(_ model: ScheduleModel) {
+            selectedSchedule = model
+            clearVisitPlaceSelection()
+            clearPlaceSelection()
+        }
+        
+        func selectVisitPlace(_ visitPlace: VisitPlaceModel) {
+            selectedVisitPlace = visitPlace
+            selectedPlace = visitPlace.placeModel
+            loadPlaceDetails(visitPlace.placeModel)
+        }
+        
+        func selectPlace(_ place: PlaceModel) {
+            selectedPlace = place
+            loadPlaceDetails(place)
+        }
+        
+        func clearAllModels() {
+            selectedSchedule = nil
+            selectedVisitPlace = nil
+            selectedPlace = nil
+            placeReviews = []
+            currentUserRating = nil
+            placeAverageRating = 0.0
+            clearBookmarkCache()
+        }
+        
+        private func clearVisitPlaceSelection() {
+            selectedVisitPlace = nil
+        }
+        
+        private func clearPlaceSelection() {
+            selectedPlace = nil
+            placeReviews = []
+            currentUserRating = nil
+            placeAverageRating = 0.0
+        }
+    }
+
+    // MARK: - Helper Methods
+    extension ScheduleViewModel {
+        
+        private func handleCompletion(_ completion: Subscribers.Completion<Error>) {
+            isLoading = false
+            if case .failure(let error) = completion {
+                errorMessage = error.localizedDescription
+            }
+        }
+        
+        private func loadPlaceDetails(_ place: PlaceModel) {
+            loadPlaceReviews(placeUID: place.uid)
+            loadAverageRating(placeUID: place.uid)
+            loadMyRating(placeUID: place.uid)
+        }
+        
+        private func addNewReviewToLocal(_ newReview: ReviewModel) {
+            placeReviews.insert(newReview, at: 0)
+            
+            if let placeUID = selectedPlace?.uid {
+                updatePlaceInAllLocations(placeUID: placeUID) { place in
+                    var updatedPlace = place
+                    updatedPlace.reviews.insert(newReview, at: 0)
+                    return updatedPlace
+                }
+            }
+        }
+        
+        private func removeReviewFromLocal(reviewUID: String) {
+            placeReviews.removeAll { $0.reviewUID == reviewUID }
+            
+            if let placeUID = selectedPlace?.uid {
+                updatePlaceInAllLocations(placeUID: placeUID) { place in
+                    var updatedPlace = place
+                    updatedPlace.reviews.removeAll { $0.reviewUID == reviewUID }
+                    return updatedPlace
+                }
+            }
+        }
+        
+        private func updateLocalBookmarkState(placeUID: String, isBookmarked: Bool) {
+            updatePlaceInAllLocations(placeUID: placeUID) { place in
+                var updatedPlace = place
+                if isBookmarked {
+                    if !updatedPlace.bookMarks.contains(where: { $0.userUID == currentUserUID }) {
+                        updatedPlace.bookMarks.append(BookMarkModel(userUID: currentUserUID))
+                    }
+                } else {
+                    updatedPlace.bookMarks.removeAll { $0.userUID == currentUserUID }
+                }
+                return updatedPlace
+            }
+        }
+        
+        private func updateLocalStarRating(placeUID: String, star: StarModel) {
+            updatePlaceInAllLocations(placeUID: placeUID) { place in
+                var updatedPlace = place
+                updatedPlace.stars.removeAll { $0.userUID == currentUserUID }
+                updatedPlace.stars.append(star)
+                return updatedPlace
+            }
+        }
+        
+        private func updateLocalStarRemoval(placeUID: String) {
+            updatePlaceInAllLocations(placeUID: placeUID) { place in
+                var updatedPlace = place
+                updatedPlace.stars.removeAll { $0.userUID == currentUserUID }
+                return updatedPlace
+            }
+        }
+        
+        private func updateLocalReviewUsefulState(reviewUID: String, isUseful: Bool) {
+            if let index = placeReviews.firstIndex(where: { $0.reviewUID == reviewUID }) {
+                var updatedReview = placeReviews[index]
+                if isUseful {
+                    if !updatedReview.usefulList.contains(where: { $0.userUID == currentUserUID }) {
+                        updatedReview.usefulList.append(UsefulModel(userUID: currentUserUID))
+                    }
+                } else {
+                    updatedReview.usefulList.removeAll { $0.userUID == currentUserUID }
+                }
+                placeReviews[index] = updatedReview
+            }
+        }
+    }

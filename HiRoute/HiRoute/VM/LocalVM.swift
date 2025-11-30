@@ -1,0 +1,58 @@
+//
+//  LocalVM.swift
+//  HiRoute
+//
+//  Created by Jupond on 11/28/25.
+//
+import SwiftUI
+import Combine
+
+class LocalVM : ObservableObject {
+    
+    @Published var nationality : NationalityType {
+        didSet {
+            saveToUserDefaults()
+        }
+    }
+    
+    private let userDefaults = UserDefaults.standard
+    private let userDefaultsKey = "local"
+    
+    
+    init() {
+        // 앱 시작시 UserDefaults에서 로드
+        let savedRawValue = UserDefaults.standard.string(forKey: "local")
+                
+        if let savedRawValue = savedRawValue,
+           let savedType = NationalityType(rawValue: savedRawValue) {
+            self.nationality = savedType
+        } else {
+            self.nationality = NationalityType.systemDefault
+        }
+                        
+        print("🌍 NationalitySettings initialized: \(nationality)")
+    }
+    
+    // MARK: - Public Methods
+    func updateNationality(_ newType: NationalityType) {
+        nationality = newType
+        print("🌍 Nationality updated to: \(newType)")
+    }
+    
+    func resetToSystemDefault() {
+        nationality = NationalityType.systemDefault
+    }
+    
+    // MARK: - Private Methods
+    private func loadFromUserDefaults() -> NationalityType {
+        guard let savedRawValue = userDefaults.string(forKey: userDefaultsKey),
+              let savedType = NationalityType(rawValue: savedRawValue) else {
+            return NationalityType.systemDefault
+        }
+        return savedType
+    }
+    
+    private func saveToUserDefaults() {
+        userDefaults.set(nationality.displayText, forKey: userDefaultsKey)
+    }
+}

@@ -49,14 +49,10 @@ struct PlanTopSection : View {
                 PlanTitleView(title: selectedSchedule.title)
                     .padding(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
 
-                PlanMemoView(
+                MultiLineMemoView(
                     setHint: "메모를 입력하세요",
-                    setText: .constant(selectedSchedule.memo),
-                    setModeType : getModeType,
-                    setOnClick: { newMemo in
-                        // ✅ ScheduleViewModel 메소드 사용
-                        scheduleVM.updateSelectedScheduleMemo(newMemo)
-                    }
+                    setText: scheduleVM.scheduleMemomBinding,
+                    setModeType : getModeType
                 )
                 .padding(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
                 
@@ -80,7 +76,9 @@ struct PlanTopSection : View {
         .padding(
             EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16)
         )
+        .onDisappear {
+            scheduleVM.updateSelectedScheduleMemo(scheduleVM.selectedSchedule?.memo ?? "")
 
-
+        }
     }
 }

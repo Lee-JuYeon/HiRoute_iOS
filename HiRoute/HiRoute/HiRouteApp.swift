@@ -11,15 +11,15 @@ import SwiftUI
 struct HiRouteApp: App {
     
     @StateObject private var scheduleVM = ScheduleViewModel()
+    @StateObject private var localVM = LocalVM()
     
   
     var body: some Scene {
         WindowGroup {
             AppNavigationView()
                 .environmentObject(scheduleVM)
+                .environmentObject(localVM)  // ✅ 전역 주입
 
-//            ContentView()
-//                .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }
     }
 }

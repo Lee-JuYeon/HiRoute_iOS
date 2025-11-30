@@ -8,16 +8,20 @@ import SwiftUI
 
 struct PlaceView : View {
     
-    private var getPlaceModel : PlaceModel
-    private var getNationalityType : NationalityType
-    @Environment(\.presentationMode) var presentationMode
+    private var getVisitPlaceModel : VisitPlaceModel
+    private var getPlaceModeType : PlaceModeType
     init(
-        setPlaceModel : PlaceModel,
-        setNationalityType : NationalityType
+        setVisitPlaceModel : VisitPlaceModel,
+        setPlaceModeType : PlaceModeType
     ){
-        self.getPlaceModel = setPlaceModel
-        self.getNationalityType = setNationalityType
+        self.getVisitPlaceModel = setVisitPlaceModel
+        self.getPlaceModeType = setPlaceModeType
     }
+    
+    @Environment(\.presentationMode) private var presentationMode
+    @EnvironmentObject private var scheduleVM: ScheduleViewModel
+    @EnvironmentObject private var localVM : LocalVM
+
     
     @ViewBuilder
     private func backButton() -> some View {
@@ -46,10 +50,8 @@ struct PlaceView : View {
             
             ScrollView(.vertical) {
                 VStack(alignment: HorizontalAlignment.leading, spacing: 0){
-                    
-                    
                     PlaceTopSection(
-                        setPlaceModel: getPlaceModel,
+                        setPlaceModel: getVisitPlaceModel.placeModel,
                         onCallBackEditInfo: { placeUID in
                             //정보 변경 제안하기 뷰
                         },
@@ -68,8 +70,9 @@ struct PlaceView : View {
                     )
                     
                     PlaceBottomSection(
-                        setPlaceModel: getPlaceModel,
-                        setNationalityType: getNationalityType,
+                        setVisitPlaceModel: getVisitPlaceModel,
+                        setNationalityType: localVM.nationality,
+                        setPlaceModeType: getPlaceModeType,
                         onClickReviewCell: { reviewModel in
                             // 리뷰 셀 클릭이벤트
                         },
