@@ -16,7 +16,7 @@ class DummyPack {
     
     // MARK: - Sample Data
     
-    static let sampleSchedules: [ScheduleModel] = [
+    static var sampleSchedules: [ScheduleModel] = [
         ScheduleModel(
             uid: "schedule_001",
             index: 1,
