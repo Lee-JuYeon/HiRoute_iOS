@@ -8,6 +8,40 @@ import Combine
 import Foundation
 
 class BookMarkRepository: BookMarkProtocol {
+    static let shared = BookMarkRepository()
+
+    // ✅ 캐시 추가
+    private var cache = NSCache<NSString, AnyObject>()
+    private let cacheQueue = DispatchQueue(label: "com.bookmark.cache", qos: .utility)
+    
+    private init() {
+        setupCache()  // ✅ 추가
+    }
+    
+    // ✅ 캐시 설정 추가
+    private func setupCache() {
+        cache.countLimit = 50
+        cache.totalCostLimit = 10 * 1024 * 1024  // 10MB
+    }
+    
+    // ✅ 캐시 정리 메소드 추가
+    func clearCache() {
+        cacheQueue.async { [weak self] in
+            self?.cache.removeAllObjects()
+        }
+    }
+    
+    func optimizeCache() {
+        cacheQueue.async { [weak self] in
+            guard let self = self else { return }
+            let oldLimit = self.cache.totalCostLimit
+            self.cache.totalCostLimit = oldLimit / 2
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.cache.totalCostLimit = oldLimit
+            }
+        }
+    }
+        
     
     func toggleBookMark(placeUID: String, userUID: String) -> AnyPublisher<Bool, Error> {
         Future { promise in

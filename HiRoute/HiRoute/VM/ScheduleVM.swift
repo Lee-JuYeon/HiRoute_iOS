@@ -35,19 +35,31 @@ class ScheduleVM: ObservableObject {
     private func setupBindings() {
         scheduleService.schedulePublisher
             .receive(on: DispatchQueue.main)
-            .assign(to: &$selectedSchedule)
+            .sink { [weak self] schedule in
+                self?.selectedSchedule = schedule
+            }
+            .store(in: &cancellables)
         
         scheduleService.scheduleListPublisher
             .receive(on: DispatchQueue.main)
-            .assign(to: &$schedules)
+            .sink { [weak self] schedules in
+                self?.schedules = schedules
+            }
+            .store(in: &cancellables)
         
         scheduleService.isLoadingPublisher
             .receive(on: DispatchQueue.main)
-            .assign(to: &$isLoading)
+            .sink { [weak self] isLoading in
+                self?.isLoading = isLoading
+            }
+            .store(in: &cancellables)
         
         scheduleService.errorPublisher
             .receive(on: DispatchQueue.main)
-            .assign(to: &$errorMessage)
+            .sink { [weak self] error in
+                self?.errorMessage = error
+            }
+            .store(in: &cancellables)
     }
     
     /// 검색 및 필터 설정 (리액티브)
@@ -58,7 +70,10 @@ class ScheduleVM: ObservableObject {
                 self?.filterSchedules(schedules, searchText: searchText, showUpcoming: showUpcoming) ?? []
             }
             .receive(on: DispatchQueue.main)
-            .assign(to: &$filteredSchedules)
+            .sink { [weak self] filtered in
+                self?.filteredSchedules = filtered
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Schedule CRUD (Service 연동 + 로컬 관리)

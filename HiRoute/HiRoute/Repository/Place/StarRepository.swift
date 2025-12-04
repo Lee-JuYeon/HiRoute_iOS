@@ -6,8 +6,44 @@
 //
 import Foundation
 import Combine
+
 class StarRepository: StarProtocol {
     
+    static let shared = StarRepository()
+    
+    // ✅ 캐시 관련 추가 (기존 코드는 그대로)
+    private var cache = NSCache<NSString, AnyObject>()
+    private let cacheQueue = DispatchQueue(label: "com.star.cache", qos: .utility)
+    
+    private init() {
+        setupCache()  // ✅ 추가
+    }
+    
+    // ✅ 캐시 설정 추가
+    private func setupCache() {
+        cache.countLimit = 50
+        cache.totalCostLimit = 5 * 1024 * 1024  // 5MB
+    }
+    
+    // ✅ 캐시 정리 메소드 추가
+    func clearCache() {
+        cacheQueue.async { [weak self] in
+            self?.cache.removeAllObjects()
+        }
+    }
+    
+    func optimizeCache() {
+        cacheQueue.async { [weak self] in
+            guard let self = self else { return }
+            let oldLimit = self.cache.totalCostLimit
+            self.cache.totalCostLimit = oldLimit / 2
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.cache.totalCostLimit = oldLimit
+            }
+        }
+    }
+    
+
     func createRate(placeUID: String, userUID: String, star: Int) -> AnyPublisher<StarModel, Error> {
         Future { promise in
             DispatchQueue.global(qos: .userInitiated).async {

@@ -77,5 +77,9 @@ class ReviewService {
             return reviews.sorted { $0.usefulList.count < $1.usefulList.count }
         }
     }
+    
+    deinit {
+        print("✅ ReviewService deinit")
+    }
 }
 

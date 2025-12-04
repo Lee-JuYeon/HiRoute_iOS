@@ -10,6 +10,40 @@ import Combine
 
 class PlaceRepository: PlaceProtocol {
     
+    static let shared = PlaceRepository()
+
+    // 메모리 캐시 - 최대 100개 항목만 유지
+    private var cache = NSCache<NSString, AnyObject>()
+    private let cacheQueue = DispatchQueue(label: "com.place.cache", qos: .utility)
+    private init() {
+        setupCache()
+        loadInitialData()
+    }
+    
+    // ✅ 캐시 설정 추가
+    private func setupCache() {
+        cache.countLimit = 100
+        cache.totalCostLimit = 10 * 1024 * 1024 // 10MB
+    }
+    
+    // ✅ 캐시 정리 메소드 추가
+    func clearCache() {
+        cacheQueue.async { [weak self] in
+            self?.cache.removeAllObjects()
+        }
+    }
+    
+    func optimizeCache() {
+        cacheQueue.async { [weak self] in
+            guard let self = self else { return }
+            let oldLimit = self.cache.totalCostLimit
+            self.cache.totalCostLimit = oldLimit / 2
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.cache.totalCostLimit = oldLimit
+            }
+        }
+    }
+    
     func createPlace(_ place: PlaceModel) -> AnyPublisher<PlaceModel, Error> {
         Future { promise in
             DispatchQueue.global(qos: .userInitiated).async {

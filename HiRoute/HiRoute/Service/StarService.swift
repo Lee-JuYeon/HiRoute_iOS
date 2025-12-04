@@ -62,6 +62,9 @@ class StarService {
             .eraseToAnyPublisher()
     }
     
-   
+    // ✅ deinit 추가 (메모리 해제 확인)
+    deinit {
+        print("✅ StarService deinit")
+    }
 }
 

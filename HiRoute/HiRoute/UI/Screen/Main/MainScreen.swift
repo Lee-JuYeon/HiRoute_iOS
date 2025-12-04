@@ -7,6 +7,7 @@
 import SwiftUI
 
 struct MainScreen: View {
+     
     @State private var selectedTab: MainDestination = .map
     @EnvironmentObject private var navigationVM : NavigationVM
     
@@ -45,7 +46,14 @@ struct MainScreen: View {
                 }
                 .tag(MainDestination.myPage)
         }
+        .overlay(
+            // 오프라인 상태 알림
+            OfflineIndicatorView(isVisible: networkStatus == .offline),
+            alignment: .top
+        )
         .onAppear {
+            setupNetworkMonitoring()
+            loadInitialDataIfNeeded()
         }
     }
 }

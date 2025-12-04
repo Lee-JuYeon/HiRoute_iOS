@@ -10,35 +10,21 @@ import SwiftUI
 @main
 struct HiRouteApp: App {
     
-    // Service 인스턴스들을 미리 생성 (공유용)
-    private let scheduleService = ScheduleService(repository: ScheduleRepository())
-    private let placeService = PlaceService(repository: PlaceRepository())
-    private let bookmarkService = BookMarkService(repository: BookMarkRepository())
-    private let reviewService = ReviewService(repository: ReviewRepository())
-    private let starService = StarService(repository: StarRepository())
-    
-    @StateObject private var scheduleVM: ScheduleVM
-    @StateObject private var planVM: PlanVM
-    @StateObject private var placeVM: PlaceVM
+    // ServiceContainer 활용으로 Service 인스턴스 공유 ✅
+    @StateObject private var scheduleVM = ScheduleVM(
+        scheduleService: ServiceContainer.shared.scheduleService
+    )
+    @StateObject private var planVM = PlanVM(
+        scheduleService: ServiceContainer.shared.scheduleService,  // 같은 인스턴스 공유
+        placeService: ServiceContainer.shared.placeService
+    )
+    @StateObject private var placeVM = PlaceVM(
+        placeService: ServiceContainer.shared.placeService,        // 같은 인스턴스 공유
+        bookmarkService: ServiceContainer.shared.bookMarkService,
+        reviewService: ServiceContainer.shared.reviewService,
+        starService: ServiceContainer.shared.starService
+    )
     @StateObject private var localVM = LocalVM()
-    
-    init() {
-        // 같은 Service 인스턴스를 공유
-        self._scheduleVM = StateObject(wrappedValue:
-            ScheduleViewModel(scheduleService: scheduleService)
-        )
-        self._planVM = StateObject(wrappedValue:
-            PlanViewModel(scheduleService: scheduleService, placeService: placeService)
-        )
-        self._placeVM = StateObject(wrappedValue:
-            PlaceViewModel(
-                placeService: placeService,
-                bookmarkService: bookmarkService,
-                reviewService: reviewService,
-                starService: starService
-            )
-        )
-    }
     
     var body: some Scene {
         WindowGroup {
@@ -50,4 +36,3 @@ struct HiRouteApp: App {
         }
     }
 }
-
