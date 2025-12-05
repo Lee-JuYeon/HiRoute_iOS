@@ -6,5 +6,7 @@
 //
 
 enum NetworkStatus {
-    case connected, offline, connecting
+    case connected
+    case offline
+    case connecting
 }

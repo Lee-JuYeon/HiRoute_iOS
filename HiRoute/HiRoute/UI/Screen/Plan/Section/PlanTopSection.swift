@@ -20,7 +20,7 @@ struct PlanTopSection : View {
         self.getModeType = setModeType
     }
     
-    @EnvironmentObject var scheduleVM: ScheduleViewModel
+    @EnvironmentObject var scheduleVM: ScheduleVM
 
     @ViewBuilder
     private func dateView(_ date : Date) -> some View {
@@ -41,6 +41,9 @@ struct PlanTopSection : View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            
+            offlineIndicator() // ✅ 추가: 오프라인 인디케이터
+
             if let selectedSchedule = scheduleVM.selectedSchedule {
                 
                 DdayCountingView(setDdayDate: selectedSchedule.d_day)
@@ -60,9 +63,14 @@ struct PlanTopSection : View {
                 
             } else {
                 // ✅ 선택된 스케줄이 없을 때
-                Text("스케줄을 불러올 수 없습니다")
-                    .foregroundColor(.gray)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if scheduleVM.isLoading {
+                    ProgressView("스케줄 로딩 중...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    Text("스케줄을 불러올 수 없습니다")
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -77,7 +85,10 @@ struct PlanTopSection : View {
             EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16)
         )
         .onDisappear {
-            scheduleVM.updateSelectedScheduleMemo(scheduleVM.selectedSchedule?.memo ?? "")
+            // ✅ 수정: 오프라인에서도 로컬 저장
+            if let memo = scheduleVM.selectedSchedule?.memo {
+                scheduleVM.updateScheduleMemo(memo)
+            }
 
         }
     }
