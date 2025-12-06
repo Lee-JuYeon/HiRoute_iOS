@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23788" systemVersion="24F74" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="AddressEntity" representedClassName="AddressEntity" syncable="YES">
+        <attribute name="addressLat" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="addressLon" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="addressTitle" optional="YES" attributeType="String"/>
+        <attribute name="addressUID" optional="YES" attributeType="String"/>
+        <attribute name="dong" optional="YES" attributeType="String"/>
+        <attribute name="fullAddress" optional="YES" attributeType="String"/>
+        <attribute name="gungu" optional="YES" attributeType="String"/>
+        <attribute name="sido" optional="YES" attributeType="String"/>
+        <relationship name="place" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PlaceEntity" inverseName="address" inverseEntity="PlaceEntity"/>
+    </entity>
+    <entity name="BookmarkEntity" representedClassName="BookmarkEntity" syncable="YES">
+        <attribute name="userUID" optional="YES" attributeType="String"/>
+        <relationship name="place" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PlaceEntity" inverseName="bookMarks" inverseEntity="PlaceEntity"/>
+    </entity>
+    <entity name="FileEntity" representedClassName="FileEntity" syncable="YES">
+        <attribute name="createDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="fileName" optional="YES" attributeType="String"/>
+        <attribute name="filePath" optional="YES" attributeType="String"/>
+        <attribute name="fileSize" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="fileType" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <relationship name="visitPlace" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="VisitPlaceEntity" inverseName="files" inverseEntity="VisitPlaceEntity"/>
+    </entity>
+    <entity name="InfoEditRequestEntity" representedClassName="InfoEditRequestEntity" syncable="YES">
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="placeUID" optional="YES" attributeType="String"/>
+        <attribute name="requestDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="requestText" optional="YES" attributeType="String"/>
+        <attribute name="userUID" optional="YES" attributeType="String"/>
+    </entity>
+    <entity name="PlaceEntity" representedClassName="PlaceEntity" syncable="YES">
+        <attribute name="subtitle" optional="YES" attributeType="String"/>
+        <attribute name="thumbnailImageURL" optional="YES" attributeType="String"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <attribute name="type" optional="YES" attributeType="String"/>
+        <attribute name="uid" optional="YES" attributeType="String"/>
+        <relationship name="address" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="AddressEntity" inverseName="place" inverseEntity="AddressEntity"/>
+        <relationship name="bookMarks" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="BookmarkEntity" inverseName="place" inverseEntity="BookmarkEntity"/>
+        <relationship name="reviews" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ReviewEntity" inverseName="place" inverseEntity="ReviewEntity"/>
+        <relationship name="stars" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="StarEntity" inverseName="place" inverseEntity="StarEntity"/>
+        <relationship name="workingTimes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="WorkingTimeEntity" inverseName="place" inverseEntity="WorkingTimeEntity"/>
+    </entity>
+    <entity name="ReviewEntity" representedClassName="ReviewEntity" syncable="YES">
+        <attribute name="reviewText" optional="YES" attributeType="String"/>
+        <attribute name="reviewUID" optional="YES" attributeType="String"/>
+        <attribute name="usefulCount" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="userName" optional="YES" attributeType="String"/>
+        <attribute name="userUID" optional="YES" attributeType="String"/>
+        <attribute name="visitDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="images" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ReviewImageEntity" inverseName="review" inverseEntity="ReviewImageEntity"/>
+        <relationship name="place" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PlaceEntity" inverseName="reviews" inverseEntity="PlaceEntity"/>
+        <relationship name="usefulList" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="UsefulEntity" inverseName="review" inverseEntity="UsefulEntity"/>
+    </entity>
+    <entity name="ReviewImageEntity" representedClassName="ReviewImageEntity" syncable="YES">
+        <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="imageURL" optional="YES" attributeType="String"/>
+        <attribute name="uid" optional="YES" attributeType="String"/>
+        <attribute name="userUID" optional="YES" attributeType="String"/>
+        <relationship name="review" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ReviewEntity" inverseName="images" inverseEntity="ReviewEntity"/>
+    </entity>
+    <entity name="ScheduleEntity" representedClassName="ScheduleEntity" syncable="YES">
+        <attribute name="d_day" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="editDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="index" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="memo" optional="YES" attributeType="String"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <attribute name="uid" optional="YES" attributeType="String"/>
+        <relationship name="visitPlaceList" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="VisitPlaceEntity" inverseName="schedule" inverseEntity="VisitPlaceEntity"/>
+    </entity>
+    <entity name="StarEntity" representedClassName="StarEntity" syncable="YES">
+        <attribute name="star" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="userUID" optional="YES" attributeType="String"/>
+        <relationship name="place" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PlaceEntity" inverseName="stars" inverseEntity="PlaceEntity"/>
+    </entity>
+    <entity name="UsefulEntity" representedClassName="UsefulEntity" syncable="YES">
+        <attribute name="userUID" optional="YES" attributeType="String"/>
+        <relationship name="review" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ReviewEntity" inverseName="usefulList" inverseEntity="ReviewEntity"/>
+    </entity>
+    <entity name="VisitPlaceEntity" representedClassName="VisitPlaceEntity" syncable="YES">
+        <attribute name="index" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="memo" optional="YES" attributeType="String"/>
+        <attribute name="uid" optional="YES" attributeType="String"/>
+        <relationship name="files" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="FileEntity" inverseName="visitPlace" inverseEntity="FileEntity"/>
+        <relationship name="placeModel" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PlaceEntity"/>
+        <relationship name="schedule" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ScheduleEntity" inverseName="visitPlaceList" inverseEntity="ScheduleEntity"/>
+    </entity>
+    <entity name="WorkingTimeEntity" representedClassName="WorkingTimeEntity" syncable="YES">
+        <attribute name="close" optional="YES" attributeType="String"/>
+        <attribute name="dayTitle" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="lastOrder" optional="YES" attributeType="String"/>
+        <attribute name="open" optional="YES" attributeType="String"/>
+        <relationship name="place" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PlaceEntity" inverseName="workingTimes" inverseEntity="PlaceEntity"/>
+    </entity>
+</model>

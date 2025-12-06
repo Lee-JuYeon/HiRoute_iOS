@@ -39,3 +39,20 @@ struct PlaceModel: Codable {
         }
     }
 }
+extension PlaceModel {
+    static func empty() -> PlaceModel {
+        return PlaceModel(
+            uid: "",
+            address: AddressModel(
+            addressUID: "", addressLat: 0.0, addressLon: 0.0, addressTitle: "", sido: "", gungu: "", dong: "", fullAddress: ""),
+            type: .restaurant, // 기본값
+            title: "",
+            subtitle: nil,
+            thumbanilImageURL: nil,
+            workingTimes: [],
+            reviews: [],
+            bookMarks: [],
+            stars: []
+        )
+    }
+}
