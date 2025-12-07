@@ -6,33 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		7EA377092EE3DDE6007EF2CB /* PlaceEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376F92EE3DDE6007EF2CB /* PlaceEntity+CoreDataClass.swift */; };
-		7EA3770A2EE3DDE6007EF2CB /* ReviewEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376FB2EE3DDE6007EF2CB /* ReviewEntity+CoreDataClass.swift */; };
-		7EA3770B2EE3DDE6007EF2CB /* BookmarkEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376F32EE3DDE6007EF2CB /* BookmarkEntity+CoreDataClass.swift */; };
-		7EA3770C2EE3DDE6007EF2CB /* VisitPlaceEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA377062EE3DDE6007EF2CB /* VisitPlaceEntity+CoreDataProperties.swift */; };
-		7EA3770D2EE3DDE6007EF2CB /* AddressEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376F22EE3DDE6007EF2CB /* AddressEntity+CoreDataProperties.swift */; };
-		7EA3770E2EE3DDE6007EF2CB /* ScheduleEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376FF2EE3DDE6007EF2CB /* ScheduleEntity+CoreDataClass.swift */; };
-		7EA3770F2EE3DDE6007EF2CB /* ReviewImageEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376FE2EE3DDE6007EF2CB /* ReviewImageEntity+CoreDataProperties.swift */; };
-		7EA377102EE3DDE6007EF2CB /* ScheduleEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA377002EE3DDE6007EF2CB /* ScheduleEntity+CoreDataProperties.swift */; };
-		7EA377112EE3DDE6007EF2CB /* UsefulEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA377042EE3DDE6007EF2CB /* UsefulEntity+CoreDataProperties.swift */; };
-		7EA377122EE3DDE6007EF2CB /* WorkingTimeEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA377082EE3DDE6007EF2CB /* WorkingTimeEntity+CoreDataProperties.swift */; };
-		7EA377132EE3DDE6007EF2CB /* StarEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA377012EE3DDE6007EF2CB /* StarEntity+CoreDataClass.swift */; };
-		7EA377142EE3DDE6007EF2CB /* PlaceEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376FA2EE3DDE6007EF2CB /* PlaceEntity+CoreDataProperties.swift */; };
-		7EA377152EE3DDE6007EF2CB /* StarEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA377022EE3DDE6007EF2CB /* StarEntity+CoreDataProperties.swift */; };
-		7EA377162EE3DDE6007EF2CB /* ReviewImageEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376FD2EE3DDE6007EF2CB /* ReviewImageEntity+CoreDataClass.swift */; };
-		7EA377172EE3DDE6007EF2CB /* VisitPlaceEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA377052EE3DDE6007EF2CB /* VisitPlaceEntity+CoreDataClass.swift */; };
-		7EA377182EE3DDE6007EF2CB /* BookmarkEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376F42EE3DDE6007EF2CB /* BookmarkEntity+CoreDataProperties.swift */; };
-		7EA377192EE3DDE6007EF2CB /* InfoEditRequestEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376F72EE3DDE6007EF2CB /* InfoEditRequestEntity+CoreDataClass.swift */; };
-		7EA3771A2EE3DDE6007EF2CB /* AddressEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376F12EE3DDE6007EF2CB /* AddressEntity+CoreDataClass.swift */; };
-		7EA3771B2EE3DDE6007EF2CB /* ReviewEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376FC2EE3DDE6007EF2CB /* ReviewEntity+CoreDataProperties.swift */; };
-		7EA3771C2EE3DDE6007EF2CB /* WorkingTimeEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA377072EE3DDE6007EF2CB /* WorkingTimeEntity+CoreDataClass.swift */; };
-		7EA3771D2EE3DDE6007EF2CB /* FileEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376F52EE3DDE6007EF2CB /* FileEntity+CoreDataClass.swift */; };
-		7EA3771E2EE3DDE6007EF2CB /* FileEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376F62EE3DDE6007EF2CB /* FileEntity+CoreDataProperties.swift */; };
-		7EA3771F2EE3DDE6007EF2CB /* InfoEditRequestEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA376F82EE3DDE6007EF2CB /* InfoEditRequestEntity+CoreDataProperties.swift */; };
-		7EA377202EE3DDE6007EF2CB /* UsefulEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA377032EE3DDE6007EF2CB /* UsefulEntity+CoreDataClass.swift */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		7E4D63CA2DEE36640044A0CD /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -54,30 +27,6 @@
 		7E4D63B62DEE36620044A0CD /* HiRoute.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiRoute.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7E4D63C92DEE36640044A0CD /* HiRouteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HiRouteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7E4D63D32DEE36640044A0CD /* HiRouteUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HiRouteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		7EA376F12EE3DDE6007EF2CB /* AddressEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AddressEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		7EA376F22EE3DDE6007EF2CB /* AddressEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AddressEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		7EA376F32EE3DDE6007EF2CB /* BookmarkEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BookmarkEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		7EA376F42EE3DDE6007EF2CB /* BookmarkEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BookmarkEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		7EA376F52EE3DDE6007EF2CB /* FileEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FileEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		7EA376F62EE3DDE6007EF2CB /* FileEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FileEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		7EA376F72EE3DDE6007EF2CB /* InfoEditRequestEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "InfoEditRequestEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		7EA376F82EE3DDE6007EF2CB /* InfoEditRequestEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "InfoEditRequestEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		7EA376F92EE3DDE6007EF2CB /* PlaceEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaceEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		7EA376FA2EE3DDE6007EF2CB /* PlaceEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaceEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		7EA376FB2EE3DDE6007EF2CB /* ReviewEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		7EA376FC2EE3DDE6007EF2CB /* ReviewEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		7EA376FD2EE3DDE6007EF2CB /* ReviewImageEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewImageEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		7EA376FE2EE3DDE6007EF2CB /* ReviewImageEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewImageEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		7EA376FF2EE3DDE6007EF2CB /* ScheduleEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScheduleEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		7EA377002EE3DDE6007EF2CB /* ScheduleEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScheduleEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		7EA377012EE3DDE6007EF2CB /* StarEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StarEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		7EA377022EE3DDE6007EF2CB /* StarEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StarEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		7EA377032EE3DDE6007EF2CB /* UsefulEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UsefulEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		7EA377042EE3DDE6007EF2CB /* UsefulEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UsefulEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		7EA377052EE3DDE6007EF2CB /* VisitPlaceEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "VisitPlaceEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		7EA377062EE3DDE6007EF2CB /* VisitPlaceEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "VisitPlaceEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		7EA377072EE3DDE6007EF2CB /* WorkingTimeEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WorkingTimeEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
-		7EA377082EE3DDE6007EF2CB /* WorkingTimeEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WorkingTimeEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -155,30 +104,6 @@
 		7E4D63AD2DEE36620044A0CD = {
 			isa = PBXGroup;
 			children = (
-				7EA376F12EE3DDE6007EF2CB /* AddressEntity+CoreDataClass.swift */,
-				7EA376F22EE3DDE6007EF2CB /* AddressEntity+CoreDataProperties.swift */,
-				7EA376F32EE3DDE6007EF2CB /* BookmarkEntity+CoreDataClass.swift */,
-				7EA376F42EE3DDE6007EF2CB /* BookmarkEntity+CoreDataProperties.swift */,
-				7EA376F52EE3DDE6007EF2CB /* FileEntity+CoreDataClass.swift */,
-				7EA376F62EE3DDE6007EF2CB /* FileEntity+CoreDataProperties.swift */,
-				7EA376F72EE3DDE6007EF2CB /* InfoEditRequestEntity+CoreDataClass.swift */,
-				7EA376F82EE3DDE6007EF2CB /* InfoEditRequestEntity+CoreDataProperties.swift */,
-				7EA376F92EE3DDE6007EF2CB /* PlaceEntity+CoreDataClass.swift */,
-				7EA376FA2EE3DDE6007EF2CB /* PlaceEntity+CoreDataProperties.swift */,
-				7EA376FB2EE3DDE6007EF2CB /* ReviewEntity+CoreDataClass.swift */,
-				7EA376FC2EE3DDE6007EF2CB /* ReviewEntity+CoreDataProperties.swift */,
-				7EA376FD2EE3DDE6007EF2CB /* ReviewImageEntity+CoreDataClass.swift */,
-				7EA376FE2EE3DDE6007EF2CB /* ReviewImageEntity+CoreDataProperties.swift */,
-				7EA376FF2EE3DDE6007EF2CB /* ScheduleEntity+CoreDataClass.swift */,
-				7EA377002EE3DDE6007EF2CB /* ScheduleEntity+CoreDataProperties.swift */,
-				7EA377012EE3DDE6007EF2CB /* StarEntity+CoreDataClass.swift */,
-				7EA377022EE3DDE6007EF2CB /* StarEntity+CoreDataProperties.swift */,
-				7EA377032EE3DDE6007EF2CB /* UsefulEntity+CoreDataClass.swift */,
-				7EA377042EE3DDE6007EF2CB /* UsefulEntity+CoreDataProperties.swift */,
-				7EA377052EE3DDE6007EF2CB /* VisitPlaceEntity+CoreDataClass.swift */,
-				7EA377062EE3DDE6007EF2CB /* VisitPlaceEntity+CoreDataProperties.swift */,
-				7EA377072EE3DDE6007EF2CB /* WorkingTimeEntity+CoreDataClass.swift */,
-				7EA377082EE3DDE6007EF2CB /* WorkingTimeEntity+CoreDataProperties.swift */,
 				7E4D63B82DEE36620044A0CD /* HiRoute */,
 				7E4D63CC2DEE36640044A0CD /* HiRouteTests */,
 				7E4D63D62DEE36640044A0CD /* HiRouteUITests */,
@@ -340,30 +265,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7EA377092EE3DDE6007EF2CB /* PlaceEntity+CoreDataClass.swift in Sources */,
-				7EA3770A2EE3DDE6007EF2CB /* ReviewEntity+CoreDataClass.swift in Sources */,
-				7EA3770B2EE3DDE6007EF2CB /* BookmarkEntity+CoreDataClass.swift in Sources */,
-				7EA3770C2EE3DDE6007EF2CB /* VisitPlaceEntity+CoreDataProperties.swift in Sources */,
-				7EA3770D2EE3DDE6007EF2CB /* AddressEntity+CoreDataProperties.swift in Sources */,
-				7EA3770E2EE3DDE6007EF2CB /* ScheduleEntity+CoreDataClass.swift in Sources */,
-				7EA3770F2EE3DDE6007EF2CB /* ReviewImageEntity+CoreDataProperties.swift in Sources */,
-				7EA377102EE3DDE6007EF2CB /* ScheduleEntity+CoreDataProperties.swift in Sources */,
-				7EA377112EE3DDE6007EF2CB /* UsefulEntity+CoreDataProperties.swift in Sources */,
-				7EA377122EE3DDE6007EF2CB /* WorkingTimeEntity+CoreDataProperties.swift in Sources */,
-				7EA377132EE3DDE6007EF2CB /* StarEntity+CoreDataClass.swift in Sources */,
-				7EA377142EE3DDE6007EF2CB /* PlaceEntity+CoreDataProperties.swift in Sources */,
-				7EA377152EE3DDE6007EF2CB /* StarEntity+CoreDataProperties.swift in Sources */,
-				7EA377162EE3DDE6007EF2CB /* ReviewImageEntity+CoreDataClass.swift in Sources */,
-				7EA377172EE3DDE6007EF2CB /* VisitPlaceEntity+CoreDataClass.swift in Sources */,
-				7EA377182EE3DDE6007EF2CB /* BookmarkEntity+CoreDataProperties.swift in Sources */,
-				7EA377192EE3DDE6007EF2CB /* InfoEditRequestEntity+CoreDataClass.swift in Sources */,
-				7EA3771A2EE3DDE6007EF2CB /* AddressEntity+CoreDataClass.swift in Sources */,
-				7EA3771B2EE3DDE6007EF2CB /* ReviewEntity+CoreDataProperties.swift in Sources */,
-				7EA3771C2EE3DDE6007EF2CB /* WorkingTimeEntity+CoreDataClass.swift in Sources */,
-				7EA3771D2EE3DDE6007EF2CB /* FileEntity+CoreDataClass.swift in Sources */,
-				7EA3771E2EE3DDE6007EF2CB /* FileEntity+CoreDataProperties.swift in Sources */,
-				7EA3771F2EE3DDE6007EF2CB /* InfoEditRequestEntity+CoreDataProperties.swift in Sources */,
-				7EA377202EE3DDE6007EF2CB /* UsefulEntity+CoreDataClass.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

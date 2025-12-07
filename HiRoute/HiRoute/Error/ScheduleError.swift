@@ -9,8 +9,10 @@ import Foundation
 enum ScheduleError: Error, LocalizedError {
     case noCurrentSchedule
     case updateFailed
+    case saveFailed
     case maxPlacesReached
     case duplicatePlace
+    case duplicateSchedule
     case notFound
     case networkError
     case unknown
@@ -21,12 +23,16 @@ enum ScheduleError: Error, LocalizedError {
             return "현재 스케줄이 없습니다"
         case .updateFailed:
             return "스케줄 업데이트에 실패했습니다"
+        case .saveFailed: 
+            return "저장에 실패했습니다"
         case .maxPlacesReached:
             return "최대 20개의 장소만 추가 가능합니다"
         case .duplicatePlace:
             return "이미 추가된 장소입니다"
         case .notFound:
             return "일정을 찾을 수 없습니다"
+        case .duplicateSchedule:
+            return "중복된 일정입니다"
         case .networkError:
             return "네트워크 오류"
         case .unknown:

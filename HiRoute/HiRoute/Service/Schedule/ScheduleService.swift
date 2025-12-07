@@ -7,542 +7,244 @@
 import Combine
 import Foundation
 
-/*
- MVVM + Service Layer에서의 Service의 역할
- - 중복 체크 & 최대 개수 검증
- - 상태 관리 (@Published)
- - UI용 Publisher 제공
- - 복합 연산 (검색, 필터링)
- */
-
-/*
- 1. respository가 지금 굳이 필요하나? 통합해야하나?
-     도메인 복잡성: Schedule + Place 조합 로직
-     확장성: 결제, 알림, 추천 기능 추가 시
-     테스트 용이성: Mock Repository 주입 가능
-     책임 분리: Repository(데이터) vs Service(비즈니스)
- 2. cache파일 매니저 필요하나?
-     통합 메모리 관리: 전체 앱 캐시를 한곳에서
-     일관된 정책: TTL, LRU 등 통일된 정책
-     타입 안전성: Generic으로 타입 보장
-     성능 모니터링: 캐시 히트율 추적 가능
- 3. offline queue 관련 파일매니저를 다로 구현해야하나? (로컬 디비?)
- */
-
 class ScheduleService {
     
-    // MARK: - 기본 CRUD
-    func create(_ schedule: ScheduleModel){
-        
+    // MARK: - Dependencies
+    private let repository: ScheduleProtocol
+    
+    // MARK: - Reactive
+    private var cancellables = Set<AnyCancellable>()
+    
+    /**
+     * 초기화
+     * @param repository: Schedule 데이터 액세스를 담당하는 Repository
+     */
+    init(repository: ScheduleProtocol) {
+        self.repository = repository
+        print("ScheduleService, init // Success : Repository 연결 완료")
     }
     
-    func update(_ schedule: ScheduleModel){
+    /**
+     * 새 일정 생성
+     * - Schedule 고유 정보만 검증 후 저장
+     * - VisitPlace 추가는 VisitPlaceService에서 별도 처리
+     * @param schedule: 생성할 일정 모델
+     * @return: 생성된 일정 Publisher
+     */
+    func create(_ schedule: ScheduleModel) -> AnyPublisher<ScheduleModel, Error> {
+        print("ScheduleService, create // Info : 일정 생성 시작 - \(schedule.title)")
         
+        return Just(schedule)
+            .tryMap { [weak self] schedule in
+                // Schedule 도메인 기본 검증만 수행
+                try self?.validateSchedule(schedule).get()
+                return schedule
+            }
+            .flatMap { [weak self] validatedSchedule in
+                // 2. Repository 호출
+                guard let self = self else {
+                    return Fail<ScheduleModel, Error>(error: ScheduleError.unknown)
+                        .eraseToAnyPublisher()
+                }
+                return self.repository.create(validatedSchedule)
+            }
+            .handleEvents(
+                receiveOutput: { [weak self] createdSchedule in
+                    print("ScheduleService, create // Success : 일정 생성 완료 - \(createdSchedule.title)")
+                },
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        print("ScheduleService, create // Exception : \(error.localizedDescription)")
+                    }
+                }
+            )
+            .eraseToAnyPublisher()
     }
     
-    func delete(uid: String){
+    /**
+     * 특정 일정 조회
+     * - UID로 단일 일정 조회
+     * - Repository에서 직접 조회하여 최신 상태 반환
+     * @param uid: 조회할 일정의 고유 식별자
+     * @return: 조회된 일정 Publisher
+     */
+    func read(uid: String) -> AnyPublisher<ScheduleModel, Error> {
+        print("ScheduleService, read // Info : 일정 조회 시작 - \(uid)")
         
+        // 1. Repository에서 조회
+        return repository.read(scheduleUID: uid)
+            .handleEvents(
+                receiveOutput: { [weak self] schedule in
+                    print("ScheduleService, read // Success : 일정 조회 완료 - \(schedule.title)")
+                },
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        print("ScheduleService, read // Exception : \(error.localizedDescription)")
+                    }
+                }
+            )
+            .eraseToAnyPublisher()
     }
     
-    func read(uid: String) -> ScheduleModel {
+    /**
+     * 전체 일정 목록 조회 (페이지네이션)
+     * - 사용자 친화적 정렬 적용: D-Day 가까운 순 → 최신 편집순
+     * - 페이지네이션으로 메모리 효율성 확보
+     * @param page: 페이지 번호 (0부터 시작)
+     * @param itemsPerPage: 페이지당 항목 수
+     * @return: 정렬된 일정 목록 Publisher
+     */
+    func readAll(page: Int = 0, itemsPerPage: Int = 10) -> AnyPublisher<[ScheduleModel], Error> {
+        print("ScheduleService, readAll // Info : 전체 일정 조회 시작 - page:\(page)")
         
+        return repository.readList(page: page, itemsPerPage: itemsPerPage)
+            .map { [weak self] schedules in
+                // 비즈니스 로직: 사용자 친화적 정렬
+                return schedules.sorted { schedule1, schedule2 in
+                    // 1순위: d_day가 가까운 순서
+                    if schedule1.d_day == schedule2.d_day {
+                        // 2순위: editDate 최신 순서
+                        return schedule1.editDate > schedule2.editDate
+                    }
+                    return schedule1.d_day < schedule2.d_day
+                }
+            }
+            .handleEvents(
+                receiveOutput: { schedules in
+                    print("ScheduleService, readAll // Success : 전체 조회 완료 - \(schedules.count)개")
+                },
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        print("ScheduleService, readAll // Exception : \(error.localizedDescription)")
+                    }
+                }
+            )
+            .eraseToAnyPublisher()
     }
     
-    func readAll() -> [ScheduleModel] {
+    /**
+     * 기존 일정 수정
+     * - Schedule 정보만 업데이트 (title, memo, d_day 등)
+     * - VisitPlace 관련 수정은 VisitPlaceService에서 처리
+     * @param schedule: 수정된 일정 모델
+     * @return: 수정된 일정 Publisher
+     */
+    func update(_ schedule: ScheduleModel) -> AnyPublisher<ScheduleModel, Error> {
+        print("ScheduleService, update // Info : 일정 업데이트 시작 - \(schedule.title)")
         
+        return Just(schedule)
+            .tryMap { [weak self] schedule in
+                // 1. Schedule 도메인 검증
+                try self?.validateSchedule(schedule).get()
+                return schedule
+            }
+            .flatMap { [weak self] validatedSchedule in
+                // 2. Repository 호출
+                guard let self = self else {
+                    return Fail<ScheduleModel, Error>(error: ScheduleError.unknown)
+                        .eraseToAnyPublisher()
+                }
+                return self.repository.update(validatedSchedule)
+            }
+            .handleEvents(
+                receiveOutput: { [weak self] updatedSchedule in
+                    print("ScheduleService, update // Success : 일정 업데이트 완료 - \(updatedSchedule.title)")
+                },
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        print("ScheduleService, update // Exception : \(error.localizedDescription)")
+                    }
+                }
+            )
+            .eraseToAnyPublisher()
+    }
+    
+    /**
+     * 일정 삭제
+     * - Schedule과 관련된 모든 VisitPlace도 Cascade 삭제됨 (CoreData 설정)
+     * - 물리적 파일 삭제는 FileService에서 별도 처리 필요
+     * @param uid: 삭제할 일정의 고유 식별자
+     * @return: 삭제 완료 Publisher
+     */
+    func delete(uid: String) -> AnyPublisher<Void, Error> {
+        print("ScheduleService, delete // Info : 일정 삭제 시작 - \(uid)")
+        
+        return repository.delete(scheduleUID: uid)
+            .handleEvents(
+                receiveOutput: { [weak self] _ in
+                    print("ScheduleService, delete // Success : 일정 삭제 완료 - \(uid)")
+                },
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        print("ScheduleService, delete // Exception : \(error.localizedDescription)")
+                    }
+                }
+            )
+            .eraseToAnyPublisher()
+    }
+    
+    /**
+     * 일정 기본 정보 업데이트
+     * - 제목, 메모, D-Day만 수정하는 편의 메서드
+     * - 기존 VisitPlace 목록은 그대로 유지
+     * - editDate는 자동으로 현재 시간으로 업데이트
+     * @param uid: 수정할 일정 UID
+     * @param title: 새 제목
+     * @param memo: 새 메모
+     * @param dDay: 새 D-Day
+     * @return: 수정된 일정 Publisher
+     */
+    func updateScheduleInfo(uid: String, title: String, memo: String, dDay: Date) -> AnyPublisher<ScheduleModel, Error> {
+        print("ScheduleService, updateScheduleInfo // Info : 일정 정보 업데이트 - \(uid)")
+        
+        return read(uid: uid)
+            .map { schedule in
+                // Immutable 패턴으로 새 Schedule 생성
+                return ScheduleModel(
+                    uid: schedule.uid,
+                    index: schedule.index,
+                    title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                    memo: memo,
+                    editDate: Date(), // 편집 날짜 자동 갱신
+                    d_day: dDay,
+                    visitPlaceList: schedule.visitPlaceList // 기존 방문장소 유지
+                )
+            }
+            .flatMap { [weak self] updatedSchedule in
+                guard let self = self else {
+                    return Fail<ScheduleModel, Error>(error: ScheduleError.unknown)
+                        .eraseToAnyPublisher()
+                }
+                return self.update(updatedSchedule)
+            }
+            .eraseToAnyPublisher()
+    }
+    
+    /**
+     * Schedule 기본 검증
+     * - 사용자 편의성 우선으로 최소한의 검증만 수행
+     * - 제목 길이 제한 없음, 내용 제한 없음
+     * - UID 존재 여부만 확인
+     * @param schedule: 검증할 일정 모델
+     * @return: 검증 결과
+     */
+    private func validateSchedule(_ schedule: ScheduleModel) -> Result<Void, ScheduleError> {
+        // 최소한의 검증만: 필수 필드 존재 여부
+        if schedule.uid.isEmpty {
+            print("ScheduleService, validateBasicSchedule // Warning : UID가 비어있음")
+            return .failure(.saveFailed)
+        }
+        
+        // 사용자 편의성을 위해 다른 제한 없음:
+        // - 제목 길이 제한 없음 (긴 제목도 허용)
+        // - 빈 제목도 허용 (나중에 수정 가능)
+        // - 과거 D-Day도 허용 (추억 여행 등)
+        
+        return .success(())
+    }
+    
+    deinit {
+        cancellables.removeAll()
+        print("ScheduleService, deinit // Success : 서비스 해제 완료")
     }
 }
-
-//
-//class ScheduleService {
-//    
-//    private let repository: ScheduleProtocol
-//    private let networkMonitor: NetworkMonitor
-//    private let cacheManager: CacheManager
-//    private let queueManager: QueueManager
-//    
-//    private let queueName = "schedule_sync"
-//    private var cancellables = Set<AnyCancellable>()
-//    
-//    init(
-//        scheduleRepository: ScheduleProtocol,
-//        networkMonitor: NetworkMonitor,
-//        cacheManager: CacheManager = .shared,
-//        queueManager: QueueManager = .shared
-//    ) {
-//        self.repository = scheduleRepository
-//        self.networkMonitor = networkMonitor
-//        self.cacheManager = cacheManager
-//        self.queueManager = queueManager
-//        
-//        setupQueue()
-//        setupNetworkStatusObserver()
-//    }
-//    
-//    // 오프라인 작업 큐
-//    private var offlineQueue: [OfflineOperation] = []
-//       
-//    
-//    // 리액티브 상태 스트림
-//    @Published private var currentSchedule: ScheduleModel?
-//    @Published private var scheduleList: [ScheduleModel] = []
-//    @Published private var isLoading = false
-//    @Published private var errorMessage: String?
-//    
-//    // 공개 스트림 - UI가 구독하는 Publisher들
-//    var schedulePublisher: AnyPublisher<ScheduleModel?, Never> {
-//        $currentSchedule.eraseToAnyPublisher()
-//    }
-//    
-//    var scheduleListPublisher: AnyPublisher<[ScheduleModel], Never> {
-//        $scheduleList.eraseToAnyPublisher()
-//    }
-//    
-//    var isLoadingPublisher: AnyPublisher<Bool, Never> {
-//        $isLoading.eraseToAnyPublisher()
-//    }
-//    
-//    var errorPublisher: AnyPublisher<String?, Never> {
-//        $errorMessage.eraseToAnyPublisher()
-//    }
-//        
-//   
-//    
-//    // 네트워크 상태 변화 감지
-//    private func setupNetworkStatusObserver() {
-//        networkMonitor.startMonitoring { [weak self] networkStatus, connectionType in
-//            // 온라인 상태가 되면 오프라인 큐 처리
-//            if networkStatus == .connected {
-//                self?.processOfflineQueue()
-//            }
-//        }
-//    }
-//       
-//    // 온라인 상태가 되면 오프라인 큐 처리
-//    private func processOfflineQueue() {
-//        guard !offlineQueue.isEmpty else { return }
-//        
-//        print("🔄 오프라인 큐 처리 시작: \(offlineQueue.count)개 작업")
-//        
-//        let operations = offlineQueue
-//        offlineQueue.removeAll()
-//        
-//        for operation in operations {
-//            switch operation {
-//            case .create(let schedule):
-//                syncCreateToServer(schedule)
-//                    .sink(receiveCompletion: { _ in }, receiveValue: { _ in })
-//                    .store(in: &cancellables)
-//                
-//            case .update(let schedule):
-//                syncUpdateToServer(schedule)
-//                    .sink(receiveCompletion: { _ in }, receiveValue: { _ in })
-//                    .store(in: &cancellables)
-//                
-//            case .delete(let uid):
-//                syncDeleteToServer(uid: uid)
-//                    .sink(receiveCompletion: { _ in }, receiveValue: { _ in })
-//                    .store(in: &cancellables)
-//            }
-//        }
-//    }
-//    
-//    // 새로운 스케줄을 생성하고 현재 스케줄과 리스트에 자동 반영,  오프라인 우선 처리
-//    
-//    // 모델 생성 서버 동기화
-//    private func syncCreateToServer(_ schedule: ScheduleModel) -> AnyPublisher<ScheduleModel, Error> {
-//        return repository.createSchedule(schedule)
-//            .handleEvents(
-//                receiveOutput: { [weak self] _ in
-////                        self?.currentSchedule = createdSchedule  // 현재 스케줄로 설정
-////                        self?.addToScheduleList(createdSchedule) // 리스트에 추가
-//                    self?.isLoading = false
-//                },
-//                receiveCompletion: { [weak self] completion in
-//                    self?.isLoading = false
-//                    if case .failure(let error) = completion {
-//                        self?.errorMessage = error.localizedDescription
-//                    }
-//                }
-//            )
-//            .eraseToAnyPublisher()
-//    }
-//    
-//    
-//    /// 스케줄 리스트에 새 스케줄 추가 (중복 체크)
-//    private func addToScheduleList(_ schedule: ScheduleModel) {
-//        if !scheduleList.contains(where: { $0.uid == schedule.uid }) {
-//            scheduleList.append(schedule)
-//        }
-//    }
-//      
-//    
-//    func create(_ schedule: ScheduleModel) -> AnyPublisher<ScheduleModel, Error> {
-//        // 1. 중복체크
-//        if scheduleList.contains(where: { $0.uid == schedule.uid }) {
-//            return Fail(error: ScheduleError.duplicateSchedule)
-//                .eraseToAnyPublisher()
-//        }
-//        
-//        // 2. 로컬DB에 먼저 저장 (오프라인 우선)
-//        saveToLocalDB(schedule)
-//        
-//        
-//        // 3. 메모리에 추가 (중복체크 후)
-//        isLoading = true
-//        errorMessage = nil
-//        
-//        scheduleList.append(schedule)
-//        currentSchedule = schedule
-//               
-//        // 2. 네트워크 상태 확인 후 처리
-//        let (networkStatus, _) = networkMonitor.getCurrentStatus()
-//               
-//        switch networkStatus {
-//        case .connected:
-//            // 온라인: 즉시 서버 동기화
-//            return syncCreateToServer(schedule)
-//        case .offline, .connecting:
-//            // 오프라인: 큐에 추가 후 로컬 완료 처리
-//            offlineQueue.append(OfflineOperation.create(schedule))
-//            isLoading = false
-//            return Just(schedule)
-//                .setFailureType(to: Error.self)
-//                .eraseToAnyPublisher()
-//        }
-//    }
-//    
-//    // 모델 업데이트 서버 동기화
-//    private func syncUpdateToServer(_ schedule: ScheduleModel) -> AnyPublisher<ScheduleModel, Error> {
-//        return repository.updateSchedule(schedule)
-//            .handleEvents(
-//                receiveOutput: { [weak self] _ in
-////                    self?.currentSchedule = updatedSchedule     // 현재 스케줄 업데이트
-////                    self?.updateInScheduleList(updatedSchedule) // 리스트에서도 업데이트
-//                    self?.isLoading = false
-//                },
-//                receiveCompletion: { [weak self] completion in
-//                    self?.isLoading = false
-//                    if case .failure(let error) = completion {
-//                        self?.errorMessage = error.localizedDescription
-//                    }
-//                }
-//            )
-//            .eraseToAnyPublisher()
-//    }
-//        
-//    /// 오프라인 작업을 큐에 추가
-//    private func addToOfflineQueue(_ operation: OfflineOperation) {
-//        offlineQueue.append(operation)
-//        print("📱 오프라인 작업 큐에 추가: \(operation)")
-//    }
-//    
-//    /// 로컬 스케줄 업데이트
-//    private func updateLocalSchedule(_ schedule: ScheduleModel) {
-//        if let index = scheduleList.firstIndex(where: { $0.uid == schedule.uid }) {
-//            scheduleList[index] = schedule
-//        }
-//        
-//        if currentSchedule?.uid == schedule.uid {
-//            currentSchedule = schedule
-//        }
-//    }
-//    
-//    
-//    /// 현재 스케줄의 메모를 업데이트
-//    func updateMemo(_ memo: String) -> AnyPublisher<ScheduleModel, Error> {
-//        guard let schedule = currentSchedule else {
-//            let error = ScheduleError.noCurrentSchedule
-//            errorMessage = error.localizedDescription
-//            return Fail(error: error).eraseToAnyPublisher()
-//        }
-//        
-//        let updatedSchedule = schedule.updateModel(ScheduleModel(
-//            uid: schedule.uid,
-//            index: schedule.index,
-//            title: schedule.title,
-//            memo: memo,  // 메모만 변경
-//            editDate: Date(),
-//            d_day: schedule.d_day,
-//            visitPlaceList: schedule.visitPlaceList
-//        ))
-//        
-//        return update(updatedSchedule)
-//    }
-//        
-//    /// 캐시 업데이트 (Repository에 위임)
-//    private func updateCache(_ schedule: ScheduleModel) {
-//        // Repository의 캐시 업데이트 로직 활용
-//        repository.updateSchedule(schedule)
-//            .sink(receiveCompletion: { _ in }, receiveValue: { _ in })
-//            .store(in: &cancellables)
-//    }
-//       
-//       
-//    // 스케줄을 업데이트하고 현재 스케줄과 리스트에 자동 반영
-//    func update(_ schedule: ScheduleModel) -> AnyPublisher<ScheduleModel, Error> {
-//        isLoading = true
-//        errorMessage = nil
-//        
-//        // 1. 로컬 즉시 반영
-//        updateLocalSchedule(schedule)
-//        
-//        // 2. 캐시 업데이트
-//        updateCache(schedule)
-//        
-//        // 3. 네트워크 상태 확인 후 서버 동기화
-//        let (networkStatus, _) = networkMonitor.getCurrentStatus()
-//        
-//        switch networkStatus {
-//        case .connected:
-//            return syncUpdateToServer(schedule)
-//        case .offline, .connecting:
-//            addToOfflineQueue(.update(schedule))
-//            isLoading = false
-//            return Just(schedule)
-//                .setFailureType(to: Error.self)
-//                .eraseToAnyPublisher()
-//        }
-//    }
-//    
-//    
-//    /// 캐시 엔트리 제거
-//    private func removeCacheEntry(uid: String) {
-//        // Repository의 삭제 로직으로 캐시도 정리됨
-//    }
-//    
-//    // 특정 UID로 스케줄을 로드하고 현재 스케줄로 설정
-//    func read(uid: String) -> AnyPublisher<ScheduleModel, Error> {
-//        isLoading = true
-//        errorMessage = nil
-//        
-//        // 1. 로컬에서 먼저 확인
-//        if let localSchedule = scheduleList.first(where: { $0.uid == uid }) {
-//            currentSchedule = localSchedule
-//            isLoading = false
-//            return Just(localSchedule)
-//                .setFailureType(to: Error.self)
-//                .eraseToAnyPublisher()
-//        }
-//        
-//        // 2. Repository (캐시 + 서버) 통해 로드
-//        return repository.readSchedule(scheduleModelUID: uid)
-//            .handleEvents(
-//                receiveOutput: { [weak self] schedule in
-//                    self?.currentSchedule = schedule  // 현재 스케줄로 설정
-//                    
-//                    // 로컬 리스트에 추가 (중복 방지)
-//                    if let strongSelf = self,
-//                       !strongSelf.scheduleList.contains(where: { $0.uid == schedule.uid }) {
-//                        strongSelf.scheduleList.append(schedule)
-//                    }
-//                    
-//                    self?.isLoading = false
-//                },
-//                receiveCompletion: { [weak self] completion in
-//                    self?.isLoading = false
-//                    if case .failure(let error) = completion {
-//                        self?.errorMessage = error.localizedDescription
-//                    }
-//                }
-//            )
-//            .eraseToAnyPublisher()
-//    }
-//    
-//    // 스케줄 목록을 페이징으로 로드 (page=0이면 새로고침, 그외는 추가로드)
-//    func readList(page: Int = 0, itemsPerPage: Int = 8) -> AnyPublisher<[ScheduleModel], Error> {
-//        isLoading = true
-//        errorMessage = nil
-//        
-//        return repository.readScheduleList(page: page, itemsPerPage: itemsPerPage)
-//            .handleEvents(
-//                receiveOutput: { [weak self] schedules in
-//                    if page == 0 {
-//                        self?.scheduleList = schedules        // 새로고침
-//                    } else {
-//                        self?.scheduleList.append(contentsOf: schedules) // 추가로드
-//                    }
-//                    self?.isLoading = false
-//                },
-//                receiveCompletion: { [weak self] completion in
-//                    self?.isLoading = false
-//                    if case .failure(let error) = completion {
-//                        self?.errorMessage = error.localizedDescription
-//                    }
-//                }
-//            )
-//            .eraseToAnyPublisher()
-//    }
-//    
-//    /// 스케줄 리스트에서 특정 UID의 스케줄 제거
-//    private func removeFromScheduleList(uid: String) {
-//        scheduleList.removeAll { $0.uid == uid }
-//    }
-//    
-//    // 모델 삭제 서버 동기화
-//    private func syncDeleteToServer(uid: String) -> AnyPublisher<Void, Error> {
-//        return repository.deleteSchedule(scheduleModelUID: uid)
-//            .handleEvents(
-//                receiveOutput: { [weak self] _ in
-////                    self?.removeFromScheduleList(uid: uid)  // 리스트에서 제거
-////                    if self?.currentSchedule?.uid == uid {
-////                        self?.currentSchedule = nil         // 현재 스케줄이면 nil로 설정
-////                    }
-//                    self?.isLoading = false
-//                },
-//                receiveCompletion: { [weak self] completion in
-//                    self?.isLoading = false
-//                    if case .failure(let error) = completion {
-//                        self?.errorMessage = error.localizedDescription
-//                    }
-//                }
-//            )
-//            .eraseToAnyPublisher()
-//    }
-//   
-//    // 스케줄을 삭제하고 현재 스케줄과 리스트에서 자동 제거
-//    func delete(uid: String) -> AnyPublisher<Void, Error> {
-//        isLoading = true
-//        errorMessage = nil
-//        
-//        // 1. 로컬에서 즉시 삭제
-//        scheduleList.removeAll { $0.uid == uid }
-//        if currentSchedule?.uid == uid {
-//            currentSchedule = nil
-//        }
-//        
-//        // 2. 캐시에서 제거
-//        removeCacheEntry(uid: uid)
-//        
-//        // 3. 네트워크 상태 확인 후 서버 동기화
-//        let (networkStatus, _) = networkMonitor.getCurrentStatus()
-//        switch networkStatus {
-//        case .connected:
-//            return syncDeleteToServer(uid: uid)
-//        case .offline, .connecting:
-//            addToOfflineQueue(.delete(uid))
-//            isLoading = false
-//            return Just(())
-//                .setFailureType(to: Error.self)
-//                .eraseToAnyPublisher()
-//        }
-//    }
-//    
-//    // MARK: - 비즈니스 로직 (리액티브)
-//    /// 현재 스케줄에 장소를 추가 (중복체크, 최대개수 검증 포함)
-//    func addPlace(_ place: PlaceModel) -> AnyPublisher<ScheduleModel, Error> {
-//        guard let schedule = currentSchedule else {
-//            let error = ScheduleError.noCurrentSchedule
-//            errorMessage = error.localizedDescription
-//            return Fail(error: error).eraseToAnyPublisher()
-//        }
-//        
-//        return Just(schedule)
-//            .tryMap { [weak self] schedule in
-//                try self?.addPlaceLocally(place, to: schedule) ?? schedule
-//            }
-//            .flatMap { [weak self] updatedSchedule in
-//                self?.update(updatedSchedule) ??
-//                Fail(error: ScheduleError.updateFailed).eraseToAnyPublisher()
-//            }
-//            .eraseToAnyPublisher()
-//    }
-//    
-//    /// 로컬에서 장소 추가 로직 (비즈니스 규칙 검증)
-//    private func addPlaceLocally(_ place: PlaceModel, to schedule: ScheduleModel) throws -> ScheduleModel {
-//        // 최대 20개 제한
-//        guard schedule.visitPlaceList.count < 20 else {
-//            throw ScheduleError.maxPlacesReached
-//        }
-//        
-//        // 중복 장소 체크
-//        guard !schedule.visitPlaceList.contains(where: { $0.placeModel.uid == place.uid }) else {
-//            throw ScheduleError.duplicatePlace
-//        }
-//        
-//        let newVisitPlace = VisitPlaceModel(
-//            uid: UUID().uuidString,
-//            index: schedule.visitPlaceList.count,
-//            memo: "",
-//            placeModel: place,
-//            files: []
-//        )
-//        
-//        var updatedVisitPlaces = schedule.visitPlaceList
-//        updatedVisitPlaces.append(newVisitPlace)
-//        
-//        return schedule.updateModel(ScheduleModel(
-//            uid: schedule.uid,
-//            index: schedule.index,
-//            title: schedule.title,
-//            memo: schedule.memo,
-//            editDate: Date(),
-//            d_day: schedule.d_day,
-//            visitPlaceList: updatedVisitPlaces
-//        ))
-//    }
-//    
-//    /// 현재 스케줄에서 특정 인덱스의 장소를 제거
-//    func removePlace(at index: Int) -> AnyPublisher<ScheduleModel, Error> {
-//        guard let schedule = currentSchedule else {
-//            let error = ScheduleError.noCurrentSchedule
-//            errorMessage = error.localizedDescription
-//            return Fail(error: error).eraseToAnyPublisher()
-//        }
-//        
-//        return Just(schedule)
-//            .map { schedule in
-//                var updated = schedule
-//                if index < updated.visitPlaceList.count {
-//                    var newVisitPlaces = updated.visitPlaceList
-//                    newVisitPlaces.remove(at: index)  // 해당 인덱스 장소 제거
-//                    updated = updated.updateModel(ScheduleModel(
-//                        uid: updated.uid,
-//                        index: updated.index,
-//                        title: updated.title,
-//                        memo: updated.memo,
-//                        editDate: Date(),
-//                        d_day: updated.d_day,
-//                        visitPlaceList: newVisitPlaces
-//                    ))
-//                }
-//                return updated
-//            }
-//            .flatMap { [weak self] updatedSchedule in
-//                self?.update(updatedSchedule) ??
-//                Fail(error: ScheduleError.updateFailed).eraseToAnyPublisher()
-//            }
-//            .eraseToAnyPublisher()
-//    }
-//    
-//   
-//
-//    /// 스케줄 리스트에서 기존 스케줄을 업데이트된 버전으로 교체
-//    private func updateInScheduleList(_ schedule: ScheduleModel) {
-//        if let index = scheduleList.firstIndex(where: { $0.uid == schedule.uid }) {
-//            scheduleList[index] = schedule
-//        }
-//    }
-//    
-//  
-//    /// 제목으로 스케줄을 실시간 검색 (대소문자 무시)
-//    func searchSchedules(by title: String) -> AnyPublisher<[ScheduleModel], Never> {
-//        $scheduleList
-//            .map { schedules in
-//                schedules.filter { $0.title.lowercased().contains(title.lowercased()) }
-//            }
-//            .eraseToAnyPublisher()
-//    }
-//    
-//    /// 다가오는 스케줄만 필터링해서 날짜순 정렬
-//    func getUpcomingSchedules() -> AnyPublisher<[ScheduleModel], Never> {
-//        $scheduleList
-//            .map { schedules in
-//                schedules.filter { $0.d_day > Date() }
-//                    .sorted { $0.d_day < $1.d_day }
-//            }
-//            .eraseToAnyPublisher()
-//    }
-//}
-//    
-//   

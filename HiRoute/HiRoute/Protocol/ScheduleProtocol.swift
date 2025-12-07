@@ -8,9 +8,9 @@
 import Combine
 
 protocol ScheduleProtocol {
-    func createSchedule(_ scheduleModel: ScheduleModel) -> AnyPublisher<ScheduleModel, Error>
-    func readSchedule(scheduleModelUID: String) -> AnyPublisher<ScheduleModel, Error>
-    func readScheduleList(page: Int, itemsPerPage: Int) -> AnyPublisher<[ScheduleModel], Error>
-    func updateSchedule(_ scheduleModel: ScheduleModel) -> AnyPublisher<ScheduleModel, Error>
-    func deleteSchedule(scheduleModelUID: String) -> AnyPublisher<Void, Error>
+    func create(_ scheduleModel: ScheduleModel) -> AnyPublisher<ScheduleModel, Error>
+    func read(scheduleUID: String) -> AnyPublisher<ScheduleModel, Error>
+    func readList(page: Int, itemsPerPage: Int) -> AnyPublisher<[ScheduleModel], Error>
+    func update(_ scheduleModel: ScheduleModel) -> AnyPublisher<ScheduleModel, Error>
+    func delete(scheduleUID: String) -> AnyPublisher<Void, Error>
 }
