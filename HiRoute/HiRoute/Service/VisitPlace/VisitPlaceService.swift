@@ -33,10 +33,12 @@ class VisitPlaceService {
     // MARK: - Standard CRUD Operations
     
     /**
-     * 새 방문장소 생성
-     * - Schedule에 Place를 추가할 때 사용
-     * - index는 현재 Schedule의 마지막 순서 + 1로 자동 설정 권장
+     * 새 방문장소 생성 (파일 처리 포함)
+     * - 1. 파일들 먼저 FileService로 저장
+     * - 2. VisitPlace Repository로 메타데이터 저장
+     * - 파일 저장 실패시 전체 롤백
      * @param visitPlace: 생성할 방문장소 모델
+     * @param fileDataList: 실제 파일 데이터들 (파일이 있는 경우)
      * @return: 생성된 방문장소 Publisher
      */
     func create(_ visitPlace: VisitPlaceModel) -> AnyPublisher<VisitPlaceModel, Error> {

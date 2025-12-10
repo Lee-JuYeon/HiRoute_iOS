@@ -7,7 +7,7 @@
 import Combine
 import SwiftUI
 
-class PlanVM: ObservableObject {
+class VisitPlaceVM: ObservableObject {
     
     // MARK: - Published Properties (UI 상태)
     @Published var currentPlan: [VisitPlaceModel] = []
