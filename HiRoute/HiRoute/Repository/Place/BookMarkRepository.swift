@@ -8,13 +8,12 @@ import Combine
 import Foundation
 
 class BookMarkRepository: BookMarkProtocol {
-    static let shared = BookMarkRepository()
 
     // ✅ 캐시 추가
     private var cache = NSCache<NSString, AnyObject>()
     private let cacheQueue = DispatchQueue(label: "com.bookmark.cache", qos: .utility)
     
-    private init() {
+    init() {
         setupCache()  // ✅ 추가
     }
     

@@ -8,12 +8,12 @@ import Foundation
 import Combine
 
 class ReviewRepository: ReviewProtocol {
-    static let shared = ReviewRepository()
 
     // 메모리 캐시 - 최대 100개 항목만 유지
     private var cache = NSCache<NSString, AnyObject>()
     private let cacheQueue = DispatchQueue(label: "com.review.cache", qos: .utility)
-    private init() {
+    
+    init() {
         setupCache()
     }
     

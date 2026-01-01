@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct ScheduleList : View {
-    
   
     private var getList : [ScheduleModel]
     private var getNationalityType : NationalityType

@@ -10,20 +10,25 @@ import SwiftUI
 @main
 struct HiRouteApp: App {
     
-    // ServiceContainer 활용으로 Service 인스턴스 공유 ✅
+    // ServiceContainer로 통합 관리
+    private let serviceContainer = ServiceContainer.shared
+    
+    // ViewModel들은 ServiceContainer에서 Service 주입
     @StateObject private var scheduleVM = ScheduleVM(
         scheduleService: ServiceContainer.shared.scheduleService
     )
+    
     @StateObject private var planVM = PlanVM(
-        scheduleService: ServiceContainer.shared.scheduleService,  // 같은 인스턴스 공유
-        placeService: ServiceContainer.shared.placeService
+        planService: ServiceContainer.shared.planService
     )
+    
     @StateObject private var placeVM = PlaceVM(
-        placeService: ServiceContainer.shared.placeService,        // 같은 인스턴스 공유
+        placeService: ServiceContainer.shared.placeService,
         bookmarkService: ServiceContainer.shared.bookMarkService,
         reviewService: ServiceContainer.shared.reviewService,
         starService: ServiceContainer.shared.starService
     )
+    
     @StateObject private var localVM = LocalVM()
     
     var body: some Scene {

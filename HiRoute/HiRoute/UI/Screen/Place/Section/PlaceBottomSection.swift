@@ -8,13 +8,13 @@ import SwiftUI
 
 struct PlaceBottomSection : View {
     
-    private var getVisitPlaceModel : VisitPlaceModel
+    private var getVisitPlaceModel : PlanModel
     private var getNationalityType : NationalityType
     private var getPlaceModeType : PlaceModeType
     private var getOnClickReviewCell : (ReviewModel) -> Void
     private var getOnClickWriteReview : (String) -> Void
     init(
-        setVisitPlaceModel : VisitPlaceModel,
+        setVisitPlaceModel : PlanModel,
         setNationalityType : NationalityType,
         setPlaceModeType : PlaceModeType,
         onClickReviewCell : @escaping (ReviewModel) -> Void,
@@ -28,7 +28,7 @@ struct PlaceBottomSection : View {
     }
     
   
-    @EnvironmentObject private var scheduleVM : ScheduleViewModel
+    @EnvironmentObject private var scheduleVM : ScheduleVM
     @State private var selectedTabIndex = 0
     
     private func tabTitles() -> [String] {
@@ -72,11 +72,11 @@ struct PlaceBottomSection : View {
         case .MY :
             switch selectedTabIndex {
             case 0:
-                MultiLineMemoView(
-                    setHint: "메모를 입력해보세요",
-                    setText: scheduleVM.visitPlaceMemoBinding,
-                    setModeType: ModeType.READ
-                )
+//                MultiLineMemoView(
+//                    setHint: "메모를 입력해보세요",
+//                    setText: scheduleVM.bindingScheduleMemo,
+//                    setModeType: ModeType.READ
+//                )
                 ReviewListView(
                     setPlaceModel: getVisitPlaceModel.placeModel,
                     setNationalityType: getNationalityType,

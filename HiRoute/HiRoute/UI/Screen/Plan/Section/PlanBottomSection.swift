@@ -8,15 +8,18 @@ import SwiftUI
 
 
 struct PlanBottomSection: View {
-    private var getVisitPlaceList : [VisitPlaceModel]
-    private var getOnClickCell : (VisitPlaceModel) -> Void
-    private var getOnClickAnnotation : (VisitPlaceModel) -> Void
+    private var getVisitPlaceList : [PlanModel]
+    private var getOnClickCell : (PlanModel) -> Void
+    private var getOnClickAnnotation : (PlanModel) -> Void
+    private var getModeType : ModeType
     init(
-        setVisitPlaceList : [VisitPlaceModel],
-        onClickCell : @escaping (VisitPlaceModel) -> Void,
-        onClickAnnotation : @escaping (VisitPlaceModel) -> Void
+        setVisitPlaceList : [PlanModel],
+        setModeType : ModeType,
+        onClickCell : @escaping (PlanModel) -> Void,
+        onClickAnnotation : @escaping (PlanModel) -> Void
     ){
         self.getVisitPlaceList = setVisitPlaceList
+        self.getModeType = setModeType
         self.getOnClickCell = onClickCell
         self.getOnClickAnnotation = onClickAnnotation
     }
@@ -54,6 +57,7 @@ struct PlanBottomSection: View {
         TabView(selection: $selectedTabIndex) {
             TimeLineListView(
                 setPlanModel: getVisitPlaceList,
+                setModeType: getModeType,
                 setOnClickCell: { clickedVisitPlaceModel in
                     getOnClickCell(clickedVisitPlaceModel)
                     
@@ -86,52 +90,6 @@ struct PlanBottomSection: View {
             
             // 컨텐츠 영역
             tabContent()
-        }
-    }
-}
-
-struct FileView : View {
-    
-    @State private var presentDocumentPicker : Bool = false
-    
-    @ViewBuilder
-    private func addFileButton() -> some View {
-        Button {
-            presentDocumentPicker = true
-        } label: {
-            HStack(alignment: .center, spacing: 0){
-                Text("여행에 관한 문서를 추가해볼까요?")
-                    .font(.system(size: 20))
-                    .foregroundColor(Color.getColour(.background_white))
-                    .fontWeight(.light)
-                    .lineLimit(1)
-                    .multilineTextAlignment(.leading)
-                
-                Spacer()
-                
-                Image("icon_arrow")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaleEffect(x: -1, y: 1)
-                    .foregroundColor(Color.getColour(.background_white))
-                    .aspectRatio(contentMode: ContentMode.fit)
-                    .frame(width: 16, height: 16)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
-        .background(Color.getColour(.label_strong))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .padding(EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12))
-    }
-    
-    var body: some View {
-        VStack(alignment: HorizontalAlignment.leading, spacing: 10){
-            addFileButton()
-            
-            FileListView(
-                isPresentDocumentPicker: $presentDocumentPicker
-            )
         }
     }
 }

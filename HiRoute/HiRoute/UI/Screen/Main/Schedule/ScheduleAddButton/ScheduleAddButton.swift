@@ -35,12 +35,12 @@ struct ScheduleAddButton: View {
             alignment : HorizontalAlignment.leading,
             spacing: 4
         ){
-            Text("만나기로 한 날, 뭐하지?")
+            Text("여행 하는 날, 어디서 뭐하지?")
                 .font(.system(size: 14))
                 .foregroundColor(Color.getColour(.label_neutral))
                 .fontWeight(.light)
             
-            Text("루트짜기")
+            Text("일정짜기")
                 .font(.system(size: 24))
                 .foregroundColor(Color.getColour(.label_strong))
                 .fontWeight(.bold)

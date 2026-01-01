@@ -8,14 +8,14 @@
 import SwiftUI
 
 struct TimeLineCell : View {
-    private var getModel : VisitPlaceModel
-    private var onClickCell : (VisitPlaceModel) -> Void
+    private var getModel : PlanModel
+    private var onClickCell : (PlanModel) -> Void
     private var type: TimeLinePositionType
 
     init(
-        setModel : VisitPlaceModel,
+        setModel : PlanModel,
         setType : TimeLinePositionType,
-        setOnClickCell : @escaping (VisitPlaceModel) -> Void
+        setOnClickCell : @escaping (PlanModel) -> Void
     ){
         self.getModel = setModel
         self.onClickCell = setOnClickCell

@@ -9,13 +9,12 @@ import Combine
 
 class StarRepository: StarProtocol {
     
-    static let shared = StarRepository()
     
     // ✅ 캐시 관련 추가 (기존 코드는 그대로)
     private var cache = NSCache<NSString, AnyObject>()
     private let cacheQueue = DispatchQueue(label: "com.star.cache", qos: .utility)
     
-    private init() {
+    init() {
         setupCache()  // ✅ 추가
     }
     

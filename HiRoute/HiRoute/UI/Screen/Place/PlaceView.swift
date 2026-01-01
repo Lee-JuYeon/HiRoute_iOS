@@ -8,13 +8,13 @@ import SwiftUI
 
 struct PlaceView : View {
     
-    private var getVisitPlaceModel : VisitPlaceModel
+    private var getVisitPlaceModel : PlanModel
     private var getPlaceModeType : PlaceModeType
     init(
-        setVisitPlaceModel : VisitPlaceModel,
+        setPlanModel : PlanModel,
         setPlaceModeType : PlaceModeType
     ){
-        self.getVisitPlaceModel = setVisitPlaceModel
+        self.getVisitPlaceModel = setPlanModel
         self.getPlaceModeType = setPlaceModeType
     }
     
@@ -31,15 +31,15 @@ struct PlaceView : View {
     private func handleEditPlaceInfo(_ placeUID: String) {
         if isOfflineMode {
             // 오프라인 모드에서는 로컬에 저장 후 나중에 동기화
-            placeVM.queueOfflineEditRequest(placeUID)
+//            placeVM.queueOfflineEditRequest(placeUID)
         } else {
-            placeVM.requestPlaceEdit(placeUID)
+//            placeVM.requestPlaceEdit(placeUID)
         }
     }
     
     /// ✅ 추가: 북마크 토글 처리
     private func handleBookmarkToggle(_ placeUID: String) {
-        placeVM.toggleBookmark(placeUID: placeUID)
+//        placeVM.toggleBookmark(placeUID: placeUID)
     }
     
     /// ✅ 추가: 네비게이션 처리 (오프라인 대응)
@@ -55,28 +55,28 @@ struct PlaceView : View {
     
     /// ✅ 추가: 스케줄에 장소 추가
     private func handleAddPlaceToSchedule(_ place: PlaceModel) {
-        scheduleVM.addPlaceToCurrentSchedule(place)
+//        scheduleVM.addPlaceToCurrentSchedule(place)
     }
     
     /// ✅ 추가: 리뷰 상세보기
     private func handleReviewDetail(_ review: ReviewModel) {
-        placeVM.selectReview(review)
+//        placeVM.selectReview(review)
     }
     
     /// ✅ 추가: 리뷰 작성
     private func handleWriteReview(_ placeUID: String) {
-        placeVM.startReviewComposition(for: placeUID)
+//        placeVM.startReviewComposition(for: placeUID)
     }
     
     /// ✅ 추가: 네트워크 상태 확인
     private func checkNetworkStatus() {
         // 네트워크 상태 확인 로직
-        isOfflineMode = !NetworkMonitor.shared.isConnected
+//        isOfflineMode = !NetworkMonitor.shared.isConnected
     }
     
     /// ✅ 추가: 장소 상세 정보 로드 (캐시 우선)
     private func loadPlaceDetails() {
-        placeVM.loadPlaceDetails(placeUID: getVisitPlaceModel.placeModel.uid)
+//        placeVM.loadPlaceDetails(placeUID: getVisitPlaceModel.placeModel.uid)
     }
     
     

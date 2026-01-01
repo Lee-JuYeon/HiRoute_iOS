@@ -70,7 +70,7 @@ class FileSingleton {
      * @param visitPlaceUID: 연결할 방문장소 UID
      * @return: 생성된 파일 모델 Result
      */
-    func createFile(data: Data, fileName: String, fileType: String, visitPlaceUID: String) -> Result<FileModel, Error> {
+    func createFile(data: Data, fileName: String, fileType: String, planUID: String) -> Result<FileModel, Error> {
         print("FileService, createFile // Info : 사용자 파일 생성 시작 - \(fileName)")
         
         do {
@@ -97,7 +97,7 @@ class FileSingleton {
             )
             
             // 6. CoreData에 메타데이터 저장 (동기)
-            try saveFileMetadata(fileModel, visitPlaceUID: visitPlaceUID)
+            try saveFileMetadata(fileModel, planUID: planUID)
             
             print("FileService, createFile // Success : 사용자 파일 생성 완료 - \(uniqueFileName)")
             return .success(fileModel)
@@ -441,17 +441,17 @@ class FileSingleton {
     /**
      * FileEntity 메타데이터 저장 (동기)
      */
-    private func saveFileMetadata(_ fileModel: FileModel, visitPlaceUID: String) throws {
+    private func saveFileMetadata(_ fileModel: FileModel, planUID: String) throws {
         var saveError: Error?
         
         backgroundContext.performAndWait {
             do {
                 // VisitPlace 조회
-                let visitPlaceRequest: NSFetchRequest<VisitPlaceEntity> = VisitPlaceEntity.fetchRequest()
-                visitPlaceRequest.predicate = NSPredicate(format: "uid == %@", visitPlaceUID)
-                visitPlaceRequest.fetchLimit = 1
+                let planRequest: NSFetchRequest<PlanEntity> = PlanEntity.fetchRequest()
+                planRequest.predicate = NSPredicate(format: "uid == %@", planUID)
+                planRequest.fetchLimit = 1
                 
-                guard let visitPlaceEntity = try backgroundContext.fetch(visitPlaceRequest).first else {
+                guard let planEntity = try backgroundContext.fetch(planRequest).first else {
                     saveError = FileError.operationFailed
                     return
                 }
@@ -464,7 +464,7 @@ class FileSingleton {
                 fileEntity.fileSize = fileModel.fileSize
                 fileEntity.filePath = fileModel.filePath
                 fileEntity.createdDate = fileModel.createdDate
-                fileEntity.visitPlace = visitPlaceEntity
+                fileEntity.visitPlace = planEntity
                 
                 try backgroundContext.save()
                 

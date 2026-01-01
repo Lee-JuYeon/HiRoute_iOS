@@ -8,7 +8,7 @@ import SwiftUI
 import MapKit
 
 struct DashedPath: View {
-    let visitPlaces: [VisitPlaceModel]
+    let visitPlaces: [PlanModel]
     let region: MKCoordinateRegion
     
     private let annotationRadius: CGFloat = 15

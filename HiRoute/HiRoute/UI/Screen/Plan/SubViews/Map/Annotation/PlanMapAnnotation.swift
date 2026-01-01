@@ -7,8 +7,8 @@
 import SwiftUI
 
 struct PlanMapAnnotation : View {
-    let visitPlaceModel: VisitPlaceModel
-    let onClick: (VisitPlaceModel) -> Void
+    let visitPlaceModel: PlanModel
+    let onClick: (PlanModel) -> Void
     
     var body: some View {
         Button(action: {

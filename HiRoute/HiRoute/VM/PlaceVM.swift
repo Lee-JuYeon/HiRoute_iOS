@@ -11,6 +11,7 @@ class PlaceVM: ObservableObject {
     
     // MARK: - Published Properties (UI 상태)
     @Published var places: [PlaceModel] = []
+    @Published var filteredPlaces : [PlaceModel] = []
     @Published var selectedPlace: PlaceModel?
     @Published var myBookmarkedPlaces: [PlaceModel] = []
     @Published var placeReviews: [ReviewModel] = []
@@ -40,6 +41,38 @@ class PlaceVM: ObservableObject {
         
         setupBindings()
         loadInitialData()
+    }
+    
+    func searchPlaces(text : String) -> [PlaceModel]{
+        let searchText = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+        filteredPlaces = DummyPack.samplePlaces.filter { place in
+            // 제목에서 검색
+            let titleMatch = place.title.lowercased().contains(searchText)
+            
+            // 부제목에서 검색 (옵셔널 처리)
+            let subtitleMatch = place.subtitle?.lowercased().contains(searchText) ?? false
+            
+            // 장소 타입에서 검색
+            let typeMatch = place.type.displayText.lowercased().contains(searchText)
+            
+            // 주소에서 검색 (전체 주소, 시도, 구군, 동)
+            let fullAddressMatch = place.address.fullAddress.lowercased().contains(searchText)
+            let sidoMatch = place.address.sido.lowercased().contains(searchText)
+            let gunguMatch = place.address.gungu.lowercased().contains(searchText)
+            let dongMatch = place.address.dong.lowercased().contains(searchText)
+            let addressTitleMatch = place.address.addressTitle.lowercased().contains(searchText)
+            
+            // 하나라도 일치하면 포함
+            return titleMatch || subtitleMatch || typeMatch ||
+                   fullAddressMatch || sidoMatch || gunguMatch ||
+                   dongMatch || addressTitleMatch
+        }
+        return filteredPlaces
+    }
+    
+    func recommendPlaces() -> [PlaceModel]{
+        return DummyPack.samplePlaces
     }
     
     // MARK: - Service Bindings (안전한 패턴)
@@ -322,6 +355,9 @@ class PlaceVM: ObservableObject {
     private func loadInitialData() {
         loadPlaces()
         loadMyBookmarkedPlaces()
+        
+        places = DummyPack.samplePlaces
+        filteredPlaces = places
     }
     
     deinit {

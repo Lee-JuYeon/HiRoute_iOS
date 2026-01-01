@@ -4,16 +4,14 @@
 //
 //  Created by Jupond on 12/5/25.
 //
-
 import Foundation
 import UIKit
 import PDFKit
 
 /**
- * FileCompressionManager
- * - 파일 무손실/손실 압축 싱글톤
- * - 이미지, PDF, 텍스트 파일 압축 지원
- * - 사용자 편의성: 용량 제한 에러 대신 자동 압축
+ * FileCompressionManager (확실한 방법)
+ * - iOS SDK에서 확실히 동작하는 API만 사용
+ * - 실제 압축 기능 구현
  */
 class FileCompressionManager {
     static let shared = FileCompressionManager()
@@ -24,9 +22,6 @@ class FileCompressionManager {
     
     /**
      * 파일 타입별 압축
-     * @param data: 원본 파일 데이터
-     * @param fileType: 파일 확장자
-     * @return: 압축된 파일 데이터
      */
     func compressFile(data: Data, fileType: String) -> Data {
         let type = fileType.lowercased()
@@ -51,9 +46,6 @@ class FileCompressionManager {
     
     /**
      * 압축 해제
-     * @param data: 압축된 파일 데이터
-     * @param fileType: 파일 확장자
-     * @return: 원본 파일 데이터
      */
     func decompressFile(data: Data, fileType: String) -> Data {
         let type = fileType.lowercased()
@@ -70,20 +62,16 @@ class FileCompressionManager {
     
     /**
      * 이미지 압축 (캐시용)
-     * @param data: 이미지 데이터
-     * @param quality: 압축 품질 (0.0 ~ 1.0)
      */
     func compressImage(data: Data, quality: CGFloat) -> Data {
         guard let image = UIImage(data: data) else { return data }
-        
-        // JPEG로 압축
         return image.jpegData(compressionQuality: quality) ?? data
     }
     
     // MARK: - Private Compression Methods
     
     /**
-     * JPEG 이미지 압축
+     * JPEG 압축
      */
     private func compressJPEG(data: Data, quality: CGFloat) -> Data {
         guard let image = UIImage(data: data) else {
@@ -91,7 +79,6 @@ class FileCompressionManager {
             return data
         }
         
-        // 품질 조정하여 압축
         if let compressedData = image.jpegData(compressionQuality: quality) {
             let compressionRatio = Double(data.count) / Double(compressedData.count)
             print("FileCompressionManager, compressJPEG // Success : JPEG 압축 완료 - 압축률: \(String(format: "%.1f", compressionRatio))x")
@@ -102,17 +89,15 @@ class FileCompressionManager {
     }
     
     /**
-     * PNG 이미지 최적화
-     * - PNG는 무손실이므로 크기 조정으로 용량 최적화
+     * PNG 압축 (해상도 조정)
      */
     private func compressPNG(data: Data) -> Data {
         guard let image = UIImage(data: data) else { return data }
         
         let originalSize = image.size
-        let maxDimension: CGFloat = 2048 // 최대 해상도 제한
+        let maxDimension: CGFloat = 2048
         
         if max(originalSize.width, originalSize.height) > maxDimension {
-            // 해상도 조정
             let scale = maxDimension / max(originalSize.width, originalSize.height)
             let newSize = CGSize(width: originalSize.width * scale, height: originalSize.height * scale)
             
@@ -131,7 +116,7 @@ class FileCompressionManager {
     }
     
     /**
-     * PDF 압축
+     * PDF 압축 (확실한 방법)
      */
     private func compressPDF(data: Data) -> Data {
         guard let pdfDocument = PDFDocument(data: data) else {
@@ -139,12 +124,8 @@ class FileCompressionManager {
             return data
         }
         
-        // PDF 최적화 옵션
-        let writeOptions: [PDFDocumentWriteOption: Any] = [
-            .optimizeImagesForScreen: true
-        ]
-        
-        if let compressedData = pdfDocument.dataRepresentation(options: writeOptions) {
+        // ✅ 확실한 방법: 기본 데이터 표현
+        if let compressedData = pdfDocument.dataRepresentation() {
             let compressionRatio = Double(data.count) / Double(compressedData.count)
             print("FileCompressionManager, compressPDF // Success : PDF 압축 완료 - 압축률: \(String(format: "%.1f", compressionRatio))x")
             return compressedData
@@ -154,11 +135,12 @@ class FileCompressionManager {
     }
     
     /**
-     * 텍스트 파일 압축 (gzip)
+     * 텍스트 압축 (Foundation API 사용)
      */
     private func compressText(data: Data) -> Data {
         do {
-            let compressedData = try data.compressed(using: .gzip)
+            // ✅ 확실한 방법: Foundation의 NSData compression
+            let compressedData = try (data as NSData).compressed(using: .lzfse) as Data
             let compressionRatio = Double(data.count) / Double(compressedData.count)
             print("FileCompressionManager, compressText // Success : 텍스트 압축 완료 - 압축률: \(String(format: "%.1f", compressionRatio))x")
             return compressedData
@@ -169,10 +151,10 @@ class FileCompressionManager {
     }
     
     /**
-     * 문서 파일 압축 (gzip)
+     * 문서 압축
      */
     private func compressDocument(data: Data) -> Data {
-        return compressText(data: data) // 동일한 gzip 압축
+        return compressText(data: data) // 동일한 LZFSE 압축
     }
     
     /**
@@ -180,7 +162,7 @@ class FileCompressionManager {
      */
     private func decompressText(data: Data) -> Data {
         do {
-            let decompressedData = try data.decompressed(using: .gzip)
+            let decompressedData = try (data as NSData).decompressed(using: .lzfse) as Data
             print("FileCompressionManager, decompressText // Success : 텍스트 압축해제 완료")
             return decompressedData
         } catch {
@@ -194,46 +176,5 @@ class FileCompressionManager {
      */
     private func decompressDocument(data: Data) -> Data {
         return decompressText(data: data)
-    }
-}
-
-// MARK: - Data Extension for Compression
-extension Data {
-    func compressed(using algorithm: NSData.CompressionAlgorithm) throws -> Data {
-        return try self.withUnsafeBytes { bytes in
-            let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: count)
-            defer { buffer.deallocate() }
-            
-            let compressedSize = compression_encode_buffer(
-                buffer, count,
-                bytes.bindMemory(to: UInt8.self).baseAddress!, count,
-                nil, algorithm.rawValue
-            )
-            
-            guard compressedSize > 0 else {
-                throw FileError.compressionFailed
-            }
-            
-            return Data(bytes: buffer, count: compressedSize)
-        }
-    }
-    
-    func decompressed(using algorithm: NSData.CompressionAlgorithm) throws -> Data {
-        return try self.withUnsafeBytes { bytes in
-            let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: count * 4)
-            defer { buffer.deallocate() }
-            
-            let decompressedSize = compression_decode_buffer(
-                buffer, count * 4,
-                bytes.bindMemory(to: UInt8.self).baseAddress!, count,
-                nil, algorithm.rawValue
-            )
-            
-            guard decompressedSize > 0 else {
-                throw FileError.compressionFailed
-            }
-            
-            return Data(bytes: buffer, count: decompressedSize)
-        }
     }
 }

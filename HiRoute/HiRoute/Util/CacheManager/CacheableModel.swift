@@ -4,6 +4,7 @@
 //
 //  Created by Jupond on 12/5/25.
 //
+import Foundation
 
 protocol CacheableModel: Codable {
     var uid: String { get }

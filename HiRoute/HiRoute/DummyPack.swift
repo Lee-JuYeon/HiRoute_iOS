@@ -24,8 +24,8 @@ class DummyPack {
             memo: "친구들과 함께하는 2박3일 제주도 여행",
             editDate: Calendar.current.date(from: DateComponents(year: 2025, month: 11, day: 10))!,
             d_day: Calendar.current.date(from: DateComponents(year: 2025, month: 12, day: 15))!,
-            visitPlaceList: [
-                VisitPlaceModel(
+            planList: [
+                PlanModel(
                     uid: "visit_001_01",
                     index: 1,
                     memo: "공항에서 렌터카 픽업 후 첫 번째 목적지",
@@ -263,7 +263,7 @@ class DummyPack {
                     files: []
                 ),
                 
-                VisitPlaceModel(
+                PlanModel(
                     uid: "visit_001_02",
                     index: 2,
                     memo: "점심식사 - 흑돼지 맛집",
@@ -334,8 +334,8 @@ class DummyPack {
             memo: "아버지 70세 생신 가족 모임",
             editDate: Calendar.current.date(from: DateComponents(year: 2025, month: 11, day: 12))!,
             d_day: Calendar.current.date(from: DateComponents(year: 2025, month: 12, day: 3))!,
-            visitPlaceList: [
-                VisitPlaceModel(
+            planList: [
+                PlanModel(
                     uid: "visit_002_01",
                     index: 1,
                     memo: "가족 모임 식사 장소",
@@ -380,7 +380,7 @@ class DummyPack {
             memo: "팀 전체 송년회 및 회식",
             editDate: Calendar.current.date(from: DateComponents(year: 2025, month: 11, day: 8))!,
             d_day: Calendar.current.date(from: DateComponents(year: 2025, month: 12, day: 20))!,
-            visitPlaceList: []
+            planList: []
         )
     ]
     static let sampleAnnotations: [PlaceModel] = [

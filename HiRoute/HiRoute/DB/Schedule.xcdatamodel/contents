@@ -22,7 +22,7 @@
         <attribute name="fileSize" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="fileType" optional="YES" attributeType="String"/>
         <attribute name="id" optional="YES" attributeType="String"/>
-        <relationship name="visitPlace" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="VisitPlaceEntity" inverseName="files" inverseEntity="VisitPlaceEntity"/>
+        <relationship name="visitPlace" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PlanEntity" inverseName="files" inverseEntity="PlanEntity"/>
     </entity>
     <entity name="InfoEditRequestEntity" representedClassName="InfoEditRequestEntity" syncable="YES" codeGenerationType="class">
         <attribute name="id" optional="YES" attributeType="String"/>
@@ -42,6 +42,14 @@
         <relationship name="reviews" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ReviewEntity" inverseName="place" inverseEntity="ReviewEntity"/>
         <relationship name="stars" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="StarEntity" inverseName="place" inverseEntity="StarEntity"/>
         <relationship name="workingTimes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="WorkingTimeEntity" inverseName="place" inverseEntity="WorkingTimeEntity"/>
+    </entity>
+    <entity name="PlanEntity" representedClassName="PlanEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="index" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="memo" optional="YES" attributeType="String"/>
+        <attribute name="uid" optional="YES" attributeType="String"/>
+        <relationship name="files" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="FileEntity" inverseName="visitPlace" inverseEntity="FileEntity"/>
+        <relationship name="placeModel" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PlaceEntity"/>
+        <relationship name="schedule" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ScheduleEntity" inverseName="planList" inverseEntity="ScheduleEntity"/>
     </entity>
     <entity name="ReviewEntity" representedClassName="ReviewEntity" syncable="YES" codeGenerationType="class">
         <attribute name="reviewText" optional="YES" attributeType="String"/>
@@ -68,7 +76,7 @@
         <attribute name="memo" optional="YES" attributeType="String"/>
         <attribute name="title" optional="YES" attributeType="String"/>
         <attribute name="uid" optional="YES" attributeType="String"/>
-        <relationship name="visitPlaceList" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="VisitPlaceEntity" inverseName="schedule" inverseEntity="VisitPlaceEntity"/>
+        <relationship name="planList" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="PlanEntity" inverseName="schedule" inverseEntity="PlanEntity"/>
     </entity>
     <entity name="StarEntity" representedClassName="StarEntity" syncable="YES" codeGenerationType="class">
         <attribute name="star" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
@@ -78,14 +86,6 @@
     <entity name="UsefulEntity" representedClassName="UsefulEntity" syncable="YES" codeGenerationType="class">
         <attribute name="userUID" optional="YES" attributeType="String"/>
         <relationship name="review" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ReviewEntity" inverseName="usefulList" inverseEntity="ReviewEntity"/>
-    </entity>
-    <entity name="VisitPlaceEntity" representedClassName="VisitPlaceEntity" syncable="YES" codeGenerationType="class">
-        <attribute name="index" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="memo" optional="YES" attributeType="String"/>
-        <attribute name="uid" optional="YES" attributeType="String"/>
-        <relationship name="files" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="FileEntity" inverseName="visitPlace" inverseEntity="FileEntity"/>
-        <relationship name="placeModel" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PlaceEntity"/>
-        <relationship name="schedule" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ScheduleEntity" inverseName="visitPlaceList" inverseEntity="ScheduleEntity"/>
     </entity>
     <entity name="WorkingTimeEntity" representedClassName="WorkingTimeEntity" syncable="YES" codeGenerationType="class">
         <attribute name="close" optional="YES" attributeType="String"/>

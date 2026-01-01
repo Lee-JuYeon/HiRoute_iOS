@@ -7,6 +7,7 @@
 import Network
 
 class NetworkMonitor {
+
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "NetworkMonitoring")
     

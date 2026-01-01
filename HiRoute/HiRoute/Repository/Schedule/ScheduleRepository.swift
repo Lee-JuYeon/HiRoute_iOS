@@ -17,21 +17,15 @@ import CoreData
  */
 
 class ScheduleRepository: ScheduleProtocol {
-    
-    private let mainContext = CoreDataStack.shared.context
-    private let backgroundContext: NSManagedObjectContext
+    private let localDB = LocalDB.shared
+    private let networkMonitor = NetworkMonitor()
     
     init() {
-        backgroundContext = CoreDataStack.shared.persistentContainer.newBackgroundContext()
-        backgroundContext.automaticallyMergesChangesFromParent = true
-        
-        // 메모리 최적화 설정
-        backgroundContext.undoManager = nil
-        backgroundContext.shouldDeleteInaccessibleFaults = true
-        print("ScheduleRepository, init // Success : 비동기 초기화 완료")
+        print("ScheduleRepository, init // Success : Repository 초기화 완료")
     }
     
     // MARK: - CRUD Operations
+    
     func create(_ scheduleModel: ScheduleModel) -> AnyPublisher<ScheduleModel, Error> {
         return Future<ScheduleModel, Error> { [weak self] promise in
             guard let self = self else {
@@ -39,26 +33,31 @@ class ScheduleRepository: ScheduleProtocol {
                 return
             }
             
-            self.backgroundContext.perform {
-                do {
-                    // 중복 확인 (메모리 효율적)
-                    if try self.checkDuplicateEfficient(uid: scheduleModel.uid) {
-                        promise(.failure(ScheduleError.duplicateSchedule))
-                        return
-                    }
-                    
-                    let scheduleEntity = ScheduleEntity(context: self.backgroundContext)
-                    self.mapModelToEntity(scheduleModel, entity: scheduleEntity, context: self.backgroundContext)
-                    
-                    try self.backgroundContext.save()
-                    print("ScheduleRepository, create // Success : 비동기 일정 생성 - \(scheduleModel.title)")
-                    promise(.success(scheduleModel))
-                    
-                } catch {
-                    self.backgroundContext.rollback()
-                    print("ScheduleRepository, create // Exception : \(error.localizedDescription)")
+            // 비즈니스 룰 검증
+            let placeLimit = self.checkPlaceLimit(for: scheduleModel)
+            guard case .success = placeLimit else {
+                if case .failure(let error) = placeLimit {
                     promise(.failure(error))
                 }
+                return
+            }
+            
+            // 중복 체크
+            if let _ = self.localDB.readSchedule(scheduleUID: scheduleModel.uid) {
+                promise(.failure(ScheduleError.duplicateSchedule))
+                print("ScheduleRepository, create // Warning : 중복된 일정 - \(scheduleModel.uid)")
+                return
+            }
+            
+            // 데이터 저장
+            let success = self.localDB.createSchedule(scheduleModel)
+            
+            if success {
+                promise(.success(scheduleModel))
+                print("ScheduleRepository, create // Success : 일정 생성 완료 - \(scheduleModel.title)")
+            } else {
+                promise(.failure(ScheduleError.saveFailed))
+                print("ScheduleRepository, create // Exception : 일정 생성 실패")
             }
         }
         .eraseToAnyPublisher()
@@ -71,30 +70,18 @@ class ScheduleRepository: ScheduleProtocol {
                 return
             }
             
-            self.backgroundContext.perform {
-                do {
-                    let request: NSFetchRequest<ScheduleEntity> = ScheduleEntity.fetchRequest()
-                    request.predicate = NSPredicate(format: "uid == %@", scheduleUID)
-                    request.fetchLimit = 1
-                    request.returnsObjectsAsFaults = false // 메모리 최적화
-                    
-                    if let entity = try self.backgroundContext.fetch(request).first,
-                       let schedule = self.convertToModel(entity) {
-                        print("ScheduleRepository, read // Success : 비동기 일정 조회 - \(scheduleUID)")
-                        promise(.success(schedule))
-                    } else {
-                        print("ScheduleRepository, read // Warning : 일정을 찾을 수 없음 - \(scheduleUID)")
-                        promise(.failure(ScheduleError.notFound))
-                    }
-                } catch {
-                    print("ScheduleRepository, read // Exception : \(error.localizedDescription)")
-                    promise(.failure(ScheduleError.unknown))
-                }
+            if let schedule = self.localDB.readSchedule(scheduleUID: scheduleUID) {
+                promise(.success(schedule))
+                print("ScheduleRepository, read // Success : 일정 조회 완료 - \(scheduleUID)")
+            } else {
+                promise(.failure(ScheduleError.notFound))
+                print("ScheduleRepository, read // Warning : 일정을 찾을 수 없음 - \(scheduleUID)")
             }
         }
         .eraseToAnyPublisher()
     }
     
+    /// ✅ 페이지네이션이 적용된 목록 조회
     func readList(page: Int, itemsPerPage: Int) -> AnyPublisher<[ScheduleModel], Error> {
         return Future<[ScheduleModel], Error> { [weak self] promise in
             guard let self = self else {
@@ -102,44 +89,38 @@ class ScheduleRepository: ScheduleProtocol {
                 return
             }
             
-            self.backgroundContext.perform {
-                do {
-                    let request: NSFetchRequest<ScheduleEntity> = ScheduleEntity.fetchRequest()
-                    request.sortDescriptors = [NSSortDescriptor(key: "editDate", ascending: false)]
-                    
-                    // 페이지네이션 설정
-                    request.fetchOffset = page * itemsPerPage
-                    request.fetchLimit = itemsPerPage
-                    request.fetchBatchSize = itemsPerPage
-                    
-                    // 메모리 최적화 설정
-                    request.returnsObjectsAsFaults = true
-                    request.includesPropertyValues = true
-                    request.includesSubentities = false
-                    
-                    let entities = try self.backgroundContext.fetch(request)
-                    var schedules: [ScheduleModel] = []
-                    
-                    // 배치별 메모리 관리
-                    for (index, entity) in entities.enumerated() {
-                        if let schedule = self.convertToModel(entity) {
-                            schedules.append(schedule)
-                        }
-                        
-                        // 주기적 메모리 정리
-                        if index % 10 == 0 && index > 0 {
-                            self.backgroundContext.refreshAllObjects()
-                        }
-                    }
-                    
-                    print("ScheduleRepository, readList // Success : 페이지 조회 - page:\(page), count:\(schedules.count)")
-                    promise(.success(schedules))
-                    
-                } catch {
-                    print("ScheduleRepository, readList // Exception : \(error.localizedDescription)")
-                    promise(.failure(ScheduleError.unknown))
-                }
+            // ✅ 전체 데이터 조회 후 페이지네이션 적용
+            let allSchedules = self.localDB.readAllSchedules()
+            
+            // ✅ 페이지네이션 계산
+            let startIndex = page * itemsPerPage
+            let endIndex = min(startIndex + itemsPerPage, allSchedules.count)
+            
+            guard startIndex < allSchedules.count else {
+                // 요청한 페이지가 범위를 벗어남 (빈 배열 반환)
+                promise(.success([]))
+                print("ScheduleRepository, readList // Warning : 페이지 범위 초과 - page:\(page)")
+                return
             }
+            
+            let pageSchedules = Array(allSchedules[startIndex..<endIndex])
+            promise(.success(pageSchedules))
+            print("ScheduleRepository, readList // Success : 페이지 조회 완료 - page:\(page), count:\(pageSchedules.count)")
+        }
+        .eraseToAnyPublisher()
+    }
+    
+    /// ✅ 전체 개수 조회 (페이지네이션 UI를 위해)
+    func getTotalCount() -> AnyPublisher<Int, Error> {
+        return Future<Int, Error> { [weak self] promise in
+            guard let self = self else {
+                promise(.failure(ScheduleError.unknown))
+                return
+            }
+            
+            let totalCount = self.localDB.readAllSchedules().count
+            promise(.success(totalCount))
+            print("ScheduleRepository, getTotalCount // Success : 전체 개수 - \(totalCount)")
         }
         .eraseToAnyPublisher()
     }
@@ -151,29 +132,30 @@ class ScheduleRepository: ScheduleProtocol {
                 return
             }
             
-            self.backgroundContext.perform {
-                do {
-                    let request: NSFetchRequest<ScheduleEntity> = ScheduleEntity.fetchRequest()
-                    request.predicate = NSPredicate(format: "uid == %@", scheduleModel.uid)
-                    request.fetchLimit = 1
-                    
-                    guard let entity = try self.backgroundContext.fetch(request).first else {
-                        promise(.failure(ScheduleError.notFound))
-                        return
-                    }
-                    
-                    self.cleanupExistingRelations(entity: entity, context: self.backgroundContext)
-                    self.mapModelToEntity(scheduleModel, entity: entity, context: self.backgroundContext)
-                    
-                    try self.backgroundContext.save()
-                    print("ScheduleRepository, update // Success : 비동기 일정 업데이트 - \(scheduleModel.title)")
-                    promise(.success(scheduleModel))
-                    
-                } catch {
-                    self.backgroundContext.rollback()
-                    print("ScheduleRepository, update // Exception : \(error.localizedDescription)")
-                    promise(.failure(ScheduleError.updateFailed))
+            // ✅ 비즈니스 룰 검증
+            let placeLimit = self.checkPlaceLimit(for: scheduleModel)
+            guard case .success = placeLimit else {
+                if case .failure(let error) = placeLimit {
+                    promise(.failure(error))
                 }
+                return
+            }
+            
+            // ✅ 존재 여부 확인
+            guard let _ = self.localDB.readSchedule(scheduleUID: scheduleModel.uid) else {
+                promise(.failure(ScheduleError.notFound))
+                print("ScheduleRepository, update // Warning : 업데이트할 일정을 찾을 수 없음 - \(scheduleModel.uid)")
+                return
+            }
+            
+            let success = self.localDB.updateSchedule(scheduleModel)
+            
+            if success {
+                promise(.success(scheduleModel))
+                print("ScheduleRepository, update // Success : 일정 업데이트 완료 - \(scheduleModel.title)")
+            } else {
+                promise(.failure(ScheduleError.updateFailed))
+                print("ScheduleRepository, update // Exception : 일정 업데이트 실패")
             }
         }
         .eraseToAnyPublisher()
@@ -186,38 +168,32 @@ class ScheduleRepository: ScheduleProtocol {
                 return
             }
             
-            self.backgroundContext.perform {
-                do {
-                    let request: NSFetchRequest<ScheduleEntity> = ScheduleEntity.fetchRequest()
-                    request.predicate = NSPredicate(format: "uid == %@", scheduleUID)
-                    request.fetchLimit = 1
-                    
-                    guard let entity = try self.backgroundContext.fetch(request).first else {
-                        promise(.failure(ScheduleError.notFound))
-                        return
-                    }
-                    
-                    self.backgroundContext.delete(entity)
-                    try self.backgroundContext.save()
-                    
-                    print("ScheduleRepository, delete // Success : 비동기 일정 삭제 - \(scheduleUID)")
-                    promise(.success(()))
-                    
-                } catch {
-                    self.backgroundContext.rollback()
-                    print("ScheduleRepository, delete // Exception : \(error.localizedDescription)")
-                    promise(.failure(ScheduleError.unknown))
-                }
+            // ✅ 존재 여부 확인
+            guard let _ = self.localDB.readSchedule(scheduleUID: scheduleUID) else {
+                promise(.failure(ScheduleError.notFound))
+                print("ScheduleRepository, delete // Warning : 삭제할 일정을 찾을 수 없음 - \(scheduleUID)")
+                return
+            }
+            
+            let success = self.localDB.deleteSchedule(scheduleUID: scheduleUID)
+            
+            if success {
+                promise(.success(()))
+                print("ScheduleRepository, delete // Success : 일정 삭제 완료 - \(scheduleUID)")
+            } else {
+                promise(.failure(ScheduleError.updateFailed)) // 삭제도 업데이트 실패로 분류
+                print("ScheduleRepository, delete // Exception : 일정 삭제 실패")
             }
         }
         .eraseToAnyPublisher()
     }
     
+    // MARK: - Business Rules
     
     /// 장소 개수 제한 체크 (비즈니스 룰)
     func checkPlaceLimit(for scheduleModel: ScheduleModel) -> Result<Void, ScheduleError> {
-        if scheduleModel.visitPlaceList.count >= 20 {
-            print("ScheduleRepository, checkPlaceLimit // Warning : 최대 장소 수 초과 - \(scheduleModel.visitPlaceList.count)개")
+        if scheduleModel.planList.count >= 20 {
+            print("ScheduleRepository, checkPlaceLimit // Warning : 최대 장소 수 초과 - \(scheduleModel.planList.count)개")
             return .failure(.maxPlacesReached)
         }
         return .success(())
@@ -225,114 +201,76 @@ class ScheduleRepository: ScheduleProtocol {
     
     /// 중복 장소 체크 (비즈니스 룰)
     func checkDuplicatePlace(placeUID: String, in scheduleModel: ScheduleModel) -> Result<Void, ScheduleError> {
-        if scheduleModel.visitPlaceList.contains(where: { $0.placeModel.uid == placeUID }) {
+        if scheduleModel.planList.contains(where: { $0.placeModel.uid == placeUID }) {
             print("ScheduleRepository, checkDuplicatePlace // Warning : 중복 장소 추가 시도 - \(placeUID)")
             return .failure(.duplicatePlace)
         }
         return .success(())
     }
     
-    /// 메모리 효율적 중복 확인 (객체 로드 없이)
-    private func checkDuplicateEfficient(uid: String) throws -> Bool {
-        let request: NSFetchRequest<NSNumber> = NSFetchRequest(entityName: "ScheduleEntity")
-        request.predicate = NSPredicate(format: "uid == %@", uid)
-        request.resultType = .countResultType
+    /// ✅ 현재 일정 존재 여부 체크
+    func checkCurrentScheduleExists() -> Result<ScheduleModel, ScheduleError> {
+        let allSchedules = localDB.readAllSchedules()
         
-        let results = try backgroundContext.fetch(request)
-        return (results.first?.intValue ?? 0) > 0
+        // 가장 최근 편집된 일정을 현재 일정으로 간주
+        guard let currentSchedule = allSchedules.first else {
+            print("ScheduleRepository, checkCurrentScheduleExists // Warning : 현재 스케줄이 없음")
+            return .failure(.noCurrentSchedule)
+        }
+        
+        return .success(currentSchedule)
     }
     
-    /// 기존 관계 정리 (메모리 효율적)
-    private func cleanupExistingRelations(entity: ScheduleEntity, context: NSManagedObjectContext) {
-        if let visitPlaces = entity.visitPlaceList as? Set<VisitPlaceEntity> {
-            let deleteCount = visitPlaces.count
-            for visitPlace in visitPlaces {
-                context.delete(visitPlace)
+    /// ✅ 네트워크 상태 확인
+    func checkNetworkAndSync() -> AnyPublisher<Bool, Error> {
+        return Future<Bool, Error> { [weak self] promise in
+            guard let self = self else {
+                promise(.failure(ScheduleError.unknown))
+                return
             }
-            print("ScheduleRepository, cleanupExistingRelations // Info : 기존 관계 \(deleteCount)개 정리")
+            
+            let isConnected = self.networkMonitor.isConnected
+            
+            if !isConnected {
+                promise(.failure(ScheduleError.networkError))
+                print("ScheduleRepository, checkNetworkAndSync // Warning : 네트워크 연결 끊어짐")
+            } else {
+                promise(.success(true))
+                print("ScheduleRepository, checkNetworkAndSync // Success : 네트워크 연결 정상")
+            }
         }
+        .eraseToAnyPublisher()
     }
     
-    /// Model → Entity 매핑
-    private func mapModelToEntity(_ model: ScheduleModel, entity: ScheduleEntity, context: NSManagedObjectContext) {
-        entity.uid = model.uid
-        entity.index = Int32(model.index)
-        entity.title = model.title
-        entity.memo = model.memo
-        entity.editDate = model.editDate
-        entity.d_day = model.d_day
-        
-        for visitPlace in model.visitPlaceList {
-            let visitEntity = createVisitPlaceEntity(from: visitPlace, schedule: entity, context: context)
-            entity.addToVisitPlaceList(visitEntity)
+    /// ✅ 페이지네이션 정보 계산
+    func getPaginationInfo(page: Int, itemsPerPage: Int) -> AnyPublisher<PaginationInfo, Error> {
+        return Future<PaginationInfo, Error> { [weak self] promise in
+            guard let self = self else {
+                promise(.failure(ScheduleError.unknown))
+                return
+            }
+            
+            let totalCount = self.localDB.readAllSchedules().count
+            let totalPages = (totalCount + itemsPerPage - 1) / itemsPerPage // 올림 계산
+            let hasNextPage = page < totalPages - 1
+            let hasPreviousPage = page > 0
+            
+            let info = PaginationInfo(
+                currentPage: page,
+                itemsPerPage: itemsPerPage,
+                totalItems: totalCount,
+                totalPages: totalPages,
+                hasNextPage: hasNextPage,
+                hasPreviousPage: hasPreviousPage
+            )
+            
+            promise(.success(info))
+            print("ScheduleRepository, getPaginationInfo // Success : 페이지 정보 - \(page+1)/\(totalPages)")
         }
-    }
-       
-    /// VisitPlaceEntity 생성
-    private func createVisitPlaceEntity(from visitPlace: VisitPlaceModel, schedule: ScheduleEntity, context: NSManagedObjectContext) -> VisitPlaceEntity {
-        let visitEntity = VisitPlaceEntity(context: context)
-        visitEntity.uid = visitPlace.uid
-        visitEntity.index = Int32(visitPlace.index)
-        visitEntity.memo = visitPlace.memo
-        visitEntity.schedule = schedule
-        
-        // TODO: PlaceEntity, FileEntity 연결 (PlaceRepository에서 처리)
-        return visitEntity
-    }
-    
-    /// Entity → Model 변환
-    private func convertToModel(_ entity: ScheduleEntity) -> ScheduleModel? {
-        guard let uid = entity.uid,
-              let title = entity.title,
-              let editDate = entity.editDate,
-              let dDay = entity.d_day else {
-            print("ScheduleRepository, convertToModel // Warning : 필수 필드 누락")
-            return nil
-        }
-        
-        var visitPlaceList: [VisitPlaceModel] = []
-        
-        if let visitPlaces = entity.visitPlaceList as? Set<VisitPlaceEntity> {
-            let sortedVisitPlaces = visitPlaces.sorted { $0.index < $1.index }
-            visitPlaceList = sortedVisitPlaces.compactMap { convertToVisitPlaceModel($0) }
-        }
-        
-        return ScheduleModel(
-            uid: uid,
-            index: Int(entity.index),
-            title: title,
-            memo: entity.memo ?? "",
-            editDate: editDate,
-            d_day: dDay,
-            visitPlaceList: visitPlaceList
-        )
-    }
-    
-    /// VisitPlaceEntity → VisitPlaceModel 변환
-    private func convertToVisitPlaceModel(_ entity: VisitPlaceEntity) -> VisitPlaceModel? {
-        guard let uid = entity.uid else { return nil }
-        
-        return VisitPlaceModel(
-            uid: uid,
-            index: Int(entity.index),
-            memo: entity.memo ?? "",
-            placeModel: PlaceModel.empty(),
-            files: []
-        )
-    }
-    
-    // MARK: - Memory Management
-    
-    /// 메모리 정리
-    func clearMemoryCache() {
-        backgroundContext.perform { [weak self] in
-            self?.backgroundContext.refreshAllObjects()
-            print("ScheduleRepository, clearMemoryCache // Success : 메모리 캐시 정리 완료")
-        }
+        .eraseToAnyPublisher()
     }
     
     deinit {
-        clearMemoryCache()
         print("ScheduleRepository, deinit // Success : Repository 해제 완료")
     }
 }

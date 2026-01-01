@@ -46,14 +46,14 @@ struct MainScreen: View {
                 }
                 .tag(MainDestination.myPage)
         }
-        .overlay(
-            // 오프라인 상태 알림
-            OfflineIndicatorView(isVisible: networkStatus == .offline),
-            alignment: .top
-        )
+//        .overlay(
+//            // 오프라인 상태 알림
+//            OfflineIndicatorView(isVisible: networkStatus == .offline),
+//            alignment: .top
+//        )
         .onAppear {
-            setupNetworkMonitoring()
-            loadInitialDataIfNeeded()
+//            setupNetworkMonitoring()
+//            loadInitialDataIfNeeded()
         }
     }
 }

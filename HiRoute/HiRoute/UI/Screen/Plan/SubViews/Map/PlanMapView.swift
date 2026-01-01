@@ -11,11 +11,11 @@ import MapKit
 
 struct PlanMapView : View {
     
-    private var getVisitPlaceList: [VisitPlaceModel]
-    private var onClickAnnotation : (VisitPlaceModel) -> Void
+    private var getVisitPlaceList: [PlanModel]
+    private var onClickAnnotation : (PlanModel) -> Void
     init(
-        setVisitPlaceList: [VisitPlaceModel],
-        setOnClickAnnotation : @escaping (VisitPlaceModel) -> Void
+        setVisitPlaceList: [PlanModel],
+        setOnClickAnnotation : @escaping (PlanModel) -> Void
     ) {
         self.getVisitPlaceList = setVisitPlaceList
         self.onClickAnnotation = setOnClickAnnotation

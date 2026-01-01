@@ -15,7 +15,7 @@ struct ScheduleModel: Codable, Identifiable {
     let memo: String
     let editDate: Date
     let d_day: Date
-    let visitPlaceList: [VisitPlaceModel]
+    let planList: [PlanModel]
     
     func updateModel(_ newModel : ScheduleModel) -> ScheduleModel {
         return ScheduleModel(
@@ -25,7 +25,7 @@ struct ScheduleModel: Codable, Identifiable {
             memo: newModel.memo,  // 새로운 값
             editDate: newModel.editDate,
             d_day: newModel.d_day,
-            visitPlaceList: newModel.visitPlaceList
+            planList: newModel.planList
         )
     }
 }

@@ -12,6 +12,15 @@ struct CacheStats {
     let maxSize: Int
     let utilizationRate: Double
     
+    // ✅ 초기화 파라미터 순서 맞춤
+    init(totalItems: Int, totalCost: Int, hitRate: Double, maxSize: Int, utilizationRate: Double) {
+        self.totalItems = totalItems
+        self.totalCost = totalCost
+        self.hitRate = hitRate
+        self.maxSize = maxSize
+        self.utilizationRate = utilizationRate
+    }
+    
     var description: String {
         return """
         📊 캐시 통계:

@@ -286,7 +286,7 @@ class LocalVM : ObservableObject {
     
     private func handleMemoryWarning() {
         let beforeCount = schedules.count
-        schedules.removeAll { $0.visitPlaceList.isEmpty }
+        schedules.removeAll { $0.planList.isEmpty }
         let afterCount = schedules.count
         clearMemoryCache()
         print("LocalVM, handleMemoryWarning // Warning : 메모리 경고 대응 - \(beforeCount - afterCount)개 빈 일정 제거")
@@ -322,10 +322,10 @@ class LocalVM : ObservableObject {
     
     /// 기존 관계 정리
     private func cleanupExistingRelations(entity: ScheduleEntity, context: NSManagedObjectContext) {
-        if let visitPlaces = entity.visitPlaceList as? Set<VisitPlaceEntity> {
-            let deleteCount = visitPlaces.count
-            for visitPlace in visitPlaces {
-                context.delete(visitPlace)
+        if let plans = entity.planList as? Set<PlanEntity> {
+            let deleteCount = plans.count
+            for plan in plans {
+                context.delete(plan)
             }
             print("LocalVM, cleanupExistingRelations // Info : 기존 관계 \(deleteCount)개 정리")
         }
@@ -340,23 +340,23 @@ class LocalVM : ObservableObject {
         entity.editDate = model.editDate
         entity.d_day = model.d_day
         
-        for visitPlace in model.visitPlaceList {
-            let visitEntity = createVisitPlaceEntity(from: visitPlace, schedule: entity, context: context)
-            entity.addToVisitPlaceList(visitEntity)
+        for plan in model.planList {
+            let planEntity = createVisitPlaceEntity(from: plan, schedule: entity, context: context)
+            entity.addToPlanList(planEntity)
         }
         
-        print("LocalVM, mapModelToEntity // Success : 모델 매핑 완료 - \(model.title), 방문장소 \(model.visitPlaceList.count)개")
+        print("LocalVM, mapModelToEntity // Success : 모델 매핑 완료 - \(model.title), 방문장소 \(model.planList.count)개")
     }
     
     /// VisitPlaceEntity 생성
-    private func createVisitPlaceEntity(from visitPlace: VisitPlaceModel, schedule: ScheduleEntity, context: NSManagedObjectContext) -> VisitPlaceEntity {
-        let visitEntity = VisitPlaceEntity(context: context)
-        visitEntity.uid = visitPlace.uid
-        visitEntity.index = Int32(visitPlace.index)
-        visitEntity.memo = visitPlace.memo
-        visitEntity.schedule = schedule
+    private func createVisitPlaceEntity(from plan: PlanModel, schedule: ScheduleEntity, context: NSManagedObjectContext) -> PlanEntity {
+        let entity = PlanEntity(context: context)
+        entity.uid = plan.uid
+        entity.index = Int32(plan.index)
+        entity.memo = plan.memo
+        entity.schedule = schedule
         
-        return visitEntity
+        return entity
     }
     
     /// Entity → Model 변환
@@ -369,11 +369,11 @@ class LocalVM : ObservableObject {
             return nil
         }
         
-        var visitPlaceList: [VisitPlaceModel] = []
+        var planList: [PlanModel] = []
         
-        if let visitPlaces = entity.visitPlaceList as? Set<VisitPlaceEntity> {
-            let sortedVisitPlaces = visitPlaces.sorted { $0.index < $1.index }
-            visitPlaceList = sortedVisitPlaces.compactMap { convertToVisitPlaceModel($0) }
+        if let plans = entity.planList as? Set<PlanEntity> {
+            let sortedPlans = plans.sorted { $0.index < $1.index }
+            planList = sortedPlans.compactMap { convertToVisitPlaceModel($0) }
         }
         
         return ScheduleModel(
@@ -383,12 +383,12 @@ class LocalVM : ObservableObject {
             memo: entity.memo ?? "",
             editDate: editDate,
             d_day: dDay,
-            visitPlaceList: visitPlaceList
+            planList: planList
         )
     }
     
     /// VisitPlaceEntity → VisitPlaceModel 변환
-    private func convertToVisitPlaceModel(_ entity: VisitPlaceEntity) -> VisitPlaceModel? {
+    private func convertToVisitPlaceModel(_ entity: PlanEntity) -> PlanModel? {
         guard let uid = entity.uid else {
             print("LocalVM, convertToVisitPlaceModel // Warning : VisitPlace uid 누락")
             return nil
@@ -397,7 +397,7 @@ class LocalVM : ObservableObject {
         // TODO: 실제 PlaceModel, FileModel 변환 구현
         let emptyPlace = PlaceModel.empty()
         
-        return VisitPlaceModel(
+        return PlanModel(
             uid: uid,
             index: Int(entity.index),
             memo: entity.memo ?? "",

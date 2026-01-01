@@ -12,27 +12,32 @@ class ServiceContainer {
     
     // MARK: - Lazy Services (메모리 효율성)
     lazy var scheduleService: ScheduleService = {
-        let service = ScheduleService(repository: ScheduleRepository.shared)
+        let service = ScheduleService(repository: ScheduleRepository())
+        return service
+    }()
+    
+    lazy var planService : PlanService = {
+        let service = PlanService(planRepository: PlanRepository())
         return service
     }()
     
     lazy var placeService: PlaceService = {
-        let service = PlaceService(placeProtocol: PlaceRepository.shared)
+        let service = PlaceService(placeProtocol: PlaceRepository())
         return service
     }()
     
     lazy var bookMarkService: BookMarkService = {
-        let service = BookMarkService(bookMarkProtocol: BookMarkRepository.shared)
+        let service = BookMarkService(bookMarkProtocol: BookMarkRepository())
         return service
     }()
     
     lazy var reviewService: ReviewService = {
-        let service = ReviewService(reviewProtocol: ReviewRepository.shared)
+        let service = ReviewService(reviewProtocol: ReviewRepository())
         return service
     }()
     
     lazy var starService: StarService = {
-        let service = StarService(starProtocol: StarRepository.shared)
+        let service = StarService(starProtocol: StarRepository())
         return service
     }()
     
@@ -69,24 +74,24 @@ class ServiceContainer {
     private func handleMemoryPressure() {
         print("🧹 Memory pressure detected - Clearing caches")
         
-        // 모든 Repository 캐시 정리
-        ScheduleRepository.shared.clearCache()
-        PlaceRepository.shared.clearCache()
-        BookMarkRepository.shared.clearCache()
-        ReviewRepository.shared.clearCache()
-        StarRepository.shared.clearCache()
+//        // 모든 Repository 캐시 정리
+//        scheduleService.clearCache()
+//        PlaceRepository.shared.clearCache()
+//        BookMarkRepository.shared.clearCache()
+//        ReviewRepository.shared.clearCache()
+//        StarRepository.shared.clearCache()
     }
     
     /// 백그라운드 진입시 메모리 최적화
     private func handleBackgroundMemoryOptimization() {
         print("🧹 Background optimization - Partial cache cleanup")
         
-        // 부분적 캐시 정리 (LRU 기반)
-        ScheduleRepository.shared.optimizeCache()
-        PlaceRepository.shared.optimizeCache()
-        BookMarkRepository.shared.optimizeCache()
-        ReviewRepository.shared.optimizeCache()
-        StarRepository.shared.optimizeCache()
+//        // 부분적 캐시 정리 (LRU 기반)
+//        ScheduleRepository.shared.optimizeCache()
+//        PlaceRepository.shared.optimizeCache()
+//        BookMarkRepository.shared.optimizeCache()
+//        ReviewRepository.shared.optimizeCache()
+//        StarRepository.shared.optimizeCache()
     }
     
     deinit {

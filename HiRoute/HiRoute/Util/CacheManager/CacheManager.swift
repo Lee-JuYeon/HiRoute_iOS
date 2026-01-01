@@ -71,10 +71,6 @@ class CacheManager: NSObject {
         }
     }
     
-    enum CachePriority: Int {
-        case high = 3, medium = 2, low = 1
-    }
-    
     private override init() {
         super.init()
         setupCache()
@@ -242,21 +238,6 @@ class CacheManager: NSObject {
         }
     }
     
-    func getCacheStats() -> CacheStats {
-        return queue.sync { [weak self] in
-            guard let self = self else {
-                return CacheStats(totalItems: 0, totalCost: 0, hitRate: 0.0)
-            }
-            
-            return CacheStats(
-                totalItems: self.accessTimes.count,
-                totalCost: self.currentCacheSize,
-                hitRate: self.calculateHitRate(),
-                maxSize: self.maxCacheSize,
-                utilizationRate: Double(self.currentCacheSize) / Double(self.maxCacheSize) * 100
-            )
-        }
-    }
     
     // MARK: - ✅ 데이터 검증 및 최적화 로직
     

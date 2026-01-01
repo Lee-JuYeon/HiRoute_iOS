@@ -11,6 +11,7 @@ class ScheduleService {
     
     // MARK: - Dependencies
     private let repository: ScheduleProtocol
+    private let networkMonitor = NetworkMonitor()
     
     // MARK: - Reactive
     private var cancellables = Set<AnyCancellable>()
@@ -21,8 +22,76 @@ class ScheduleService {
      */
     init(repository: ScheduleProtocol) {
         self.repository = repository
+        setupNetworkMonitoring()
         print("ScheduleService, init // Success : Repository 연결 완료")
     }
+    
+    private func setupNetworkMonitoring() {
+        networkMonitor.startMonitoring { [weak self] networkStatus, connectionType in
+            // 네트워크 상태 변화 처리
+            print("ScheduleService, setupNetworkMonitoring // 네트워크 상태 변화 처리 : \(networkStatus), \(connectionType)")
+                       
+            if networkStatus == .connected {
+                self?.processOfflineQueue()
+            }
+        }
+    }
+    
+    private func processOfflineQueue() {
+        QueueManager.shared.processQueue()
+            .sink { [weak self] queueResults in
+                guard let self = self else { return }
+
+                print("ScheduleService, processOfflineQueue // Info : \(queueResults.count)개 오프라인 작업 서버 동기화 시작")
+                            
+                // 각 작업 타입별로 처리
+                for queueResult in queueResults {
+                    switch queueResult.operation {
+                    case .create(let schedule):
+                        self.processOfflineCreate(schedule)
+                        
+                    case .update(let schedule):
+                        self.processOfflineUpdate(schedule)
+                        
+                    case .delete(let scheduleUID):
+                        self.processOfflineDelete(scheduleUID)
+                        
+                    case .readAll:
+                        self.processOfflineReadAll()
+                        
+                    case .read(let scheduleUID):
+                        self.processOfflineRead(scheduleUID)
+                    }
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func processOfflineCreate(_ schedule: ScheduleModel) {
+        print("ScheduleService, processOfflineCreate // Info : 오프라인 생성 작업 서버 동기화 - \(schedule.title)")
+        // TODO: API 호출하여 서버에 생성
+    }
+
+    private func processOfflineUpdate(_ schedule: ScheduleModel) {
+        print("ScheduleService, processOfflineUpdate // Info : 오프라인 수정 작업 서버 동기화 - \(schedule.title)")
+        // TODO: API 호출하여 서버에 수정
+    }
+
+    private func processOfflineDelete(_ scheduleUID: String) {
+        print("ScheduleService, processOfflineDelete // Info : 오프라인 삭제 작업 서버 동기화 - \(scheduleUID)")
+        // TODO: API 호출하여 서버에서 삭제
+    }
+
+    private func processOfflineReadAll() {
+        print("ScheduleService, processOfflineReadAll // Info : 서버 전체 목록 동기화")
+        // TODO: API 호출하여 서버에서 전체 목록 가져오기
+    }
+
+    private func processOfflineRead(_ scheduleUID: String) {
+        print("ScheduleService, processOfflineRead // Info : 서버 단일 일정 동기화 - \(scheduleUID)")
+        // TODO: API 호출하여 서버에서 특정 일정 가져오기
+    }
+    
     
     /**
      * 새 일정 생성
@@ -169,18 +238,66 @@ class ScheduleService {
     func delete(uid: String) -> AnyPublisher<Void, Error> {
         print("ScheduleService, delete // Info : 일정 삭제 시작 - \(uid)")
         
-        return repository.delete(scheduleUID: uid)
-            .handleEvents(
-                receiveOutput: { [weak self] _ in
-                    print("ScheduleService, delete // Success : 일정 삭제 완료 - \(uid)")
-                },
-                receiveCompletion: { completion in
-                    if case .failure(let error) = completion {
-                        print("ScheduleService, delete // Exception : \(error.localizedDescription)")
-                    }
+      
+        
+        // 내부에서 CompletionScope 판단하여 처리
+        return determineDeleteStrategy(uid: uid)
+            .flatMap { [weak self] completionScope -> AnyPublisher<Void, Error> in
+                guard let self = self else {
+                    return Fail(error: ScheduleError.unknown).eraseToAnyPublisher()
                 }
-            )
+                
+                return self.handleDeleteResult(uid: uid, scope: completionScope)
+            }
             .eraseToAnyPublisher()
+    }
+    
+    private func determineDeleteStrategy(uid: String) -> AnyPublisher<CompletionScope, Never> {
+        return Future<CompletionScope, Never> { [weak self] promise in
+            guard let self = self else {
+                promise(.success(.failure(ScheduleError.unknown)))
+                return
+            }
+            
+            if self.networkMonitor.isConnected {
+                // 온라인 전략
+                print("ScheduleService, determineDeleteStrategy // Info : 온라인 모드 감지")
+                
+                // TODO: 향후 API 구현시 .success로 변경
+                // 현재: API 없으므로 localOnly 처리
+                promise(.success(.localOnly))
+                
+            } else {
+                // 오프라인 전략
+                print("ScheduleService, determineDeleteStrategy // Info : 오프라인 모드 감지")
+                
+                do {
+                    // CustomQueueManager에 서버 동기화 작업 등록
+                    try QueueManager.shared.enqueueDelete(scheduleUID: uid)
+                    promise(.success(.localOnly))
+                    
+                } catch {
+                    promise(.success(.failure(error)))
+                }
+            }
+        }
+        .eraseToAnyPublisher()
+    }
+    
+    private func handleDeleteResult(uid: String, scope: CompletionScope) -> AnyPublisher<Void, Error> {
+        switch scope {
+        case .success:
+            print("ScheduleService, handleDeleteResult // Info : 전체 삭제 완료")
+            return repository.delete(scheduleUID: uid)
+            
+        case .localOnly:
+            print("ScheduleService, handleDeleteResult // Info : 로컬 삭제, 서버 동기화 예약됨")
+            return repository.delete(scheduleUID: uid)
+            
+        case .failure(let error):
+            print("ScheduleService, handleDeleteResult // Exception : \(error.localizedDescription)")
+            return Fail(error: error).eraseToAnyPublisher()
+        }
     }
     
     /**
@@ -207,7 +324,7 @@ class ScheduleService {
                     memo: memo,
                     editDate: Date(), // 편집 날짜 자동 갱신
                     d_day: dDay,
-                    visitPlaceList: schedule.visitPlaceList // 기존 방문장소 유지
+                    planList: schedule.planList // 기존 방문장소 유지
                 )
             }
             .flatMap { [weak self] updatedSchedule in
@@ -244,6 +361,7 @@ class ScheduleService {
     }
     
     deinit {
+        networkMonitor.stopMonitoring()
         cancellables.removeAll()
         print("ScheduleService, deinit // Success : 서비스 해제 완료")
     }

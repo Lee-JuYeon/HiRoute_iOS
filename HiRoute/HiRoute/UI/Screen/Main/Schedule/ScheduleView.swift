@@ -12,13 +12,11 @@ struct ScheduleView: View {
     @EnvironmentObject private var localVM : LocalVM
     
     @State private var modeType: ModeType = .READ
-    @State private var editMode: Bool = false
-    @State private var isOfflineMode: Bool = false
    
+    private var userUID : String = "userUID"
     private func addSchedule() {
-        modeType = .ADD
-        let newSchedule = scheduleVM.createEmptySchedule()
-        scheduleVM.selectSchedule(newSchedule)
+        modeType = .CREATE
+        scheduleVM.selectedSchedule = ScheduleModel(uid: "schedule_\(userUID)_\(Date())", index: 0, title: "", memo: "", editDate: Date(), d_day: Date(), planList: [])
     }
     
     private func onClickScheduleModel(_ model: ScheduleModel) {
@@ -27,47 +25,34 @@ struct ScheduleView: View {
     }
     
     private func deleteScheduleModel(_ scheduleUID: String) {
-        // ✅ 수정: 오프라인 대응 삭제
-        if isOfflineMode {
-            scheduleVM.markForDeletion(scheduleUID)
-        } else {
-            scheduleVM.delete(scheduleUID: scheduleUID)
-        }
-    }
-      
-    private func initScheduleData(){
-        // 로컬 데이터 먼저 로드
-        if scheduleVM.schedules.isEmpty {
-            scheduleVM.loadFromCache()
-        }
-        // 백그라운드에서 서버 동기화
-        if !isOfflineMode {
-            scheduleVM.syncWithServer()
-        }
+        scheduleVM.deleteSchedule(scheduleUID: scheduleUID)
     }
     
-    
-    @State private var editMode : Bool = false
+        
     @ViewBuilder
     private func filterEditButtons() -> some View{
         HStack(alignment: VerticalAlignment.center, spacing: 0){
             ScheduleListFilterButton { listFilterType in
-                scheduleVM.applyFilter(listFilterType)
-                return scheduleVM.filteredSchedules
+                switch listFilterType {
+                case .DEFAULT :
+                    scheduleVM.filteredSchedules
+                case .NEWEST :
+                    scheduleVM.filteredSchedules
+                case .OLDEST :
+                    scheduleVM.filteredSchedules
+                }
             }
             
             Spacer()
-            
-            // ✅ 추가: 오프라인 인디케이터
-            if isOfflineMode {
-                Image(systemName: "wifi.slash")
-                    .foregroundColor(.orange)
-                    .padding(.trailing, 8)
-            }
                        
-            ScheduleListEditButton {
-                editMode.toggle()
-            }
+            TextButton(
+                text: "편집",
+                textSize: 16,
+                textColour: Color.getColour(.label_strong),
+                callBackClick: {
+                    modeType = ModeType.UPDATE
+                }
+            )
         }
         .padding(16)
     }
@@ -75,7 +60,7 @@ struct ScheduleView: View {
     @ViewBuilder
     private func scheduleListView() -> some View {
         if scheduleVM.isLoading {
-            ProgressView("스케줄 로딩 중...")
+            ProgressView("일정 로딩 중...")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let errorMessage = scheduleVM.errorMessage {
             VStack {
@@ -85,18 +70,30 @@ struct ScheduleView: View {
                     .font(.caption)
                     .foregroundColor(.gray)
                 Button("다시 시도") {
-                    initScheduleData()
+                    // 데이터 새로고침
+                    scheduleVM.refreshScheduleList()
                 }
                 .padding()
             }
         } else {
-            ScheduleList(
-                setList: scheduleVM.filteredSchedules,
-                setNationalityType: localVM.nationality,
-                setOnClickCell: { model in
-                    onClickScheduleModel(model)
-                }
-            )
+            if scheduleVM.schedules.isEmpty {
+                Text("작성된 일정이 없네요, 일정을 추가해볼까요?")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .frame(
+                        maxWidth: .infinity,
+                        maxHeight: .infinity,
+                        alignment: .center
+                    )
+            }else{
+                ScheduleList(
+                    setList: scheduleVM.filteredSchedules,
+                    setNationalityType: localVM.nationality,
+                    setOnClickCell: { model in
+                        onClickScheduleModel(model)
+                    }
+                )
+            }
         }
     }
     
@@ -111,8 +108,7 @@ struct ScheduleView: View {
             scheduleListView()
         }
         .onAppear {
-            checkNetworkStatus()
-            initScheduleData()
+            scheduleVM.initData()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fullScreenCover(item: $scheduleVM.selectedSchedule) { scheduleModel in
@@ -121,9 +117,7 @@ struct ScheduleView: View {
                 setScheduleModel: scheduleModel
             )
         }
-    }
     
-    private func checkNetworkStatus() {
-        isOfflineMode = !NetworkMonitor.shared.isConnected
     }
+ 
 }

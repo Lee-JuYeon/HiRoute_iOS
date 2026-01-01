@@ -10,14 +10,13 @@ import Combine
 
 class PlaceRepository: PlaceProtocol {
     
-    static let shared = PlaceRepository()
-
     // 메모리 캐시 - 최대 100개 항목만 유지
     private var cache = NSCache<NSString, AnyObject>()
     private let cacheQueue = DispatchQueue(label: "com.place.cache", qos: .utility)
-    private init() {
+    
+    init() {
         setupCache()
-        loadInitialData()
+//        loadInitialData()
     }
     
     // ✅ 캐시 설정 추가
@@ -70,15 +69,27 @@ class PlaceRepository: PlaceProtocol {
     func readPlaceList(page: Int, itemsPerPage: Int) -> AnyPublisher<[PlaceModel], Error> {
         Future { promise in
             DispatchQueue.global().asyncAfter(deadline: .now() + 0.4) {
-                let startIndex = (page - 1) * itemsPerPage
+                
+                // ✅ 페이지 값 검증
+                guard page >= 0, itemsPerPage > 0 else {
+                    print("PlaceRepository, readPlaceList // Warning : 잘못된 페이지 파라미터 - page:\(page), itemsPerPage:\(itemsPerPage)")
+                    promise(.success([]))
+                    return
+                }
+                
+                // ✅ 수정: 0부터 시작하는 페이지 계산
+                let startIndex = page * itemsPerPage
                 let endIndex = min(startIndex + itemsPerPage, DummyPack.samplePlaces.count)
                 
-                guard startIndex < DummyPack.samplePlaces.count else {
+                // ✅ 범위 검증 강화
+                guard startIndex >= 0 && startIndex < DummyPack.samplePlaces.count else {
+                    print("PlaceRepository, readPlaceList // Info : 요청된 페이지 범위 초과 - page:\(page)")
                     promise(.success([]))
                     return
                 }
                 
                 let pageData = Array(DummyPack.samplePlaces[startIndex..<endIndex])
+                print("PlaceRepository, readPlaceList // Success : 페이지 데이터 조회 완료 - page:\(page), count:\(pageData.count)")
                 promise(.success(pageData))
             }
         }.eraseToAnyPublisher()
