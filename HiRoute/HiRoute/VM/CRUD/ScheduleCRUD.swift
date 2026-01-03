@@ -21,7 +21,7 @@ struct ScheduleCRUD {
         self.vm = vm
     }
     
-    func create(title: String, memo: String, dDay: Date) {
+    func create(title: String, memo: String, dDay: Date, result: @escaping (Bool) -> Void) {
         print("ScheduleCRUD, create // 일정 생성 시작 - \(title)")
         guard let vm = vm else { return  }
 
@@ -55,12 +55,15 @@ struct ScheduleCRUD {
                         /*
                          코드가 한번 돌면 스트림의 생명주기가 끝남 (한 번만 호출됨)
                          */
+                        result(true) // ✅ 성공 시 콜백
                         print("ScheduleCRUD, create // Success : 스트림 정상 완료")
                         
                     case .failure(let error):
                         // 에러 처리
                         vm?.handleError(error)
                         
+                        result(false) // ✅ 실패 시 콜백
+
                         // 실패시 롤백 및 에러 처리
                         print("ScheduleCRUD, create // Exception : 서버 동기화 실패, 로컬 롤백 - \(error.localizedDescription)")
                     }

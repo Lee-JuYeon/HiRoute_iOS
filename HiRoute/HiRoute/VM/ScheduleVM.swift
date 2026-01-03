@@ -25,6 +25,14 @@ final class ScheduleVM: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
+    @Published var planTitle = ""
+    @Published var planMemo = ""
+    @Published var planDDay = Date()
+    
+    private var originalTitle = ""
+    private var originalMemo = ""
+    private var originalDDay = Date()
+    
     internal let scheduleService: ScheduleService
     internal var cancellables = Set<AnyCancellable>()
     
@@ -34,7 +42,6 @@ final class ScheduleVM: ObservableObject {
      * - 편집 상태 자동 관리
      * - 메모리 효율적인 바인딩 생성
      */
-    internal lazy var scheduleBindings: ScheduleBindings = ScheduleBindings(vm: self)
     internal lazy var scheduleCRUD : ScheduleCRUD = ScheduleCRUD(vm: self)
     
     init(scheduleService: ScheduleService) {
@@ -50,7 +57,8 @@ final class ScheduleVM: ObservableObject {
          1. 처음 앱을 켜서 보여지는 데이터는 '오프라인 데이터'임.
          2. 페이지네이션이라던가 새로고침 등이 있을 경우 그제서야 서버로부터 데이터를 호출하는 방향으로.
          */
-        schedules = DummyPack.sampleSchedules
+//        schedules = DummyPack.sampleSchedules
+        self.loadScheduleList()
         print("ScheduleViewModel, loadInitialData // Info : 로컬 데이터 우선 로드 - \(schedules.count)개")
     }
     
@@ -71,8 +79,8 @@ final class ScheduleVM: ObservableObject {
     
     
     // schedule crud
-    func createSchedule(title: String, memo: String, dDay: Date) {
-        scheduleCRUD.create(title: title, memo: memo, dDay: dDay)
+    func createSchedule(title: String, memo: String, dDay: Date, result: @escaping (Bool) -> Void) {
+        scheduleCRUD.create(title: title, memo: memo, dDay: dDay, result: result)
     }
     
     func loadScheduleList() {
@@ -103,6 +111,54 @@ final class ScheduleVM: ObservableObject {
     // 새로고침
     func refreshScheduleList(){
         scheduleCRUD.refreshScheduleList()
+    }
+    
+    
+    // 편집 시작 (일정 선택시)
+    func startEditing(_ schedule: ScheduleModel) {
+        selectedSchedule = schedule
+        planTitle = schedule.title
+        planMemo = schedule.memo
+        planDDay = schedule.d_day
+        
+        /*
+         원본 백업
+         왜 originalTitle,Memo,DDay를 변수 선언했냐면 planview에서 실제로 수정이 일어났다는걸을 확인한 이후에 로컬과 서버에 변경요청해야한다.
+         하지만 originalTitle,Memo,DDay없이 실질적으로 수정이 어디서 일어났는지 확인하기가 어려워 확인용으로 변수 선언함.
+         */
+        originalTitle = schedule.title
+        originalMemo = schedule.memo
+        originalDDay = schedule.d_day
+    }
+    
+    // 편집 완료 (확인 버튼)
+    func finishEditing() {
+        guard let schedule = selectedSchedule else { return }
+        updateScheduleInfo(uid: schedule.uid, title: planTitle, memo: planMemo, dDay: planDDay)
+    }
+    
+    // 편집 취소
+    func cancelEditing() {
+        guard let schedule = selectedSchedule else { return }
+        planTitle = schedule.title
+        planMemo = schedule.memo
+        planDDay = schedule.d_day
+    }
+    
+    // 변경사항 확인
+    var hasChanges: Bool {
+        return planTitle != originalTitle ||
+               planMemo != originalMemo ||
+               planDDay != originalDDay
+    }
+    
+    func finishEditingIfChanged() -> Bool {
+        guard hasChanges else { return false }
+        guard let schedule = selectedSchedule else { return false }
+        
+        // UPDATE 전용으로 단순화
+        updateScheduleInfo(uid: schedule.uid, title: planTitle, memo: planMemo, dDay: planDDay)
+        return true
     }
     
     deinit {

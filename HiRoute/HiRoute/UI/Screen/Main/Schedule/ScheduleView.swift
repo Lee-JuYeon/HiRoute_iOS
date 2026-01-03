@@ -87,7 +87,7 @@ struct ScheduleView: View {
                     )
             }else{
                 ScheduleList(
-                    setList: scheduleVM.filteredSchedules,
+                    setList: scheduleVM.schedules,
                     setNationalityType: localVM.nationality,
                     setOnClickCell: { model in
                         onClickScheduleModel(model)

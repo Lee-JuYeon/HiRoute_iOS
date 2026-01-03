@@ -12,6 +12,7 @@ struct DateTextView: View {
     @Binding var date : Date
     let nationalityType : NationalityType
     let modeType : ModeType
+    let onDateChanged: (() -> Void)
 
     
     @ViewBuilder
@@ -65,6 +66,9 @@ struct DateTextView: View {
                     selection: $date,
                     displayedComponents: .date
                 )
+                .onChange(of: date) { _ in
+                    onDateChanged() // 날짜 변경시 콜백 호출
+                }
                 .datePickerStyle(WheelDatePickerStyle())  // iOS 14 호환
                 
             }
