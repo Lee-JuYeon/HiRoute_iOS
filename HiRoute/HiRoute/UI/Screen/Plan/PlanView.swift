@@ -9,14 +9,14 @@ import SwiftUI
 
 struct PlanView : View {
     
-    private var getModeType : ModeType
+    @State private var getModeType : ModeType
     private var getScheduleModel : ScheduleModel
-    
+
     init(
         setModeType : ModeType,
         setScheduleModel: ScheduleModel
     ){
-        self.getModeType = setModeType
+        self._getModeType = State(initialValue: setModeType)
         self.getScheduleModel = setScheduleModel
     }
     
@@ -32,15 +32,66 @@ struct PlanView : View {
     @State private var isShowTitleWriting : Bool = false
     @State private var isShowMemoWriting : Bool = false
     @State private var isShowDate : Bool = false
-    @State private var showUnsavedAlert: Bool = false // ✅ 변경사항 알림
+    @State private var showUnsavedAlert: Bool = false // 변경사항 알림
     
-    private func handleBackButton(){
-        if getModeType != .READ && scheduleVM.hasChanges {
-            showUnsavedAlert = true // ✅ 변경사항 확인 알림
-        } else {
+    private func handleExit(forceExit: Bool = false) {
+        switch getModeType {
+        case .CREATE:
+            if scheduleVM.hasChanges && !forceExit {
+                showUnsavedAlert = true
+            } else {
+                scheduleVM.cancelEditing()
+                scheduleVM.selectedSchedule = nil
+                presentationMode.wrappedValue.dismiss()
+            }
+            
+        case .UPDATE:
+            if scheduleVM.hasChanges && !forceExit {
+                showUnsavedAlert = true
+            } else {
+                scheduleVM.cancelEditing()
+                if forceExit {
+                    // ✅ 강제 종료시에는 완전히 나가기
+                    scheduleVM.selectedSchedule = nil
+                    presentationMode.wrappedValue.dismiss()
+                } else {
+                    // ✅ 일반 백버튼시에는 READ 모드로만 전환
+                    getModeType = .READ
+                }
+            }
+            
+        case .READ:
             scheduleVM.selectedSchedule = nil
             presentationMode.wrappedValue.dismiss()
         }
+    }
+    
+    private func handleBackButton(){
+        handleExit(forceExit: false)  // ✅ 일반 뒤로가기
+//        switch getModeType {
+//        case .CREATE:
+//            switch scheduleVM.hasChanges {
+//            case true:
+//                showUnsavedAlert = true
+//            case false:
+//                scheduleVM.selectedSchedule = nil
+//                presentationMode.wrappedValue.dismiss()
+//            }
+//            
+//        case .UPDATE:
+//            switch scheduleVM.hasChanges {
+//            case true:
+//                showUnsavedAlert = true
+//            case false:
+//                getModeType = .READ
+//                scheduleVM.cancelEditing()
+//            }
+//            
+//        case .READ:
+//            // READ 모드에서는 바로 나가기
+//            scheduleVM.selectedSchedule = nil
+//            presentationMode.wrappedValue.dismiss()
+//        }
     }
     
     private func handleOptionButton(){
@@ -67,16 +118,21 @@ struct PlanView : View {
     
     private func handleEditSchedule(){
         isShowOptionSheet = false
+        getModeType = .UPDATE
+        
+        // UPDATE 모드로 전환 시 편집 상태 초기화
+        if let schedule = scheduleVM.selectedSchedule {
+            scheduleVM.startEditing(schedule)
+        }
     }
     
     private func handleSaveSchedule(){
         switch getModeType {
         case .CREATE:
-            // ✅ CREATE 모드: 새 스케줄 생성
             scheduleVM.createSchedule(
-                title: scheduleVM.planTitle,
-                memo: scheduleVM.planMemo,
-                dDay: scheduleVM.planDDay
+                title: scheduleVM.scheduleTitle,
+                memo: scheduleVM.scheduleMemo,
+                dDay: scheduleVM.scheduleDday
             ){ success in
                 if success {
                     print("새 일정 생성 완료")
@@ -84,24 +140,25 @@ struct PlanView : View {
                 scheduleVM.selectedSchedule = nil
                 presentationMode.wrappedValue.dismiss()
             }
-            return // ✅ 여기서 리턴 (아래 코드 실행 안함)
-            print("새 일정 생성 완료")
+            return
             
         case .UPDATE:
-            // ✅ UPDATE 모드: 기존 스케줄 수정
-            if scheduleVM.finishEditingIfChanged() {
-                print("변경사항 저장 완료")
-            } else {
-                print("저장할 변경사항 없음")
+            _ = scheduleVM.finishEditingIfChanged { success in
+                if success {
+                    print("변경사항 저장 완료")
+                } else {
+                    print("저장할 변경사항 없음")
+                }
+                
+                // ✅ self 직접 사용 (struct는 순환참조 없음)
+                scheduleVM.selectedSchedule = nil
+                presentationMode.wrappedValue.dismiss()
             }
-            
+            return
+                   
         case .READ:
-            // ✅ READ 모드: 저장 버튼 없음 (이 케이스는 실행되지 않음)
             break
         }
-        
-        scheduleVM.selectedSchedule = nil
-        presentationMode.wrappedValue.dismiss()
     }
     
     @ViewBuilder
@@ -113,11 +170,24 @@ struct PlanView : View {
             
             Spacer()
           
-            if getModeType == ModeType.READ {
-                ImageButton(imageURL: "icon_setting", imageSize: 30) {
+            switch getModeType {
+            case .READ:
+                TextButton(
+                    text: "편집",
+                    textSize: 16,
+                    textColour: Color.blue
+                ) {
                     handleOptionButton()
                 }
-            } else {
+            case .CREATE:
+                TextButton(
+                    text: "저장",
+                    textSize: 16,
+                    textColour: Color.blue
+                ) {
+                    handleSaveSchedule()
+                }
+            case .UPDATE:
                 TextButton(
                     text: "저장",
                     textSize: 16,
@@ -142,32 +212,46 @@ struct PlanView : View {
             }
             
             EditableTextView(
-                setTitle: $scheduleVM.planTitle,
-                setHint: "클릭하여 일정 제목을 입력하세요"
+                setTitle: $scheduleVM.scheduleTitle,
+                setHint: "클릭하여 일정 제목을 입력하세요",
+                setEditMode: $getModeType
             ) {
-                isShowTitleWriting = true
-            }.padding(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                switch getModeType {
+                case .READ:
+                    break
+                case .CREATE:
+                    isShowTitleWriting = true
+                case .UPDATE:
+                    isShowTitleWriting = true
+                }
+            }
             
             EditableTextView(
-                setTitle: $scheduleVM.planMemo,
+                setTitle: $scheduleVM.scheduleMemo,
                 setHint: "클릭하여 일정 내용을 입력하세요",
-                callBackClick: {
-                    isShowMemoWriting = true
-                },
+                setEditMode: $getModeType,
                 setAlignment: .vertical,
                 isMultiLine: true,
                 setTextSize: 18
-            ).padding(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            ){
+                switch getModeType {
+                case .READ:
+                    break
+                case .CREATE:
+                    isShowMemoWriting = true
+                case .UPDATE:
+                    isShowMemoWriting = true
+                }
+            }
             
             DateTextView(
-                date: $scheduleVM.planDDay,
+                date: $scheduleVM.scheduleDday,
                 nationalityType: localVM.nationality,
                 modeType: getModeType,
                 onDateChanged: {
                    
                 }
             )
-                        
        
             PlanBottomSection(
                 setVisitPlaceList: scheduleVM.selectedSchedule?.planList ?? [],
@@ -180,7 +264,6 @@ struct PlanView : View {
                 }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            
         }
         .background(Color.getColour(.background_yellow_white))
         .bottomSheet(isOpen: $showUnsavedAlert, setContent: {
@@ -189,32 +272,65 @@ struct PlanView : View {
                 Text("저장하시겠습니까?")
                 Text("저장하지 않은 변경사항은 손실됩니다.")
                 HStack(alignment: VerticalAlignment.top){
-                    Button("저장 ") {
+                    Button("저장") {
+//                        // ✅ 1. bottomSheet 먼저 닫기
+//                        showUnsavedAlert = false
+//                        
+//                        // ✅ 2. 모드별 저장 처리
+//                        switch getModeType {
+//                        case .CREATE:
+//                            scheduleVM.createSchedule(
+//                                title: scheduleVM.scheduleTitle,
+//                                memo: scheduleVM.scheduleMemo,
+//                                dDay: scheduleVM.scheduleDday
+//                            ) { success in
+//                                if success {
+//                                    print("새 일정 생성 완료")
+//                                }
+//                                scheduleVM.selectedSchedule = nil
+//                                presentationMode.wrappedValue.dismiss()
+//                            }
+//                            
+//                        case .UPDATE:
+//                            _ = scheduleVM.finishEditingIfChanged { success in
+//                                if success {
+//                                    print("변경사항 저장 완료")
+//                                } else {
+//                                    print("저장할 변경사항 없음")
+//                                }
+//                                scheduleVM.selectedSchedule = nil
+//                                presentationMode.wrappedValue.dismiss()
+//                            }
+//                            
+//                        case .READ:
+//                            break
+//                        }
+                        showUnsavedAlert = false
+                        handleExit(forceExit: true)  // ✅ 강제 종료
+                    }
+                    
+                    Spacer()
+                    
+                    Button("나가기") {
+                        // ✅ 1. bottomSheet 먼저 닫기
+                        showUnsavedAlert = false
+                        
+                        // ✅ 2. 모든 케이스에서 변경사항 취소하고 완전히 나가기
                         switch getModeType {
                         case .CREATE:
-                            scheduleVM.createSchedule(
-                                title: scheduleVM.planTitle,
-                                memo: scheduleVM.planMemo,
-                                dDay: scheduleVM.planDDay
-                            ){ result in
-                                
-                                
-                            }
+                            scheduleVM.cancelEditing()
+                            scheduleVM.selectedSchedule = nil
+                            presentationMode.wrappedValue.dismiss()
+                            
                         case .UPDATE:
-                            if scheduleVM.finishEditingIfChanged() {
-                                print("변경사항 저장 완료")
-                            }
+                            scheduleVM.cancelEditing()           // ✅ 변경사항 취소
+                            scheduleVM.selectedSchedule = nil    // ✅ 선택 해제
+                            presentationMode.wrappedValue.dismiss()  // ✅ 화면 닫기
+                            
                         case .READ:
-                            break
+                            scheduleVM.selectedSchedule = nil
+                            presentationMode.wrappedValue.dismiss()
                         }
-                        scheduleVM.selectedSchedule = nil
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                    Spacer()
-                    Button("나가기") {
-                        scheduleVM.cancelEditing()
-                        scheduleVM.selectedSchedule = nil
-                        presentationMode.wrappedValue.dismiss()
                     }
                 }
             }
@@ -232,7 +348,7 @@ struct PlanView : View {
         .topSheet(isOpen: $isShowTitleWriting, setContent: {
             SheetTextFieldView(
                 setHint: "일정 제목을 입력하세요",
-                setText: $scheduleVM.planTitle,
+                setText: $scheduleVM.scheduleTitle,
                 setToolBarTitle: "일정 제목",
                 callBackCancel: {
                     // 취소 버튼 추가
@@ -248,7 +364,7 @@ struct PlanView : View {
         .topSheet(isOpen: $isShowMemoWriting, setContent: {
             SheetTextFieldView(
                 setHint: "일정 내용을 입력하세요",
-                setText: $scheduleVM.planMemo,
+                setText: $scheduleVM.scheduleMemo,
                 setToolBarTitle: "일정 내용",
                 callBackCancel: {
                     // 취소 버튼 추가
@@ -272,12 +388,19 @@ struct PlanView : View {
             case .READ:
                 scheduleVM.selectedSchedule = getScheduleModel
                 
+                scheduleVM.scheduleTitle = getScheduleModel.title
+                scheduleVM.scheduleMemo = getScheduleModel.memo
+                scheduleVM.scheduleDday = getScheduleModel.d_day
+                print("READ 모드입니다.")
+                
             case .CREATE:
                 // 아무것도 하지 않음 (이미 ScheduleView에서 처리됨)
+                print("CREATE 모드입니다.")
                 break
                 
             case .UPDATE:
                 scheduleVM.startEditing(getScheduleModel)
+                print("UPDATE 모드입니다.")
             }
         }
         .onDisappear {
@@ -292,7 +415,7 @@ struct PlanView : View {
 //            scheduleVM.clearSelection()
 //            planVM.clearSelection()
             // 메모리 정리만 (자동 저장 제거)
-            if getModeType == .READ {
+            if (scheduleVM.selectedSchedule != nil){
                 scheduleVM.selectedSchedule = nil
             }
         }

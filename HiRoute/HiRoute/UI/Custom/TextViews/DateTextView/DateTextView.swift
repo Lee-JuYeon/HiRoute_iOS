@@ -56,7 +56,7 @@ struct DateTextView: View {
                 isShowSheet.toggle()
             }
         }
-        .padding(EdgeInsets(top: 0, leading: 16, bottom: 16, trailing: 16))
+        .padding(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
         .bottomSheet(isOpen: $isShowSheet) {
             VStack(alignment: HorizontalAlignment.center){
                 Text("날짜 변경")

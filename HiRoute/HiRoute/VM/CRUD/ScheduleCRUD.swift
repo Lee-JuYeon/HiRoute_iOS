@@ -25,6 +25,7 @@ struct ScheduleCRUD {
         print("ScheduleCRUD, create // 일정 생성 시작 - \(title)")
         guard let vm = vm else { return  }
 
+        // UI 모델 생성
         let scheduleModel = ScheduleModel(
             uid: "schedule_\(UUID().uuidString)",
             index: vm.schedules.count,
@@ -35,11 +36,13 @@ struct ScheduleCRUD {
             planList: []
         )
         
-        // 로딩 시작
+        // UI 상태 업데이트
         vm.setLoading(true)
         
+        // Service 호출
         vm.scheduleService.create(scheduleModel)
-            .receive(on: DispatchQueue.main)
+            .subscribe(on: DispatchQueue.global(qos: .userInitiated)) // 백그라운드에서 데이터 처리(백그라운드에서 무거운 작업)
+            .receive(on: DispatchQueue.main) // 메인 스레드에서 UI 업데이트
             .sink(
                 receiveCompletion: { [weak vm] completion in
                     // 로딩 종료
@@ -55,22 +58,28 @@ struct ScheduleCRUD {
                         /*
                          코드가 한번 돌면 스트림의 생명주기가 끝남 (한 번만 호출됨)
                          */
-                        result(true) // ✅ 성공 시 콜백
+                        // 메인 스레드 보장
+                        DispatchQueue.main.async {
+                            result(true)
+                        }
                         print("ScheduleCRUD, create // Success : 스트림 정상 완료")
                         
                     case .failure(let error):
                         // 에러 처리
                         vm?.handleError(error)
                         
-                        result(false) // ✅ 실패 시 콜백
+                        // 메인 스레드 보장
+                        DispatchQueue.main.async {
+                            result(false)
+                        }
 
                         // 실패시 롤백 및 에러 처리
                         print("ScheduleCRUD, create // Exception : 서버 동기화 실패, 로컬 롤백 - \(error.localizedDescription)")
                     }
                 },
                 receiveValue: { [weak vm] createdScheduleModel in
-                    // ✅ 서버 성공 후에만 UI에 추가
-                    vm?.schedules.append(createdScheduleModel)
+                    // 서버 성공 후에만 UI에 추가, 메인 스레드에서 @Published 업데이트
+                    vm?.schedules.append(createdScheduleModel) 
                     print("ScheduleCRUD, create // Success : 서버 확인 후 안전하게 추가 완료")
                 }
             )
@@ -131,8 +140,8 @@ struct ScheduleCRUD {
                     guard let vm = vm else { return }
                     
                     // 안전하게 UI에서 제거
-                    vm.schedules.remove(at: scheduleIndex)
-                    
+                    vm.schedules.removeAll { $0.uid == scheduleUID }
+
                     if vm.selectedSchedule?.uid == scheduleUID {
                         vm.selectedSchedule = nil
                     }
@@ -150,8 +159,9 @@ struct ScheduleCRUD {
         // 로딩 시작
         vm.setLoading(true)
         
+        // Service 호출
         vm.scheduleService.readAll(page: page, itemsPerPage: itemsPerPage)
-            .receive(on: DispatchQueue.main)
+            .receive(on: DispatchQueue.main) // 메인 스레드에서 결과 처리
             .sink(
                 receiveCompletion: { [weak vm] completion in
                     // 로딩 종료
@@ -218,7 +228,7 @@ struct ScheduleCRUD {
             .store(in: &vm.cancellables)
     }
     
-    func update(_ updatedSchedule: ScheduleModel) {
+    func update(_ updatedSchedule: ScheduleModel, completion: @escaping (Bool) -> Void = { _ in }) {
         print("ScheduleCRUD, update // Info : 일정 업데이트 시작 - \(updatedSchedule.title)")
         guard let vm = vm else { return }
         
@@ -258,16 +268,17 @@ struct ScheduleCRUD {
                         vm.schedules[index] = serverSchedule
                     }
                     
-                    // 선택된 일정 업데이트
-                    vm.selectedSchedule = serverSchedule
+//                    // 선택된 일정 업데이트
+//                    vm.selectedSchedule = serverSchedule
                     
+                    completion(true)
                     print("ScheduleCRUD, update // Success : 서버 확인 후 안전하게 업데이트 완료")
                 }
             )
             .store(in: &vm.cancellables)
     }
        
-    func updateScheduleInfo(uid: String, title: String, memo: String, dDay: Date) {
+    func updateScheduleInfo(uid: String, title: String, memo: String, dDay: Date, completion: @escaping (Bool) -> Void = { _ in }) {
         print("ScheduleCRUD, updateScheduleInfo // Info : 일정 정보 업데이트 시작 - \(uid)")
         guard let vm = vm else { return }
         
@@ -290,7 +301,7 @@ struct ScheduleCRUD {
         )
         
         // 기본 update 메서드 호출
-        update(updatedSchedule)
+        update(updatedSchedule, completion: completion)
     }
     
     func refreshScheduleList(){

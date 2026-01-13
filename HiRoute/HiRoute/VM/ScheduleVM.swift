@@ -25,9 +25,10 @@ final class ScheduleVM: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    @Published var planTitle = ""
-    @Published var planMemo = ""
-    @Published var planDDay = Date()
+    
+    @Published var scheduleTitle = ""
+    @Published var scheduleMemo = ""
+    @Published var scheduleDday = Date()
     
     private var originalTitle = ""
     private var originalMemo = ""
@@ -99,8 +100,8 @@ final class ScheduleVM: ObservableObject {
         scheduleCRUD.update(schedule)
     }
       
-    func updateScheduleInfo(uid: String, title: String, memo: String, dDay: Date){
-        scheduleCRUD.updateScheduleInfo(uid: uid, title: title, memo: memo, dDay: dDay)
+    func updateScheduleInfo(uid: String, title: String, memo: String, dDay: Date, completion: @escaping (Bool) -> Void = { _ in }){
+        scheduleCRUD.updateScheduleInfo(uid: uid, title: title, memo: memo, dDay: dDay, completion: completion)
     }
     
     // 일정 선택 + 에디팅 상태 초기화
@@ -117,9 +118,9 @@ final class ScheduleVM: ObservableObject {
     // 편집 시작 (일정 선택시)
     func startEditing(_ schedule: ScheduleModel) {
         selectedSchedule = schedule
-        planTitle = schedule.title
-        planMemo = schedule.memo
-        planDDay = schedule.d_day
+        scheduleTitle = schedule.title
+        scheduleMemo = schedule.memo
+        scheduleDday = schedule.d_day
         
         /*
          원본 백업
@@ -134,30 +135,35 @@ final class ScheduleVM: ObservableObject {
     // 편집 완료 (확인 버튼)
     func finishEditing() {
         guard let schedule = selectedSchedule else { return }
-        updateScheduleInfo(uid: schedule.uid, title: planTitle, memo: planMemo, dDay: planDDay)
+        updateScheduleInfo(uid: schedule.uid, title: scheduleTitle, memo: scheduleMemo, dDay: scheduleDday)
     }
     
     // 편집 취소
     func cancelEditing() {
         guard let schedule = selectedSchedule else { return }
-        planTitle = schedule.title
-        planMemo = schedule.memo
-        planDDay = schedule.d_day
+        scheduleTitle = schedule.title
+        scheduleMemo = schedule.memo
+        scheduleDday = schedule.d_day
     }
     
     // 변경사항 확인
     var hasChanges: Bool {
-        return planTitle != originalTitle ||
-               planMemo != originalMemo ||
-               planDDay != originalDDay
+        return scheduleTitle != originalTitle ||
+            scheduleMemo != originalMemo ||
+            scheduleDday != originalDDay
     }
     
-    func finishEditingIfChanged() -> Bool {
-        guard hasChanges else { return false }
-        guard let schedule = selectedSchedule else { return false }
+    func finishEditingIfChanged(completion: @escaping (Bool) -> Void = { _ in }) -> Bool {
+        guard hasChanges else {
+            completion(false)
+            return false
+        }
+        guard let schedule = selectedSchedule else {
+            completion(false)
+            return false
+        }
         
-        // UPDATE 전용으로 단순화
-        updateScheduleInfo(uid: schedule.uid, title: planTitle, memo: planMemo, dDay: planDDay)
+        updateScheduleInfo(uid: schedule.uid, title: scheduleTitle, memo: scheduleMemo, dDay: scheduleDday, completion: completion)
         return true
     }
     

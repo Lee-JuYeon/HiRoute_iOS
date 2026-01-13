@@ -17,40 +17,37 @@ class LocalDB {
         backgroundContext.shouldDeleteInaccessibleFaults = true
         print("LocalDB, init // Success : 백그라운드 컨텍스트 초기화 완료")
     }
-    
-    // MARK: - Schedule CRUD
-    
+        
     /// 일정 생성
-    func createSchedule(_ schedule: ScheduleModel) -> Bool {
+    func createSchedule(_ schedule: ScheduleModel, completion: @escaping (Bool) -> Void) {
         print("LocalDB, createSchedule // Info : 일정 생성 시작 - \(schedule.uid)")
-        return ScheduleDAO.create(schedule, context: backgroundContext)
+        ScheduleDAO.create(schedule, context: backgroundContext, completion: completion)
     }
     
     /// 일정 조회
-    func readSchedule(scheduleUID: String) -> ScheduleModel? {
+    func readSchedule(scheduleUID: String, completion: @escaping (ScheduleModel?) -> Void) {
         print("LocalDB, readSchedule // Info : 일정 조회 시작 - \(scheduleUID)")
-        return ScheduleDAO.read(scheduleUID: scheduleUID, context: backgroundContext)
+        ScheduleDAO.read(scheduleUID: scheduleUID, context: backgroundContext, completion: completion)
     }
     
     /// 모든 일정 조회
-    func readAllSchedules() -> [ScheduleModel] {
+    func readAllSchedules(completion: @escaping ([ScheduleModel]) -> Void) {
         print("LocalDB, readAllSchedules // Info : 모든 일정 조회 시작")
-        return ScheduleDAO.readAll(context: backgroundContext)
+        ScheduleDAO.readAll(context: backgroundContext, completion: completion)
     }
     
     /// 일정 업데이트
-    func updateSchedule(_ schedule: ScheduleModel) -> Bool {
+    func updateSchedule(_ schedule: ScheduleModel, completion: @escaping (Bool) -> Void) {
         print("LocalDB, updateSchedule // Info : 일정 업데이트 시작 - \(schedule.uid)")
-        return ScheduleDAO.update(schedule, context: backgroundContext)
+        ScheduleDAO.update(schedule, context: backgroundContext, completion: completion)
     }
     
     /// 일정 삭제
-    func deleteSchedule(scheduleUID: String) -> Bool {
+    func deleteSchedule(scheduleUID: String, completion: @escaping (Bool) -> Void) {
         print("LocalDB, deleteSchedule // Info : 일정 삭제 시작 - \(scheduleUID)")
-        return ScheduleDAO.delete(scheduleUID: scheduleUID, context: backgroundContext)
+        ScheduleDAO.delete(scheduleUID: scheduleUID, context: backgroundContext, completion: completion)
     }
     
-    // MARK: - Plan CRUD
     
     /// Plan 생성
     func createPlan(_ plan: PlanModel, scheduleUID: String) -> Bool {

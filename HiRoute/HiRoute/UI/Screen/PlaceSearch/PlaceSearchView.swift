@@ -29,11 +29,9 @@ struct PlaceSearchView : View {
     }
     
     private func handleAddPlace(selectedPlaceModel : PlaceModel){
-//        planVM.createPlan(placeModel: selectedPlaceModel, files: [])
+        planVM.createPlan(placeModel: selectedPlaceModel, files: [])
         presentationMode.wrappedValue.dismiss()
-        #if DEBUG
         print("PlaceSearchView, handleAddPlace(Place추가) : \(planVM.errorMessage)")
-        #endif
     }
     
     // 검색 초기화 기능
@@ -176,10 +174,8 @@ struct PlaceSearchView : View {
             }
         }
         .onAppear {
-//            #if DEBUG
-//            print("PlaceSearchView, onAppear : \(scheduleVM.selectedSchedule?.title)")
-//            #endif
-//            planVM.handleScheduleChange(scheduleVM.selectedSchedule)
+            print("PlaceSearchView, onAppear : \(scheduleVM.selectedSchedule?.title)")
+            planVM.currentPlanList = scheduleVM.selectedSchedule?.planList ?? []
         }
     }
 }

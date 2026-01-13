@@ -10,42 +10,18 @@ import CoreData
 struct ScheduleDAO {
     private init() {}
     
-    /// 스레드 안전성 검증
-    private static func validateContextSafety(context: NSManagedObjectContext) -> Bool {
-        if context.concurrencyType == .mainQueueConcurrencyType {
-            return Thread.isMainThread
-        }
-        return true
-    }
-    
-    /// iOS 8 호환 동기 실행 헬퍼
-    private static func performSynchronously<T>(on context: NSManagedObjectContext, block: @escaping () -> T) -> T {
-        var result: T?
-        let semaphore = DispatchSemaphore(value: 0)
-        
-        context.perform {
-            result = block()
-            semaphore.signal()
-        }
-        
-        semaphore.wait()
-        return result!
-    }
-    
-    /// Schedule 생성
-    static func create(_ schedule: ScheduleModel, context: NSManagedObjectContext) -> Bool {
-        guard validateContextSafety(context: context) else {
-            print("ScheduleDAO, create // Exception : 잘못된 컨텍스트 스레드 사용")
-            return false
-        }
-        
-        return performSynchronously(on: context) {
+    /// Schedule 생성 - 비동기
+    static func create(_ schedule: ScheduleModel, context: NSManagedObjectContext, completion: @escaping (Bool) -> Void) {
+        context.perform { // 백그라운드 큐에서 비동기 실행
             do {
+                // 중복검사 ( uid를 이용하여 중복검사, 동기식 헬퍼 사용 )
                 if read(scheduleUID: schedule.uid, context: context) != nil {
                     print("ScheduleDAO, create // Warning : 이미 존재하는 일정 - \(schedule.uid)")
-                    return false
+                    completion(false) // 중복이면 false를 completion으로 담아 보내고 return으로 종료
+                    return
                 }
                 
+                // coredata entity 생성
                 let scheduleEntity = ScheduleEntity(context: context)
                 scheduleEntity.uid = schedule.uid
                 scheduleEntity.index = Int32(schedule.index)
@@ -54,31 +30,26 @@ struct ScheduleDAO {
                 scheduleEntity.editDate = schedule.editDate
                 scheduleEntity.d_day = schedule.d_day
                 
-                // Plan들 저장
+                // 관련 plan entity들 생성 및 연결
                 for plan in schedule.planList {
                     let planEntity = createPlanEntity(from: plan, schedule: scheduleEntity, context: context)
-                    scheduleEntity.addToPlanList(planEntity)
+                    scheduleEntity.addToPlanList(planEntity) // core data 관계 설정
                 }
                 
+                // 영구 저장소에 저장
                 try context.save()
                 print("ScheduleDAO, create // Success : 일정 저장 완료 - \(schedule.title)")
-                return true
-                
+                completion(true) // 성공
             } catch {
                 print("ScheduleDAO, create // Exception : \(error.localizedDescription)")
-                return false
+                completion(false)
             }
         }
     }
     
-    /// Schedule 업데이트
-    static func update(_ schedule: ScheduleModel, context: NSManagedObjectContext) -> Bool {
-        guard validateContextSafety(context: context) else {
-            print("ScheduleDAO, update // Exception : 잘못된 컨텍스트 스레드 사용")
-            return false
-        }
-        
-        return performSynchronously(on: context) {
+    /// Schedule 업데이트 - 비동기
+    static func update(_ schedule: ScheduleModel, context: NSManagedObjectContext, completion: @escaping (Bool) -> Void) {
+        context.perform { // 백그라운드 큐에서 비동기 실행
             do {
                 let request: NSFetchRequest<ScheduleEntity> = ScheduleEntity.fetchRequest()
                 request.predicate = NSPredicate(format: "uid == %@", schedule.uid)
@@ -106,25 +77,21 @@ struct ScheduleDAO {
                     
                     try context.save()
                     print("ScheduleDAO, update // Success : 일정 업데이트 완료 - \(schedule.title)")
-                    return true
+                    completion(true)
                 } else {
-                    return create(schedule, context: context)
+                    print("ScheduleDAO, update // Warning : 업데이트할 일정을 찾을 수 없음")
+                    completion(false)
                 }
             } catch {
                 print("ScheduleDAO, update // Exception : \(error.localizedDescription)")
-                return false
+                completion(false)
             }
         }
     }
     
-    /// Schedule 삭제
-    static func delete(scheduleUID: String, context: NSManagedObjectContext) -> Bool {
-        guard validateContextSafety(context: context) else {
-            print("ScheduleDAO, delete // Exception : 잘못된 컨텍스트 스레드 사용")
-            return false
-        }
-        
-        return performSynchronously(on: context) {
+    /// Schedule 삭제 - 비동기
+    static func delete(scheduleUID: String, context: NSManagedObjectContext, completion: @escaping (Bool) -> Void) {
+        context.perform {
             do {
                 let request: NSFetchRequest<ScheduleEntity> = ScheduleEntity.fetchRequest()
                 request.predicate = NSPredicate(format: "uid == %@", scheduleUID)
@@ -133,65 +100,80 @@ struct ScheduleDAO {
                     context.delete(entity)
                     try context.save()
                     print("ScheduleDAO, delete // Success : 일정 삭제 완료 - \(scheduleUID)")
-                    return true
+                    completion(true)
                 } else {
                     print("ScheduleDAO, delete // Warning : 일정을 찾을 수 없음 - \(scheduleUID)")
-                    return false
+                    completion(false)
                 }
             } catch {
                 print("ScheduleDAO, delete // Exception : \(error.localizedDescription)")
-                return false
+                completion(false)
             }
         }
     }
     
-    /// Schedule 조회
-    static func read(scheduleUID: String, context: NSManagedObjectContext) -> ScheduleModel? {
-        guard validateContextSafety(context: context) else {
-            print("ScheduleDAO, read // Exception : 잘못된 컨텍스트 스레드 사용")
-            return nil
-        }
-        
-        return performSynchronously(on: context) {
+    /// Schedule 조회 - 비동기
+    static func read(scheduleUID: String, context: NSManagedObjectContext, completion: @escaping (ScheduleModel?) -> Void) {
+        context.perform { // 백그라운드 큐에서 비동기 실행
             do {
+                // fetch request 생성
                 let request: NSFetchRequest<ScheduleEntity> = ScheduleEntity.fetchRequest()
                 request.predicate = NSPredicate(format: "uid == %@", scheduleUID)
                 
                 if let entity = try context.fetch(request).first {
+                    let schedule = convertToScheduleModel(entity)
                     print("ScheduleDAO, read // Success : 일정 조회 완료 - \(scheduleUID)")
-                    return convertToScheduleModel(entity)
+                    completion(schedule)
+                } else {
+                    completion(nil)
                 }
-                return nil
             } catch {
                 print("ScheduleDAO, read // Exception : \(error.localizedDescription)")
-                return nil
+                completion(nil)
             }
         }
     }
     
-    /// 모든 Schedule 조회
-    static func readAll(context: NSManagedObjectContext) -> [ScheduleModel] {
-        guard validateContextSafety(context: context) else {
-            print("ScheduleDAO, readAll // Exception : 잘못된 컨텍스트 스레드 사용")
-            return []
-        }
-        
-        return performSynchronously(on: context) {
+    /// 모든 Schedule 조회 - 비동기
+    static func readAll(context: NSManagedObjectContext, completion: @escaping ([ScheduleModel]) -> Void) {
+        context.perform { // 백그라운드 큐에서 비동기 실행
             do {
+                // fetch request 생성
                 let request: NSFetchRequest<ScheduleEntity> = ScheduleEntity.fetchRequest()
+                // 최신 편집순 (edit date)
                 request.sortDescriptors = [NSSortDescriptor(key: "editDate", ascending: false)]
                 
+                // core data에서 모든 entity 조회
                 let entities = try context.fetch(request)
+                
+                // entity -> model 변환
+                let schedules = entities.compactMap { convertToScheduleModel($0) }
                 print("ScheduleDAO, readAll // Success : 일정 목록 조회 완료 - \(entities.count)개")
-                return entities.compactMap { convertToScheduleModel($0) }
+                
+                // model list 반환
+                completion(schedules)
             } catch {
                 print("ScheduleDAO, readAll // Exception : \(error.localizedDescription)")
-                return []
+                completion([]) // 실패시 empty list 반환
             }
         }
     }
     
-    // MARK: - Private Helpers (기존과 동일)
+    // MARK: - Helper Methods (동기식 - context.perform 내부에서만 호출)
+    private static func read(scheduleUID: String, context: NSManagedObjectContext) -> ScheduleModel? {
+        do {
+            let request: NSFetchRequest<ScheduleEntity> = ScheduleEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "uid == %@", scheduleUID)
+            
+            if let entity = try context.fetch(request).first {
+                return convertToScheduleModel(entity)
+            }
+            return nil
+        } catch {
+            print("ScheduleDAO, read // Exception : \(error.localizedDescription)")
+            return nil
+        }
+    }
     
     private static func createPlanEntity(from plan: PlanModel, schedule: ScheduleEntity, context: NSManagedObjectContext) -> PlanEntity {
         let entity = PlanEntity(context: context)

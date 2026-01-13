@@ -6,6 +6,7 @@
 //
 import Combine
 import Foundation
+import CoreData
 
 class ScheduleService {
     
@@ -104,19 +105,21 @@ class ScheduleService {
         print("ScheduleService, create // Info : 일정 생성 시작 - \(schedule.title)")
         
         return Just(schedule)
+            // Schedule 도메인 검증 수행
             .tryMap { [weak self] schedule in
-                // Schedule 도메인 기본 검증만 수행
+                // uid 검증 등
                 try self?.validateSchedule(schedule).get()
                 return schedule
             }
+            // repository 호출
             .flatMap { [weak self] validatedSchedule in
-                // 2. Repository 호출
                 guard let self = self else {
                     return Fail<ScheduleModel, Error>(error: ScheduleError.unknown)
                         .eraseToAnyPublisher()
                 }
-                return self.repository.create(validatedSchedule)
+                return self.repository.create(validatedSchedule) // repository 위임
             }
+            // 로깅
             .handleEvents(
                 receiveOutput: { [weak self] createdSchedule in
                     print("ScheduleService, create // Success : 일정 생성 완료 - \(createdSchedule.title)")
@@ -166,7 +169,7 @@ class ScheduleService {
     func readAll(page: Int = 0, itemsPerPage: Int = 10) -> AnyPublisher<[ScheduleModel], Error> {
         print("ScheduleService, readAll // Info : 전체 일정 조회 시작 - page:\(page)")
         
-        return repository.readList(page: page, itemsPerPage: itemsPerPage)
+        return repository.readAll(page: page, itemsPerPage: itemsPerPage)
             .map { [weak self] schedules in
                 // 비즈니스 로직: 사용자 친화적 정렬
                 return schedules.sorted { schedule1, schedule2 in
