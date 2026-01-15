@@ -21,7 +21,18 @@ final class ScheduleVM: ObservableObject {
     @Published var schedules: [ScheduleModel] = []
     @Published var selectedSchedule: ScheduleModel?
     @Published var filteredSchedules: [ScheduleModel] = []
+    
+    @Published var files: [FileModel] = []
+
+    @Published var selectedPlanModel: PlanModel?  // ✅ 이것만 추가하면 끝!
+
     @Published var searchText = ""
+    
+    @Published var isUploadingFile = false
+    @Published var fileUploadProgress: Double = 0.0
+    
+    // MARK: - Dependencies & Components
+    
     @Published var isLoading = false
     @Published var errorMessage: String?
     
@@ -35,6 +46,8 @@ final class ScheduleVM: ObservableObject {
     private var originalDDay = Date()
     
     internal let scheduleService: ScheduleService
+    internal let planService: PlanService
+    
     internal var cancellables = Set<AnyCancellable>()
     
     /**
@@ -43,12 +56,20 @@ final class ScheduleVM: ObservableObject {
      * - 편집 상태 자동 관리
      * - 메모리 효율적인 바인딩 생성
      */
+    
+    internal lazy var planBindings: PlanBindings = PlanBindings(vm: self)
+    
+    internal lazy var planCRUD: PlanCRUD = PlanCRUD(vm: self)
+    internal lazy var fileCRUD: FileCRUD = FileCRUD(vm: self)
     internal lazy var scheduleCRUD : ScheduleCRUD = ScheduleCRUD(vm: self)
     
-    init(scheduleService: ScheduleService) {
+    
+    init(scheduleService: ScheduleService, planService: PlanService) {
         self.scheduleService = scheduleService
-        print("ScheduleViewModel, init // Success : 에디팅 상태 방식 ViewModel 초기화")
+        self.planService = planService
+        print("ScheduleVM, init")
     }
+      
     
     // MARK: - Lifecycle
     
@@ -59,7 +80,7 @@ final class ScheduleVM: ObservableObject {
          2. 페이지네이션이라던가 새로고침 등이 있을 경우 그제서야 서버로부터 데이터를 호출하는 방향으로.
          */
 //        schedules = DummyPack.sampleSchedules
-        self.loadScheduleList()
+        self.readAllSchedule()
         print("ScheduleViewModel, loadInitialData // Info : 로컬 데이터 우선 로드 - \(schedules.count)개")
     }
     
@@ -69,13 +90,29 @@ final class ScheduleVM: ObservableObject {
         isLoading = loading
     }
     
+    internal func setFileUploading(_ uploading: Bool) {
+        isUploadingFile = uploading
+    }
+    
+    internal func updateFileUploadProgress(_ progress: Double) {
+        fileUploadProgress = progress
+    }
+    
     // 에러 처리 (internal로 노출)
     internal func handleError(_ error: Error) {
-        if let scheduleError = error as? ScheduleError {
-            errorMessage = scheduleError.localizedDescription
-        } else {
-            errorMessage = error.localizedDescription
+        let message: String
+        switch error {
+        case let scheduleError as ScheduleError:
+            message = "일정: \(scheduleError.localizedDescription)"
+        case let planError as PlanError:
+            message = "계획: \(planError.localizedDescription)"
+        case let fileError as FileError:
+            message = "파일: \(fileError.localizedDescription)"
+        default:
+            message = "알 수 없는 오류: \(error.localizedDescription)"
         }
+        errorMessage = message
+        print("ScheduleVM, handleError // Error : \(message)")
     }
     
     
@@ -84,11 +121,11 @@ final class ScheduleVM: ObservableObject {
         scheduleCRUD.create(title: title, memo: memo, dDay: dDay, result: result)
     }
     
-    func loadScheduleList() {
+    func readAllSchedule() {
         scheduleCRUD.readAll()
     }
     
-    func loadSchedule(uid: String) {
+    func readSchedule(uid: String) {
         scheduleCRUD.read(uid: uid)
     }
     
@@ -104,7 +141,7 @@ final class ScheduleVM: ObservableObject {
         scheduleCRUD.updateScheduleInfo(uid: uid, title: title, memo: memo, dDay: dDay, completion: completion)
     }
     
-    // 일정 선택 + 에디팅 상태 초기화
+    // 일정 선택
     func selectSchedule(_ schedule: ScheduleModel) {
         selectedSchedule = schedule
     }
@@ -165,6 +202,139 @@ final class ScheduleVM: ObservableObject {
         
         updateScheduleInfo(uid: schedule.uid, title: scheduleTitle, memo: scheduleMemo, dDay: scheduleDday, completion: completion)
         return true
+    }
+    
+    
+    func createPlan(placeModel: PlaceModel, files: [FileModel] = []) {
+        guard let scheduleUID = selectedSchedule?.uid else {
+            handleError(ScheduleError.notFound)
+            return
+        }
+        planCRUD.create(placeModel, scheduleUID: scheduleUID, files: files)
+    }
+    
+    func readPlan(planUID: String) {
+        planCRUD.read(uid: planUID)
+    }
+    
+    func readAllPlans() {
+        guard let scheduleUID = selectedSchedule?.uid else { return }
+        planCRUD.readAll(scheduleUID: scheduleUID)
+    }
+    
+    func updatePlan(_ plan: PlanModel) {
+        planCRUD.update(plan)
+    }
+    
+    func updatePlanIndex(from: Int, to: Int) {
+        planCRUD.updateIndex(from: from, to: to)
+    }
+    
+    func updatePlanMemo(planUID: String, newMemo: String) {
+        planCRUD.updateMemo(planUID: planUID, newMemo: newMemo)
+    }
+    
+    func deletePlan(planUID: String) {
+        planCRUD.delete(planUID: planUID)
+    }
+    
+    func createFile(planUID: String, data: Data? = nil, fileName: String? = nil, fileType: String? = nil, files: [FileModel] = []) {
+        fileCRUD.create(planUID: planUID, files: files, data: data, fileName: fileName, fileType: fileType)
+    }
+    
+    func readFile(fileUID: String) {
+        fileCRUD.read(fileUID: fileUID)
+    }
+    
+    func readAllFiles(planUID: String) {
+        fileCRUD.readAll(planUID: planUID)
+    }
+    
+    func updateFile(fileUID: String, newFileName: String) {
+        fileCRUD.update(fileUID: fileUID, newFileName: newFileName)
+    }
+    
+    func deleteFile(fileUID: String) {
+        fileCRUD.delete(fileUID: fileUID)
+    }
+    
+    // MARK: - Schedule State Management
+    internal func updateCurrentScheduleWithPlan(_ plan: PlanModel) {
+        guard let schedule = selectedSchedule else { return }
+        
+        var updatedPlanList = schedule.planList
+        if let index = updatedPlanList.firstIndex(where: { $0.uid == plan.uid }) {
+            updatedPlanList[index] = plan
+        } else {
+            updatedPlanList.append(plan)
+        }
+        
+        // 기존 updateModel 메서드 활용
+        let newScheduleModel = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: schedule.title,
+            memo: schedule.memo,
+            editDate: schedule.editDate,
+            d_day: schedule.d_day,
+            planList: updatedPlanList
+        )
+        
+        selectedSchedule = schedule.updateModel(newScheduleModel)
+        print("ScheduleVM, updateCurrentScheduleWithPlan // Success : Plan 업데이트 완료")
+    }
+
+    
+    internal func removeCurrentSchedulePlan(planUID: String) {
+        guard let schedule = selectedSchedule else { return }
+            
+        let updatedPlanList = schedule.planList.filter { $0.uid != planUID }
+        
+        let newScheduleModel = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: schedule.title,
+            memo: schedule.memo,
+            editDate: schedule.editDate,
+            d_day: schedule.d_day,
+            planList: updatedPlanList
+        )
+        
+        selectedSchedule = schedule.updateModel(newScheduleModel)
+        print("ScheduleVM, removeCurrentSchedulePlan // Success : Plan 제거 완료")
+    }
+    
+    // MARK: - File Cache Management
+    internal func updateSavedFilesForPlan(planUID: String, files: [FileModel]) {
+        self.files = self.files.filter { !($0.isSaved && $0.filePath.contains(planUID)) }
+        
+        let savedFiles = files.map { file in
+            FileModel.saved(
+                fileName: file.fileName,
+                fileType: file.fileType,
+                fileSize: file.fileSize,
+                filePath: file.filePath,
+                createdDate: file.createdDate
+            )
+        }
+        self.files.append(contentsOf: savedFiles)
+        print("ScheduleVM, updateSavedFilesForPlan // Success : 파일 캐시 업데이트 - \(savedFiles.count)개")
+    }
+    
+    internal func updateSavedFilesFromPlan(_ plan: PlanModel) {
+        files.removeAll { $0.isPendingUpload }
+        
+        let savedFileModels = plan.files.map { file in
+            FileModel.saved(
+                fileName: file.fileName,
+                fileType: file.fileType,
+                fileSize: file.fileSize,
+                filePath: file.filePath,
+                createdDate: file.createdDate
+            )
+        }
+        files.append(contentsOf: savedFileModels)
+        print("ScheduleVM, updateSavedFilesFromPlan // Success : Plan 파일 동기화 완료 - \(savedFileModels.count)개")
     }
     
     deinit {

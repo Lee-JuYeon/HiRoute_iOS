@@ -7,9 +7,9 @@
 import SwiftUI
 
 struct PlanBindings {
-    private weak var vm: PlanVM?
+    private weak var vm: ScheduleVM?
     
-    init(vm: PlanVM) {
+    init(vm: ScheduleVM) {
         self.vm = vm
     }
     
@@ -22,7 +22,7 @@ struct PlanBindings {
         return Binding(
             get: { [weak vm] in
                 guard let vm = vm else { return "" }
-                let value = vm.currentPlanList.first(where: { $0.uid == planUID })?.memo ?? ""
+                let value = (vm.selectedSchedule?.planList ?? []).first(where: { $0.uid == planUID })?.memo ?? ""
                 
                 #if DEBUG
                 print("PlanBindings, memo, GET: planUID=\(planUID), value='\(value)'")
@@ -55,10 +55,10 @@ struct PlanBindings {
         
         return Binding(
             get: { [weak vm] in
-                vm?.currentPlan
+                vm?.selectedPlanModel
             },
             set: { [weak vm] newValue in
-                vm?.currentPlan = newValue
+                vm?.selectedPlanModel = newValue
             }
         )
     }

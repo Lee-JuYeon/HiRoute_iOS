@@ -8,9 +8,9 @@ import SwiftUI
 import Combine
 
 struct FileCRUD {
-    private weak var vm: PlanVM?
+    private weak var vm: ScheduleVM?
     
-    init(vm: PlanVM) {
+    init(vm: ScheduleVM) {
         self.vm = vm
     }
     

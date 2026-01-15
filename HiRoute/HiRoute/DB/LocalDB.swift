@@ -50,44 +50,44 @@ class LocalDB {
     
     
     /// Plan 생성
-    func createPlan(_ plan: PlanModel, scheduleUID: String) -> Bool {
+    func createPlan(_ plan: PlanModel, scheduleUID: String, completion: @escaping (Bool) -> Void) {
         print("LocalDB, createPlan // Info : Plan 생성 시작 - \(plan.uid)")
-        return PlanDAO.create(plan, scheduleUID: scheduleUID, context: backgroundContext)
+        PlanDAO.create(plan, scheduleUID: scheduleUID, context: backgroundContext, completion: completion)
     }
     
     /// Plan 조회
-    func readPlan(planUID: String) -> PlanModel? {
+    func readPlan(planUID: String, completion: @escaping (PlanModel?) -> Void) {
         print("LocalDB, readPlan // Info : Plan 조회 시작 - \(planUID)")
-        return PlanDAO.read(planUID: planUID, context: backgroundContext)
+        PlanDAO.read(planUID: planUID, context: backgroundContext, completion: completion)
     }
     
     /// Plan 목록 조회
-    func readPlanList(scheduleUID: String) -> [PlanModel] {
+    func readPlanList(scheduleUID: String, completion: @escaping ([PlanModel]) -> Void) {
         print("LocalDB, readPlanList // Info : Plan 목록 조회 시작 - \(scheduleUID)")
-        return PlanDAO.readAll(scheduleUID: scheduleUID, context: backgroundContext)
+        PlanDAO.readAll(scheduleUID: scheduleUID, context: backgroundContext, completion: completion)
     }
     
     /// Plan 업데이트
-    func updatePlan(_ plan: PlanModel) -> Bool {
+    func updatePlan(_ plan: PlanModel, completion: @escaping (Bool) -> Void) {
         print("LocalDB, updatePlan // Info : Plan 업데이트 시작 - \(plan.uid)")
-        return PlanDAO.update(plan, context: backgroundContext)
+        PlanDAO.update(plan, context: backgroundContext, completion: completion)
     }
     
     /// Plan 메모 업데이트
-    func updatePlanMemo(planUID: String, memo: String) -> Bool {
+    func updatePlanMemo(planUID: String, memo: String, completion: @escaping (Bool) -> Void) {
         print("LocalDB, updatePlanMemo // Info : Plan 메모 업데이트 시작 - \(planUID)")
-        return PlanDAO.updateMemo(planUID: planUID, memo: memo, context: backgroundContext)
+        PlanDAO.updateMemo(planUID: planUID, memo: memo, context: backgroundContext, completion: completion)
     }
     
     /// Plan 인덱스 업데이트
-    func updatePlanIndex(planUID: String, newIndex: Int) -> Bool {
+    func updatePlanIndex(planUID: String, newIndex: Int, completion: @escaping (Bool) -> Void) {
         print("LocalDB, updatePlanIndex // Info : Plan 인덱스 업데이트 시작 - \(planUID)")
-        return PlanDAO.updateIndex(planUID: planUID, newIndex: newIndex, context: backgroundContext)
+        PlanDAO.updateIndex(planUID: planUID, newIndex: newIndex, context: backgroundContext, completion: completion)
     }
     
     /// Plan 삭제
-    func deletePlan(planUID: String) -> Bool {
+    func deletePlan(planUID: String, completion: @escaping (Bool) -> Void) {
         print("LocalDB, deletePlan // Info : Plan 삭제 시작 - \(planUID)")
-        return PlanDAO.delete(planUID: planUID, context: backgroundContext)
+        PlanDAO.delete(planUID: planUID, context: backgroundContext, completion: completion)
     }
 }

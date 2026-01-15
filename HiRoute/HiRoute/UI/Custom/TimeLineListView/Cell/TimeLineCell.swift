@@ -77,8 +77,14 @@ struct TimeLineCell : View {
     @ViewBuilder
     private func contentCard() -> some View {
         VStack(alignment: .leading, spacing: 8) {
+            
+            Text(getModel.placeModel.title)
+                      .font(.system(size: 14, weight: .semibold))
+                      .foregroundColor(Color.getColour(.label_strong))
+                      .lineLimit(1)
+            
             Text(getModel.placeModel.type.displayText)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 12, weight: .light))
                 .foregroundColor(Color.getColour(.label_alternative))
                 .lineLimit(1)
             

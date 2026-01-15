@@ -18,13 +18,13 @@ struct PlaceCell : View {
         setTheme : String,
         setTitle : String,
         setPlaceCellType : PlaceCellType,
-        callBackClick : @escaping () -> Void
+        onClick : @escaping () -> Void
     ){
         self.getImageURL = setImageURL
         self.getTheme = setTheme
         self.getPlaceTitle = setTitle
         self.getCellType = setPlaceCellType
-        self.getCallBackClick = callBackClick
+        self.getCallBackClick = onClick
     }
    
     var body: some View {

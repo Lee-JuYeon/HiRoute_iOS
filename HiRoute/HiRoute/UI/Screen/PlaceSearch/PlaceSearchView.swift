@@ -15,7 +15,7 @@ struct PlaceSearchView : View {
     @Environment(\.presentationMode) private var presentationMode
     @EnvironmentObject private var placeVM : PlaceVM
     @EnvironmentObject private var scheduleVM : ScheduleVM
-    @EnvironmentObject private var planVM : PlanVM
+//    @EnvironmentObject private var planVM : PlanVM
     @State private var searchState: PlaceSearchState = .initial
 
     private func handleSearchEvent(text : String){
@@ -29,9 +29,9 @@ struct PlaceSearchView : View {
     }
     
     private func handleAddPlace(selectedPlaceModel : PlaceModel){
-        planVM.createPlan(placeModel: selectedPlaceModel, files: [])
+        scheduleVM.createPlan(placeModel: selectedPlaceModel)
         presentationMode.wrappedValue.dismiss()
-        print("PlaceSearchView, handleAddPlace(Place추가) : \(planVM.errorMessage)")
+        print("PlaceSearchView, handleAddPlace(Place추가) : \(selectedPlaceModel)")
     }
     
     // 검색 초기화 기능
@@ -121,7 +121,7 @@ struct PlaceSearchView : View {
                     setTheme: placeModel.type.displayText,
                     setTitle: placeModel.title,
                     setPlaceCellType: .HOT,
-                    callBackClick: {
+                    onClick: {
                         handleAddPlace(selectedPlaceModel: placeModel)
                     }
                 )
@@ -140,7 +140,7 @@ struct PlaceSearchView : View {
                     setTheme: placeModel.type.displayText,
                     setTitle: placeModel.title,
                     setPlaceCellType: .NOMAL,
-                    callBackClick: {
+                    onClick: {
                         handleAddPlace(selectedPlaceModel: placeModel)
                     }
                 )
@@ -173,9 +173,6 @@ struct PlaceSearchView : View {
                 }
             }
         }
-        .onAppear {
-            print("PlaceSearchView, onAppear : \(scheduleVM.selectedSchedule?.title)")
-            planVM.currentPlanList = scheduleVM.selectedSchedule?.planList ?? []
-        }
     }
 }
+

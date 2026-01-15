@@ -22,7 +22,7 @@ struct PlanView : View {
     
     @Environment(\.presentationMode) private var presentationMode
     @EnvironmentObject private var scheduleVM : ScheduleVM
-    @EnvironmentObject private var planVM: PlanVM
+//    @EnvironmentObject private var planVM: PlanVM
     @EnvironmentObject private var localVM : LocalVM
     
     @State private var placeModeType = PlaceModeType.MY
@@ -108,12 +108,12 @@ struct PlanView : View {
     }
     
     private func handleCellClick(_ planModel : PlanModel){
-        planVM.currentPlan = planModel
+        scheduleVM.selectedPlanModel = planModel
     }
     
     private func handleAnnotationClick(_ planModel : PlanModel){
         // PlanVM을 통한 장소 선택
-        planVM.currentPlan = planModel
+        scheduleVM.selectedPlanModel = planModel
     }
     
     private func handleEditSchedule(){
@@ -377,7 +377,7 @@ struct PlanView : View {
                 }
             )
         })
-        .fullScreenCover(item: $planVM.currentPlan) { planModel in
+        .fullScreenCover(item: $scheduleVM.selectedPlanModel) { planModel in
             PlaceView(
                 setPlanModel: planModel,
                 setPlaceModeType : placeModeType

@@ -15,12 +15,13 @@ struct HiRouteApp: App {
     
     // ViewModel들은 ServiceContainer에서 Service 주입
     @StateObject private var scheduleVM = ScheduleVM(
-        scheduleService: ServiceContainer.shared.scheduleService
-    )
-    
-    @StateObject private var planVM = PlanVM(
+        scheduleService: ServiceContainer.shared.scheduleService,
         planService: ServiceContainer.shared.planService
     )
+    
+//    @StateObject private var planVM = PlanVM(
+//        planService: ServiceContainer.shared.planService
+//    )
     
     @StateObject private var placeVM = PlaceVM(
         placeService: ServiceContainer.shared.placeService,
@@ -35,7 +36,7 @@ struct HiRouteApp: App {
         WindowGroup {
             AppNavigationView()
                 .environmentObject(scheduleVM)
-                .environmentObject(planVM)
+//                .environmentObject(planVM)
                 .environmentObject(placeVM)
                 .environmentObject(localVM)
         }

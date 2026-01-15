@@ -30,6 +30,7 @@ struct TimeLineListView : View {
     private func addButton() -> some View {
         Button {
             isShowPlaceSearch = true
+            print("리스트 데이터 테스트 : \(getPlaceList)")
         } label: {
             HStack(alignment: .center, spacing: 0){
                 Text("방문할 여행지를 추가해볼까요?")

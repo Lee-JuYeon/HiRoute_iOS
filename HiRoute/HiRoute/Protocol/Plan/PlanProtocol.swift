@@ -22,7 +22,7 @@ protocol PlanProtocol {
      * @param visitPlace: 생성할 방문장소 모델
      * @return: 생성된 방문장소 Publisher
      */
-    func createPlan(_ planModel: PlanModel) -> AnyPublisher<PlanModel, Error>
+    func createPlan(_ planModel: PlanModel, scheduleUID : String) -> AnyPublisher<PlanModel, Error>
     
     /**
      * 특정 방문장소 조회
