@@ -30,7 +30,7 @@ struct ScheduleDAO {
                  NSManagedObject 인스턴스 생성
                  Context에 "삽입 대기" 상태로 등록
                  */
-                let scheduleEntity = ScheduleEntityMapper.toEntity(schedule, context: context)
+                _ = ScheduleEntityMapper.toEntity(schedule, context: context)
 
             
                 // 영구 저장소에 저장
@@ -55,11 +55,12 @@ struct ScheduleDAO {
                     // 기존 관계 데이터 삭제
                     if let plans = existingEntity.planList as? Set<PlanEntity> {
                         for plan in plans {
+                            // 기존 데이터 삭제후 재생성하는 방식으로 업데이트 진행하기 위해 삭제.
                             context.delete(plan)
                         }
                     }
                     
-                    // 업데이트
+                    // 2. 기본 속성 직접 업데이트
                     existingEntity.title = schedule.title
                     existingEntity.memo = schedule.memo
                     existingEntity.editDate = schedule.editDate
@@ -68,20 +69,20 @@ struct ScheduleDAO {
                     
                     // 새 Plan들 추가
                     for plan in schedule.planList {
-                        let planEntity = createPlanEntity(from: plan, schedule: existingEntity, context: context)
+                        let planEntity = PlanEntityMapper.toEntity(plan, schedule: existingEntity, context: context)
                         existingEntity.addToPlanList(planEntity)
                     }
                     
                     try context.save()
-                    print("ScheduleDAO, update // Success : 일정 업데이트 완료 - \(schedule.title)")
                     completion(true)
+                    print("ScheduleDAO, update // Success : 일정 업데이트 완료 - \(schedule.title)")
                 } else {
-                    print("ScheduleDAO, update // Warning : 업데이트할 일정을 찾을 수 없음")
                     completion(false)
+                    print("ScheduleDAO, update // Warning : 업데이트할 일정을 찾을 수 없음")
                 }
             } catch {
-                print("ScheduleDAO, update // Exception : \(error.localizedDescription)")
                 completion(false)
+                print("ScheduleDAO, update // Exception : \(error.localizedDescription)")
             }
         }
     }
@@ -96,15 +97,15 @@ struct ScheduleDAO {
                 if let entity = try context.fetch(request).first {
                     context.delete(entity)
                     try context.save()
-                    print("ScheduleDAO, delete // Success : 일정 삭제 완료 - \(scheduleUID)")
                     completion(true)
+                    print("ScheduleDAO, delete // Success : 일정 삭제 완료 - \(scheduleUID)")
                 } else {
-                    print("ScheduleDAO, delete // Warning : 일정을 찾을 수 없음 - \(scheduleUID)")
                     completion(false)
+                    print("ScheduleDAO, delete // Warning : 일정을 찾을 수 없음 - \(scheduleUID)")
                 }
             } catch {
-                print("ScheduleDAO, delete // Exception : \(error.localizedDescription)")
                 completion(false)
+                print("ScheduleDAO, delete // Exception : \(error.localizedDescription)")
             }
         }
     }
@@ -118,9 +119,9 @@ struct ScheduleDAO {
                 request.predicate = NSPredicate(format: "uid == %@", scheduleUID)
                 
                 if let entity = try context.fetch(request).first {
-                    let schedule = convertToScheduleModel(entity)
-                    print("ScheduleDAO, read // Success : 일정 조회 완료 - \(scheduleUID)")
+                    let schedule = ScheduleEntityMapper.toModel(entity)
                     completion(schedule)
+                    print("ScheduleDAO, read // Success : 일정 조회 완료 - \(scheduleUID)")
                 } else {
                     completion(nil)
                 }
@@ -144,7 +145,7 @@ struct ScheduleDAO {
                 let entities = try context.fetch(request)
                 
                 // entity -> model 변환
-                let schedules = entities.compactMap { convertToScheduleModel($0) }
+                let schedules = entities.compactMap { ScheduleEntityMapper.toModel($0) }
                 print("ScheduleDAO, readAll // Success : 일정 목록 조회 완료 - \(entities.count)개")
                 
                 // model list 반환
@@ -159,12 +160,29 @@ struct ScheduleDAO {
     // MARK: - Helper Methods (동기식 - context.perform 내부에서만 호출)
     private static func read(scheduleUID: String, context: NSManagedObjectContext) -> ScheduleModel? {
         do {
-            //  SELECT SQL 쿼리
+            /*
+             SELECT SQL 쿼리
+             CoreData의 NSFetchRequest는 ORM(Object-Relational Mapping)
+             
+             ScheduleEntity.fetchRequest() → SELECT * FROM ZSCHEDULEENTITY
+             NSPredicate(format: "uid == %@", schedule.uid) → WHERE ZUID = ?
+             
+             비유:
+             fetchRequest() = 음식 주문서 작성
+             fetch() = 주방에서 요리해서 가져오기
+
+             메모리 관점:
+             fetchRequest(): 0바이트 (객체만 생성)
+             fetch(): 조회된 데이터만큼 메모리 사용
+             
+             fetch(): DB에서 읽어서 메모리에 로드
+             save(): 모든 변경사항 한번에 커밋.
+             */
             let request: NSFetchRequest<ScheduleEntity> = ScheduleEntity.fetchRequest()
             request.predicate = NSPredicate(format: "uid == %@", scheduleUID)
             
             if let entity = try context.fetch(request).first { //여기서 SQL 실행
-                return convertToScheduleModel(entity)
+                return ScheduleEntityMapper.toModel(entity)
             }
             return nil
         } catch {
@@ -173,219 +191,5 @@ struct ScheduleDAO {
         }
     }
     
-    private static func createPlanEntity(from plan: PlanModel, schedule: ScheduleEntity, context: NSManagedObjectContext) -> PlanEntity {
-        let entity = PlanEntity(context: context)
-        entity.uid = plan.uid
-        entity.index = Int32(plan.index)
-        entity.memo = plan.memo
-        entity.schedule = schedule
-        
-        let placeEntity = createPlaceEntity(from: plan.placeModel, context: context)
-        entity.placeModel = placeEntity
-                
-        return entity
-    }
-    
-    private static func createPlaceEntity(from place: PlaceModel, context: NSManagedObjectContext) -> PlaceEntity {
-        // 기존 Place 확인
-        let request: NSFetchRequest<PlaceEntity> = PlaceEntity.fetchRequest()
-        request.predicate = NSPredicate(format: "uid == %@", place.uid)
-        
-        if let existingPlace = try? context.fetch(request).first {
-            return existingPlace // 기존 것 재사용
-        }
-        
-        
-        let entity = PlaceEntity(context: context)
-        entity.uid = place.uid
-        entity.title = place.title
-        entity.subtitle = place.subtitle
-        entity.thumbnailImageURL = place.thumbnailImageURL
-        entity.type = place.type.rawValue // enum -> String
-        
-        // 🏠 AddressModel -> AddressEntity 생성
-        for addressModel in [place.address] { // 배열로 처리 (1:N 관계)
-            let addressEntity = AddressEntity(context: context)
-            addressEntity.addressUID = addressModel.addressUID
-            addressEntity.addressLat = addressModel.addressLat
-            addressEntity.addressLon = addressModel.addressLon
-            addressEntity.addressTitle = addressModel.addressTitle
-            addressEntity.sido = addressModel.sido
-            addressEntity.gungu = addressModel.gungu
-            addressEntity.dong = addressModel.dong
-            addressEntity.fullAddress = addressModel.fullAddress
-            addressEntity.place = entity
-            entity.addToAddress(addressEntity)
-        }
-        
-        return entity
-    }
-    
-    private static func convertToScheduleModel(_ entity: ScheduleEntity) -> ScheduleModel? {
-        guard let uid = entity.uid else { return nil }
-        
-        let plans = convertPlansToModels(entity.planList)
-        
-        return ScheduleModel(
-            uid: uid,
-            index: Int(entity.index),
-            title: entity.title ?? "",
-            memo: entity.memo ?? "",
-            editDate: entity.editDate ?? Date(),
-            d_day: entity.d_day ?? Date(),
-            planList: plans
-        )
-    }
-    
-    private static func convertPlansToModels(_ planEntities: NSSet?) -> [PlanModel] {
-        guard let planSet = planEntities as? Set<PlanEntity> else { return [] }
-        
-        let sortedPlans = planSet.sorted { $0.index < $1.index }
-        return sortedPlans.compactMap { convertToPlanModel($0) }
-    }
-    
-    private static func convertToPlanModel(_ entity: PlanEntity) -> PlanModel? {
-        guard let uid = entity.uid else { return nil }
-        
-        let placeModel = convertToPlaceModel(entity.placeModel) ?? PlaceModel.empty()
-        
-        return PlanModel(
-            uid: uid,
-            index: Int(entity.index),
-            memo: entity.memo ?? "",
-            placeModel: placeModel, //
-            files: [] // TODO: FileEntity 처리
-        )
-    }
-    
-    private static func convertToPlaceModel(_ entity: PlaceEntity?) -> PlaceModel? {
-        guard let entity = entity,
-              let uid = entity.uid,
-              let title = entity.title else { return nil }
-        
-        // AddressEntity -> AddressModel 변환 (첫 번째 주소만)
-        let addressModel: AddressModel
-        if let addressSet = entity.address as? Set<AddressEntity>,
-           let firstAddress = addressSet.first {
-            addressModel = AddressModel(
-                addressUID: firstAddress.addressUID ?? "",
-                addressLat: firstAddress.addressLat,
-                addressLon: firstAddress.addressLon,
-                addressTitle: firstAddress.addressTitle ?? "",
-                sido: firstAddress.sido ?? "",
-                gungu: firstAddress.gungu ?? "",
-                dong: firstAddress.dong ?? "",
-                fullAddress: firstAddress.fullAddress ?? ""
-            )
-        } else {
-            // 주소가 없으면 기본값
-            addressModel = AddressModel(
-                addressUID: "", addressLat: 0.0, addressLon: 0.0,
-                addressTitle: "", sido: "", gungu: "", dong: "", fullAddress: ""
-            )
-        }
-        
-        let workingTimes: [WorkingTimeModel]
-        if let workingTimeSet = entity.workingTimes as? Set<WorkingTimeEntity> {
-            workingTimes = workingTimeSet.compactMap { workingTimeEntity in
-                guard let id = workingTimeEntity.id else { return nil }
-                return WorkingTimeModel(
-                    id: id,
-                    dayTitle: workingTimeEntity.dayTitle ?? "",
-                    open: workingTimeEntity.open ?? "",
-                    close: workingTimeEntity.close ?? "",
-                    lastOrder: workingTimeEntity.lastOrder ?? ""
-                )
-            }
-        } else {
-            workingTimes = []
-        }
-        
-        // ReviewEntity -> ReviewModel 변환 (완전한 데이터 포함)
-        let reviews: [ReviewModel]
-        if let reviewSet = entity.reviews as? Set<ReviewEntity> {
-            reviews = reviewSet.compactMap { reviewEntity in
-                guard let reviewUID = reviewEntity.reviewUID else { return nil }
-                
-                //  ReviewImageEntity -> ReviewImageModel 변환
-                let images: [ReviewImageModel]
-                if let imageSet = reviewEntity.images as? Set<ReviewImageEntity> {
-                    images = imageSet.compactMap { imageEntity in
-                        guard let uid = imageEntity.uid,
-                              let userUID = imageEntity.userUID,
-                              let imageURL = imageEntity.imageURL else { return nil }
-                        
-                        return ReviewImageModel(
-                            uid: uid,
-                            userUID: userUID,
-                            date: imageEntity.date ?? Date(),
-                            imageURL: imageURL
-                        )
-                    }
-                } else {
-                    images = []
-                }
-                
-                // UsefulEntity -> UsefulModel 변환
-                let usefulList: [UsefulModel]
-                if let usefulSet = reviewEntity.usefulList as? Set<UsefulEntity> {
-                    usefulList = usefulSet.compactMap { usefulEntity in
-                        guard let userUID = usefulEntity.userUID else { return nil }
-                        return UsefulModel(userUID: userUID)
-                    }
-                } else {
-                    usefulList = []
-                }
-                
-                return ReviewModel(
-                    reviewUID: reviewUID,
-                    reviewText: reviewEntity.reviewText ?? "",
-                    userUID: reviewEntity.userUID ?? "",
-                    userName: reviewEntity.userName ?? "",
-                    visitDate: reviewEntity.visitDate ?? Date(),
-                    usefulCount: Int(reviewEntity.usefulCount),
-                    images: images,
-                    usefulList: usefulList
-                )
-            }
-        } else {
-            reviews = []
-        }
-        
-        let bookMarks: [BookMarkModel]
-        if let bookmarkSet = entity.bookMarks as? Set<BookmarkEntity> {
-            bookMarks = bookmarkSet.compactMap { bookmarkEntity in
-                guard let userUID = bookmarkEntity.userUID else { return nil }
-                return BookMarkModel(userUID: userUID)
-            }
-        } else {
-            bookMarks = []
-        }
-        
-        let stars: [StarModel]
-        if let starSet = entity.stars as? Set<StarEntity> {
-            stars = starSet.compactMap { starEntity in
-                guard let userUID = starEntity.userUID else { return nil }
-                return StarModel(
-                    userUID: userUID,
-                    star: Int(starEntity.star)
-                )
-            }
-        } else {
-            stars = []
-        }
-        
-        return PlaceModel(
-            uid: uid,
-            address: addressModel,
-            type: PlaceType(rawValue: entity.type ?? "") ?? .restaurant,
-            title: title,
-            subtitle: entity.subtitle,
-            thumbnailImageURL: entity.thumbnailImageURL,
-            workingTimes: workingTimes,
-            reviews: reviews,
-            bookMarks: bookMarks,
-            stars: stars               
-        )
-    }
+   
 }

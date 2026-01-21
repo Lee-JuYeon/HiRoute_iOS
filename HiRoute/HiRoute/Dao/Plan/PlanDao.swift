@@ -28,16 +28,16 @@ struct PlanDAO {
                 }
                 
                 // Core Data Entity 생성
-                let planEntity = createPlanEntity(from: plan, schedule: scheduleEntity, context: context)
+                let planEntity = PlanEntityMapper.toEntity(plan, schedule: scheduleEntity, context: context)
                 scheduleEntity.addToPlanList(planEntity)
                 
                 // 영구 저장소에 저장
                 try context.save()
-                print("PlanDAO, create // Success : Plan 저장 완료 - \(plan.uid)")
                 completion(true)
+                print("PlanDAO, create // Success : Plan 저장 완료 - \(plan.uid)")
             } catch {
-                print("PlanDAO, create // Exception : \(error.localizedDescription)")
                 completion(false)
+                print("PlanDAO, create // Exception : \(error.localizedDescription)")
             }
         }
     }
@@ -50,7 +50,7 @@ struct PlanDAO {
                 request.predicate = NSPredicate(format: "uid == %@", planUID)
                 
                 if let entity = try context.fetch(request).first {
-                    let plan = convertToPlanModel(entity)
+                    let plan = PlanEntityMapper.toModel(entity)
                     print("PlanDAO, read // Success : Plan 조회 완료 - \(planUID)")
                     completion(plan)
                 } else {
@@ -72,7 +72,7 @@ struct PlanDAO {
                 request.sortDescriptors = [NSSortDescriptor(key: "index", ascending: true)]
                 
                 let entities = try context.fetch(request)
-                let plans = entities.compactMap { convertToPlanModel($0) }
+                let plans = entities.compactMap { PlanEntityMapper.toModel($0) }
                 print("PlanDAO, readAll // Success : Plan 목록 조회 완료 - \(entities.count)개")
                 completion(plans)
             } catch {
@@ -184,7 +184,7 @@ struct PlanDAO {
             request.predicate = NSPredicate(format: "uid == %@", planUID)
             
             if let entity = try context.fetch(request).first {
-                return convertToPlanModel(entity)
+                return PlanEntityMapper.toModel(entity)  // Mapper 사용
             }
             return nil
         } catch {
@@ -204,70 +204,6 @@ struct PlanDAO {
         }
     }
     
-    private static func createPlanEntity(from plan: PlanModel, schedule: ScheduleEntity, context: NSManagedObjectContext) -> PlanEntity {
-        let entity = PlanEntity(context: context)
-        entity.uid = plan.uid
-        entity.index = Int32(plan.index)
-        entity.memo = plan.memo
-        entity.schedule = schedule
-        entity.placeModel = findOrCreatePlace(from: plan.placeModel, context: context)
-        return entity
-    }
-    
-    private static func findOrCreatePlace(from place: PlaceModel, context: NSManagedObjectContext) -> PlaceEntity {
-        let request: NSFetchRequest<PlaceEntity> = PlaceEntity.fetchRequest()
-        request.predicate = NSPredicate(format: "uid == %@", place.uid)
-        
-        if let existing = try? context.fetch(request).first {
-            return existing
-        }
-        
-        // 신규 생성
-        let placeEntity = PlaceEntity(context: context)
-        placeEntity.uid = place.uid
-        placeEntity.title = place.title
-        placeEntity.type = place.type.rawValue
-        placeEntity.subtitle = place.subtitle
-        placeEntity.thumbnailImageURL = place.thumbnailImageURL
-        return placeEntity
-    }
-    
-    private static func convertToPlanModel(_ entity: PlanEntity) -> PlanModel? {
-        guard let uid = entity.uid else { return nil }
-        let place = entity.placeModel?.toPlaceModel() ?? PlaceModel.empty()
-        
-        return PlanModel(
-            uid: uid,
-            index: Int(entity.index),
-            memo: entity.memo ?? "",
-            placeModel: place,
-            files: []
-        )
-    }
+  
 }
 
-extension PlaceEntity {
-    func toPlaceModel() -> PlaceModel {
-        return PlaceModel(
-            uid: uid ?? "",
-            address: AddressModel(
-                addressUID: "",
-                addressLat: 0.0,
-                addressLon: 0.0,
-                addressTitle: "",
-                sido: "",
-                gungu: "",
-                dong: "",
-                fullAddress: ""
-            ),
-            type: PlaceType(rawValue: type ?? "") ?? .restaurant,
-            title: title ?? "",
-            subtitle: subtitle,
-            thumbnailImageURL: thumbnailImageURL,
-            workingTimes: [],
-            reviews: [],
-            bookMarks: [],
-            stars: []
-        )
-    }
-}
