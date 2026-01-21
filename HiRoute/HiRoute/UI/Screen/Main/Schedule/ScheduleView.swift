@@ -75,6 +75,11 @@ struct ScheduleView: View {
                 }
                 .padding()
             }
+            .frame(
+                maxWidth: .infinity,
+                maxHeight: .infinity,
+                alignment: .center
+            )
         } else {
             if scheduleVM.schedules.isEmpty {
                 Text("작성된 일정이 없네요, 일정을 추가해볼까요?")
@@ -109,6 +114,7 @@ struct ScheduleView: View {
         }
         .onAppear {
             scheduleVM.initData()
+            scheduleVM.printAllCoreData()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fullScreenCover(item: $scheduleVM.selectedSchedule) { scheduleModel in

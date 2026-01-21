@@ -22,7 +22,6 @@ struct PlanView : View {
     
     @Environment(\.presentationMode) private var presentationMode
     @EnvironmentObject private var scheduleVM : ScheduleVM
-//    @EnvironmentObject private var planVM: PlanVM
     @EnvironmentObject private var localVM : LocalVM
     
     @State private var placeModeType = PlaceModeType.MY
@@ -68,30 +67,6 @@ struct PlanView : View {
     
     private func handleBackButton(){
         handleExit(forceExit: false)  // ✅ 일반 뒤로가기
-//        switch getModeType {
-//        case .CREATE:
-//            switch scheduleVM.hasChanges {
-//            case true:
-//                showUnsavedAlert = true
-//            case false:
-//                scheduleVM.selectedSchedule = nil
-//                presentationMode.wrappedValue.dismiss()
-//            }
-//            
-//        case .UPDATE:
-//            switch scheduleVM.hasChanges {
-//            case true:
-//                showUnsavedAlert = true
-//            case false:
-//                getModeType = .READ
-//                scheduleVM.cancelEditing()
-//            }
-//            
-//        case .READ:
-//            // READ 모드에서는 바로 나가기
-//            scheduleVM.selectedSchedule = nil
-//            presentationMode.wrappedValue.dismiss()
-//        }
     }
     
     private func handleOptionButton(){
@@ -143,14 +118,30 @@ struct PlanView : View {
             return
             
         case .UPDATE:
-            _ = scheduleVM.finishEditingIfChanged { success in
-                if success {
-                    print("변경사항 저장 완료")
-                } else {
-                    print("저장할 변경사항 없음")
+            let originalCount = getScheduleModel.planList.count
+            let currentCount = scheduleVM.selectedSchedule?.planList.count ?? 0
+            let hasChanges = scheduleVM.hasChanges
+            
+            print("=== 저장 시도 ===")
+            print("원본 Plan: \(originalCount)개")
+            print("현재 Plan: \(currentCount)개")
+            print("변경사항: \(hasChanges)")
+            print("================")
+            
+            // Plan 개수가 다르거나 기본 변경사항이 있으면 저장
+            if hasChanges || originalCount != currentCount {
+                scheduleVM.updateScheduleInfo(
+                    uid: scheduleVM.selectedSchedule!.uid,
+                    title: scheduleVM.scheduleTitle,
+                    memo: scheduleVM.scheduleMemo,
+                    dDay: scheduleVM.scheduleDday
+                ) { success in
+                    print("✅ 저장 완료: \(success)")
+                    scheduleVM.selectedSchedule = nil
+                    presentationMode.wrappedValue.dismiss()
                 }
-                
-                // ✅ self 직접 사용 (struct는 순환참조 없음)
+            } else {
+                print("저장할 변경사항 없음")
                 scheduleVM.selectedSchedule = nil
                 presentationMode.wrappedValue.dismiss()
             }
@@ -418,6 +409,13 @@ struct PlanView : View {
             if (scheduleVM.selectedSchedule != nil){
                 scheduleVM.selectedSchedule = nil
             }
+            
+            if scheduleVM.hasChanges {
+                   scheduleVM.finishEditing()
+               } else {
+                   scheduleVM.cancelEditing()
+               }
+               scheduleVM.clearSelection()  // 메모리 정리
         }
     }
 }

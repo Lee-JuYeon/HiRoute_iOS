@@ -44,7 +44,7 @@ class DummyPack {
                         type: .cafe,
                         title: "제주 공항 카페",
                         subtitle: "공항 근처 • WiFi 무료",
-                        thumbanilImageURL: "https://images.khan.co.kr/article/2025/07/01/news-p.v1.20250701.a9878bb6854e4f9f832e68396d1f6bb6_P1.png",
+                        thumbnailImageURL: "https://images.khan.co.kr/article/2025/07/01/news-p.v1.20250701.a9878bb6854e4f9f832e68396d1f6bb6_P1.png",
                         workingTimes: [
                             WorkingTimeModel(
                                 id: "jeju_cafe_mon",
@@ -282,7 +282,7 @@ class DummyPack {
                         type: .restaurant,
                         title: "제주 흑돼지 전문점",
                         subtitle: "흑돼지 전문 • 현지 맛집",
-                        thumbanilImageURL: "https://example.com/jeju_pork.jpg",
+                        thumbnailImageURL: "https://example.com/jeju_pork.jpg",
                         workingTimes: [
                             WorkingTimeModel(
                                 id: "jeju_rest_mon",
@@ -354,7 +354,7 @@ class DummyPack {
                         type: .restaurant,
                         title: "노모어 피자 홍대점",
                         subtitle: "이탈리안 레스토랑 • 피자 전문점",
-                        thumbanilImageURL: "https://example.com/pizza.jpg",
+                        thumbnailImageURL: "https://example.com/pizza.jpg",
                         workingTimes: [
                             WorkingTimeModel(
                                 id: "pizza_mon",
@@ -400,7 +400,7 @@ class DummyPack {
             type: .hospital,
             title: "서울대학교병원",
             subtitle: "종합병원 • 24시간 응급실",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20190417_78%2F1555465116063h8kKu_JPEG%2FuZNobeKCumi2ws8sEcbdsKX6.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20190417_78%2F1555465116063h8kKu_JPEG%2FuZNobeKCumi2ws8sEcbdsKX6.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_001_mon", dayTitle: "월", open: "0800", close: "1700"),
                 WorkingTimeModel(id: "wt_001_tue", dayTitle: "화", open: "0800", close: "1700"),
@@ -464,7 +464,7 @@ class DummyPack {
             type: .store,
             title: "세븐일레븐 홍대점",
             subtitle: "편의점 • 24시간 운영",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20200826_105%2F1598427446074FhQeY_JPEG%2FJJsBaMWXYwpkdDEvKmZKIKgJ.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20200826_105%2F1598427446074FhQeY_JPEG%2FJJsBaMWXYwpkdDEvKmZKIKgJ.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_002_mon", dayTitle: "월", open: "0000", close: "2400"),
                 WorkingTimeModel(id: "wt_002_tue", dayTitle: "화", open: "0000", close: "2400"),
@@ -510,7 +510,7 @@ class DummyPack {
             type: .cafe,
             title: "스타벅스 홍대역점",
             subtitle: "카페 • WiFi 무료",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240116_3%2F1705376556071Xe3sT_JPEG%2F%25B4%25D9%25BF%25EE%25B7%25CE%25B5%25E5.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240116_3%2F1705376556071Xe3sT_JPEG%2F%25B4%25D9%25BF%25EE%25B7%25CE%25B5%25E5.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_003_mon", dayTitle: "월", open: "0700", close: "2200"),
                 WorkingTimeModel(id: "wt_003_tue", dayTitle: "화", open: "0700", close: "2200"),
@@ -580,7 +580,7 @@ class DummyPack {
             type: .restaurant,
             title: "노모어 피자 홍대점",
             subtitle: "이탈리안 레스토랑 • 피자 전문점",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240116_3%2F1705376556071Xe3sT_JPEG%2F%25B4%25D9%25BF%25EE%25B7%25CE%25B5%25E5.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240116_3%2F1705376556071Xe3sT_JPEG%2F%25B4%25D9%25BF%25EE%25B7%25CE%25B5%25E5.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_004_mon", dayTitle: "월", open: "1100", close: "2200", lastOrder: "21:30"),
                 WorkingTimeModel(id: "wt_004_tue", dayTitle: "화", open: "1100", close: "2200", lastOrder: "21:30"),
@@ -662,7 +662,7 @@ class DummyPack {
             type: .cafe,
             title: "브리트레소 혜화",
             subtitle: "영국식 카페 • 애프터눈티",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240326_195%2F1711439415401NEQr8_JPEG%2F%25C0%25DD%25B7%25E1_%25C0%25FC%25C3%25BC2.jpeg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240326_195%2F1711439415401NEQr8_JPEG%2F%25C0%25DD%25B7%25E1_%25C0%25FC%25C3%25BC2.jpeg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_005_mon", dayTitle: "월", open: "1100", close: "2200", lastOrder: "21:30"),
                 WorkingTimeModel(id: "wt_005_tue", dayTitle: "화", open: "1100", close: "2200", lastOrder: "21:30"),
@@ -733,7 +733,7 @@ class DummyPack {
             type: .restaurant,
             title: "멜팅소울 롯데백화점 본점",
             subtitle: "버거 전문점 • 대회 우승작",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240514_119%2F1715668910247St53v_JPEG%2F%25C7%25CA%25B8%25E1%25C6%25C3%25BC%25D2%25BF%25EF%25C7%25C1%25B7%25CE1_%25B4%25EB%25C1%25F6_1_%25B4%25EB%25C1%25F6_1.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240514_119%2F1715668910247St53v_JPEG%2F%25C7%25CA%25B8%25E1%25C6%25C3%25BC%25D2%25BF%25EF%25C7%25C1%25B7%25CE1_%25B4%25EB%25C1%25F6_1_%25B4%25EB%25C1%25F6_1.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_006_mon", dayTitle: "월", open: "1030", close: "2000", lastOrder: "19:30"),
                 WorkingTimeModel(id: "wt_006_tue", dayTitle: "화", open: "1030", close: "2000", lastOrder: "19:30"),
@@ -792,7 +792,7 @@ class DummyPack {
             type: .store,
             title: "GS25 명동중앙점",
             subtitle: "편의점 • 관광지 근처",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20200826_105%2F1598427446074FhQeY_JPEG%2FJJsBaMWXYwpkdDEvKmZKIKgJ.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20200826_105%2F1598427446074FhQeY_JPEG%2FJJsBaMWXYwpkdDEvKmZKIKgJ.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_007_mon", dayTitle: "월", open: "0600", close: "0100"),
                 WorkingTimeModel(id: "wt_007_tue", dayTitle: "화", open: "0600", close: "0100"),
@@ -839,7 +839,7 @@ class DummyPack {
             type: .hospital,
             title: "강남세브란스병원",
             subtitle: "종합병원 • 전문진료",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20190417_78%2F1555465116063h8kKu_JPEG%2FuZNobeKCumi2ws8sEcbdsKX6.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20190417_78%2F1555465116063h8kKu_JPEG%2FuZNobeKCumi2ws8sEcbdsKX6.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_008_mon", dayTitle: "월", open: "0800", close: "1730"),
                 WorkingTimeModel(id: "wt_008_tue", dayTitle: "화", open: "0800", close: "1730"),
@@ -891,7 +891,7 @@ class DummyPack {
             type: .hospital,
             title: "서울대학교병원",
             subtitle: "종합병원 • 24시간 응급실",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20190417_78%2F1555465116063h8kKu_JPEG%2FuZNobeKCumi2ws8sEcbdsKX6.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20190417_78%2F1555465116063h8kKu_JPEG%2FuZNobeKCumi2ws8sEcbdsKX6.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_001_mon", dayTitle: "월", open: "0800", close: "1700"),
                 WorkingTimeModel(id: "wt_001_tue", dayTitle: "화", open: "0800", close: "1700"),
@@ -955,7 +955,7 @@ class DummyPack {
             type: .store,
             title: "세븐일레븐 홍대점",
             subtitle: "편의점 • 24시간 운영",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20200826_105%2F1598427446074FhQeY_JPEG%2FJJsBaMWXYwpkdDEvKmZKIKgJ.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20200826_105%2F1598427446074FhQeY_JPEG%2FJJsBaMWXYwpkdDEvKmZKIKgJ.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_002_mon", dayTitle: "월", open: "0000", close: "2400"),
                 WorkingTimeModel(id: "wt_002_tue", dayTitle: "화", open: "0000", close: "2400"),
@@ -1001,7 +1001,7 @@ class DummyPack {
             type: .cafe,
             title: "스타벅스 홍대역점",
             subtitle: "카페 • WiFi 무료",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240116_3%2F1705376556071Xe3sT_JPEG%2F%25B4%25D9%25BF%25EE%25B7%25CE%25B5%25E5.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240116_3%2F1705376556071Xe3sT_JPEG%2F%25B4%25D9%25BF%25EE%25B7%25CE%25B5%25E5.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_003_mon", dayTitle: "월", open: "0700", close: "2200"),
                 WorkingTimeModel(id: "wt_003_tue", dayTitle: "화", open: "0700", close: "2200"),
@@ -1071,7 +1071,7 @@ class DummyPack {
             type: .restaurant,
             title: "노모어 피자 홍대점",
             subtitle: "이탈리안 레스토랑 • 피자 전문점",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240116_3%2F1705376556071Xe3sT_JPEG%2F%25B4%25D9%25BF%25EE%25B7%25CE%25B5%25E5.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240116_3%2F1705376556071Xe3sT_JPEG%2F%25B4%25D9%25BF%25EE%25B7%25CE%25B5%25E5.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_004_mon", dayTitle: "월", open: "1100", close: "2200", lastOrder: "21:30"),
                 WorkingTimeModel(id: "wt_004_tue", dayTitle: "화", open: "1100", close: "2200", lastOrder: "21:30"),
@@ -1153,7 +1153,7 @@ class DummyPack {
             type: .cafe,
             title: "브리트레소 혜화",
             subtitle: "영국식 카페 • 애프터눈티",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240326_195%2F1711439415401NEQr8_JPEG%2F%25C0%25DD%25B7%25E1_%25C0%25FC%25C3%25BC2.jpeg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240326_195%2F1711439415401NEQr8_JPEG%2F%25C0%25DD%25B7%25E1_%25C0%25FC%25C3%25BC2.jpeg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_005_mon", dayTitle: "월", open: "1100", close: "2200", lastOrder: "21:30"),
                 WorkingTimeModel(id: "wt_005_tue", dayTitle: "화", open: "1100", close: "2200", lastOrder: "21:30"),
@@ -1224,7 +1224,7 @@ class DummyPack {
             type: .restaurant,
             title: "멜팅소울 롯데백화점 본점",
             subtitle: "버거 전문점 • 대회 우승작",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240514_119%2F1715668910247St53v_JPEG%2F%25C7%25CA%25B8%25E1%25C6%25C3%25BC%25D2%25BF%25EF%25C7%25C1%25B7%25CE1_%25B4%25EB%25C1%25F6_1_%25B4%25EB%25C1%25F6_1.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20240514_119%2F1715668910247St53v_JPEG%2F%25C7%25CA%25B8%25E1%25C6%25C3%25BC%25D2%25BF%25EF%25C7%25C1%25B7%25CE1_%25B4%25EB%25C1%25F6_1_%25B4%25EB%25C1%25F6_1.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_006_mon", dayTitle: "월", open: "1030", close: "2000", lastOrder: "19:30"),
                 WorkingTimeModel(id: "wt_006_tue", dayTitle: "화", open: "1030", close: "2000", lastOrder: "19:30"),
@@ -1283,7 +1283,7 @@ class DummyPack {
             type: .store,
             title: "GS25 명동중앙점",
             subtitle: "편의점 • 관광지 근처",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20200826_105%2F1598427446074FhQeY_JPEG%2FJJsBaMWXYwpkdDEvKmZKIKgJ.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20200826_105%2F1598427446074FhQeY_JPEG%2FJJsBaMWXYwpkdDEvKmZKIKgJ.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_007_mon", dayTitle: "월", open: "0600", close: "0100"),
                 WorkingTimeModel(id: "wt_007_tue", dayTitle: "화", open: "0600", close: "0100"),
@@ -1330,7 +1330,7 @@ class DummyPack {
             type: .hospital,
             title: "강남세브란스병원",
             subtitle: "종합병원 • 전문진료",
-            thumbanilImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20190417_78%2F1555465116063h8kKu_JPEG%2FuZNobeKCumi2ws8sEcbdsKX6.jpg",
+            thumbnailImageURL: "https://search.pstatic.net/common/?src=https%3A%2F%2Fldb-phinf.pstatic.net%2F20190417_78%2F1555465116063h8kKu_JPEG%2FuZNobeKCumi2ws8sEcbdsKX6.jpg",
             workingTimes: [
                 WorkingTimeModel(id: "wt_008_mon", dayTitle: "월", open: "0800", close: "1730"),
                 WorkingTimeModel(id: "wt_008_tue", dayTitle: "화", open: "0800", close: "1730"),

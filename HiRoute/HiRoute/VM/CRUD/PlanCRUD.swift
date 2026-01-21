@@ -18,10 +18,11 @@ struct PlanCRUD {
         print("PlanCRUD, create // Info : Plan 생성 시작 - \(placeModel.title)")
         guard let vm = vm else { return }
         
-        // ✅ selectedSchedule?.planList 직접 사용
+        let currentCount = vm.selectedSchedule?.planList.count ?? 0
+        
         let newPlan = PlanModel(
             uid: "plan_\(UUID().uuidString)",
-            index: vm.selectedSchedule?.planList.count ?? 0,
+            index: currentCount, // ✅ 정확한 다음 인덱스
             memo: "",
             placeModel: placeModel,
             files: []
@@ -59,21 +60,30 @@ struct PlanCRUD {
                 receiveValue: { [weak vm] createdPlan in
                     guard let schedule = vm?.selectedSchedule else { return }
                         
-                    // 새 Plan을 추가한 후 전체 인덱스 재정렬
+                    // ✅ 생성된 Plan의 인덱스를 현재 리스트 끝으로 설정
+                    let correctedPlan = PlanModel(
+                        uid: createdPlan.uid,
+                        index: schedule.planList.count, // 새 Plan은 맨 끝 인덱스
+                        memo: createdPlan.memo,
+                        placeModel: createdPlan.placeModel,
+                        files: createdPlan.files
+                    )
+                    
                     var updatedPlanList = schedule.planList
-                    updatedPlanList.append(createdPlan)
+                    updatedPlanList.append(correctedPlan)
                     
                     // ✅ 모든 Plan의 인덱스를 순차적으로 재할당
                     var reindexedPlanList: [PlanModel] = []
                     for (index, plan) in updatedPlanList.enumerated() {
                         let updatedPlan = PlanModel(
                             uid: plan.uid,
-                            index: index,  // ← 순차적 인덱스 할당
+                            index: index,  // ← 순차적 인덱스 (0,1,2,3...)
                             memo: plan.memo,
                             placeModel: plan.placeModel,
                             files: plan.files
                         )
                         reindexedPlanList.append(updatedPlan)
+                        print("PlanCRUD, create // Debug : Plan[\(index)] - \(plan.placeModel.title) 인덱스 설정")
                     }
                     
                     // selectedSchedule 업데이트
@@ -88,13 +98,13 @@ struct PlanCRUD {
                     )
                     
                     vm?.selectedSchedule = schedule.updateModel(newScheduleModel)
-                    vm?.updateSavedFilesFromPlan(createdPlan)
+                    vm?.updateSavedFilesFromPlan(correctedPlan)
                     print("PlanCRUD, create // Success : selectedSchedule 업데이트 완료 - 인덱스 재정렬")
                 }
             )
             .store(in: &vm.cancellables)
     }
-    
+
     func read(uid: String) {
         print("PlanCRUD, read // Info : Plan 조회 - \(uid)")
         guard let vm = vm else { return }

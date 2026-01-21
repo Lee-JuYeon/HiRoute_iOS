@@ -8,6 +8,7 @@ import SwiftUI
 import Combine
 import Foundation
 import Combine
+import CoreData
 
 /**
  * ScheduleViewModel (에디팅 상태 방식)
@@ -40,10 +41,8 @@ final class ScheduleVM: ObservableObject {
     @Published var scheduleTitle = ""
     @Published var scheduleMemo = ""
     @Published var scheduleDday = Date()
-    
-    private var originalTitle = ""
-    private var originalMemo = ""
-    private var originalDDay = Date()
+    private var originalSchedule: ScheduleModel?
+
     
     internal let scheduleService: ScheduleService
     internal let planService: PlanService
@@ -164,31 +163,60 @@ final class ScheduleVM: ObservableObject {
          왜 originalTitle,Memo,DDay를 변수 선언했냐면 planview에서 실제로 수정이 일어났다는걸을 확인한 이후에 로컬과 서버에 변경요청해야한다.
          하지만 originalTitle,Memo,DDay없이 실질적으로 수정이 어디서 일어났는지 확인하기가 어려워 확인용으로 변수 선언함.
          */
-        originalTitle = schedule.title
-        originalMemo = schedule.memo
-        originalDDay = schedule.d_day
+        originalSchedule = schedule
     }
     
     // 편집 완료 (확인 버튼)
     func finishEditing() {
         guard let schedule = selectedSchedule else { return }
-        updateScheduleInfo(uid: schedule.uid, title: scheduleTitle, memo: scheduleMemo, dDay: scheduleDday)
+        
+        // ✅ 업데이트된 전체 schedule 저장 (plan 포함)
+        let updatedSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: scheduleTitle,
+            memo: scheduleMemo,
+            editDate: Date(),
+            d_day: scheduleDday,
+            planList: schedule.planList  // 현재 planList 포함
+        )
+        
+        updateSchedule(schedule: updatedSchedule)
     }
     
     // 편집 취소
     func cancelEditing() {
-        guard let schedule = selectedSchedule else { return }
-        scheduleTitle = schedule.title
-        scheduleMemo = schedule.memo
-        scheduleDday = schedule.d_day
+        guard let original = originalSchedule else { return }
+        
+        // UI 상태 원복
+        scheduleTitle = original.title
+        scheduleMemo = original.memo
+        scheduleDday = original.d_day
+        
+        // selectedSchedule 전체 원복 (plan 포함)
+        selectedSchedule = original
     }
+
     
     // 변경사항 확인
     var hasChanges: Bool {
-        return scheduleTitle != originalTitle ||
-            scheduleMemo != originalMemo ||
-            scheduleDday != originalDDay
+        guard let original = originalSchedule else { return false }
+        
+        let basicChanges = scheduleTitle != original.title ||
+                          scheduleMemo != original.memo ||
+                          scheduleDday != original.d_day
+        
+        let planChanges = (selectedSchedule?.planList.count ?? 0) != original.planList.count
+        
+        let totalChanges = basicChanges || planChanges
+        
+        if totalChanges {
+            print("ScheduleVM, hasChanges // 변경감지: 기본=\(basicChanges), Plan=\(planChanges)")
+        }
+        
+        return totalChanges
     }
+    
     
     func finishEditingIfChanged(completion: @escaping (Bool) -> Void = { _ in }) -> Bool {
         guard hasChanges else {
@@ -200,10 +228,33 @@ final class ScheduleVM: ObservableObject {
             return false
         }
         
-        updateScheduleInfo(uid: schedule.uid, title: scheduleTitle, memo: scheduleMemo, dDay: scheduleDday, completion: completion)
+        // ✅ 전체 schedule 업데이트 (plan 포함)
+        let updatedSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: scheduleTitle,
+            memo: scheduleMemo,
+            editDate: Date(),
+            d_day: scheduleDday,
+            planList: schedule.planList
+        )
+        
+        updateSchedule(schedule: updatedSchedule)
+        completion(true)
         return true
     }
-    
+
+    func clearSelection() {
+        selectedSchedule = nil
+        selectedPlanModel = nil
+        
+        // 편집 상태 초기화
+        scheduleTitle = ""
+        scheduleMemo = ""
+        scheduleDday = Date()
+        originalSchedule = nil
+    }
+
     
     func createPlan(placeModel: PlaceModel, files: [FileModel] = []) {
         guard let scheduleUID = selectedSchedule?.uid else {
@@ -340,5 +391,40 @@ final class ScheduleVM: ObservableObject {
     deinit {
         cancellables.removeAll()
         print("ScheduleViewModel, deinit // Success : ScheduleViewModel 해제 완료")
+    }
+}
+
+extension ScheduleVM {
+    func printAllCoreData() {
+        print("\n" + String(repeating: "=", count: 60))
+        print("🔍 REAL CORE DATA VS VIEWMODEL")
+        print(String(repeating: "=", count: 60))
+        
+        // 1. ViewModel 상태
+        print("\n📱 VIEWMODEL STATE:")
+        print("schedules.count: \(schedules.count)")
+        print("selectedSchedule: \(selectedSchedule?.title ?? "nil")")
+        
+        // 2. 실제 CoreData 조회
+        print("\n💾 REAL CORE DATA:")
+        LocalDB.shared.readAllSchedules { realSchedules in
+            DispatchQueue.main.async {
+                print("Real DB count: \(realSchedules.count)")
+                realSchedules.forEach { schedule in
+                    print("- \(schedule.title) (Plans: \(schedule.planList.count))")
+                    schedule.planList.forEach { plan in
+                        print("  └─ Plan[\(plan.index)]: '\(plan.placeModel.title)'")
+                    }
+                }
+                
+                // 3. 동기화 문제 확인
+                if realSchedules.count != self.schedules.count {
+                    print("\n❌ SYNC PROBLEM: DB(\(realSchedules.count)) != VM(\(self.schedules.count))")
+                    print("🔧 Fix: Call initData() or loadData()")
+                }
+            }
+        }
+        
+        print(String(repeating: "=", count: 60))
     }
 }

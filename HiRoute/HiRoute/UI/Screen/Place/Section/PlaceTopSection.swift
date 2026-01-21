@@ -63,7 +63,7 @@ struct PlaceTopSection : View {
     private let cornerRadius : CGFloat = 20
     var body: some View {
         VStack(alignment: HorizontalAlignment.leading, spacing: 0){
-            placeThumbNailImage(imageURL: model.thumbanilImageURL ?? "")
+            placeThumbNailImage(imageURL: model.thumbnailImageURL ?? "")
             placeTitleWithType(
                 title: model.title,
                 type: model.type.displayText

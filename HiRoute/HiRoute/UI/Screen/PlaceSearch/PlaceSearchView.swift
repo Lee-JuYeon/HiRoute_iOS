@@ -117,7 +117,7 @@ struct PlaceSearchView : View {
         VStack(alignment: HorizontalAlignment.leading, spacing: 0){
             ForEach(placeVM.recommendPlaces(), id: \.uid) { placeModel in
                 PlaceCell(
-                    setImageURL: placeModel.thumbanilImageURL ?? "",
+                    setImageURL: placeModel.thumbnailImageURL ?? "",
                     setTheme: placeModel.type.displayText,
                     setTitle: placeModel.title,
                     setPlaceCellType: .HOT,
@@ -136,7 +136,7 @@ struct PlaceSearchView : View {
         VStack(alignment: HorizontalAlignment.leading, spacing: 0){
             ForEach(placeVM.filteredPlaces, id: \.uid) { placeModel in
                 PlaceCell(
-                    setImageURL: placeModel.thumbanilImageURL ?? "",
+                    setImageURL: placeModel.thumbnailImageURL ?? "",
                     setTheme: placeModel.type.displayText,
                     setTitle: placeModel.title,
                     setPlaceCellType: .NOMAL,

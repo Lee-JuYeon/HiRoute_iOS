@@ -263,7 +263,7 @@ class FileSingleton {
         var imagePublishers: [AnyPublisher<(String, String), Error>] = []
         
         // 1. 썸네일 이미지
-        if let thumbnailURL = place.thumbanilImageURL, !thumbnailURL.isEmpty {
+        if let thumbnailURL = place.thumbnailImageURL, !thumbnailURL.isEmpty {
             let publisher = saveImage(url: thumbnailURL)
                 .map { localPath in (thumbnailURL, localPath) }
                 .eraseToAnyPublisher()
@@ -553,7 +553,7 @@ class FileSingleton {
      */
     private func convertPlaceURLsToLocalPaths(place: PlaceModel, urlToPathMap: [String: String]) -> PlaceModel {
         // 썸네일 이미지 URL 변환
-        let localThumbnailURL = place.thumbanilImageURL.flatMap { urlToPathMap[$0] } ?? place.thumbanilImageURL
+        let localThumbnailURL = place.thumbnailImageURL.flatMap { urlToPathMap[$0] } ?? place.thumbnailImageURL
         
         // 리뷰 이미지 URL들 변환
         let updatedReviews = place.reviews.map { review in
@@ -585,7 +585,7 @@ class FileSingleton {
             type: place.type,                       // 장소 타입
             title: place.title,
             subtitle: place.subtitle,
-            thumbanilImageURL: localThumbnailURL,   // 변환된 썸네일 URL
+            thumbnailImageURL: localThumbnailURL,   // 변환된 썸네일 URL
             workingTimes: place.workingTimes,       // 운영시간 배열
             reviews: updatedReviews,                // URL 변환된 리뷰들
             bookMarks: place.bookMarks,             // 북마크 목록

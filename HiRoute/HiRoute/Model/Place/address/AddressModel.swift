@@ -16,3 +16,19 @@ struct AddressModel : Hashable, Codable {
     let dong : String // 읍,면,동
     let fullAddress : String // 전체 주소
 }
+
+// MARK: - AddressModel Extension 추가
+extension AddressModel {
+    static func empty() -> AddressModel {
+        return AddressModel(
+            addressUID: "",
+            addressLat: 0.0,
+            addressLon: 0.0,
+            addressTitle: "",
+            sido: "",
+            gungu: "",
+            dong: "",
+            fullAddress: ""
+        )
+    }
+}

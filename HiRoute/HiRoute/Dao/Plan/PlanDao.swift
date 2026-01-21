@@ -210,18 +210,64 @@ struct PlanDAO {
         entity.index = Int32(plan.index)
         entity.memo = plan.memo
         entity.schedule = schedule
+        entity.placeModel = findOrCreatePlace(from: plan.placeModel, context: context)
         return entity
+    }
+    
+    private static func findOrCreatePlace(from place: PlaceModel, context: NSManagedObjectContext) -> PlaceEntity {
+        let request: NSFetchRequest<PlaceEntity> = PlaceEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "uid == %@", place.uid)
+        
+        if let existing = try? context.fetch(request).first {
+            return existing
+        }
+        
+        // 신규 생성
+        let placeEntity = PlaceEntity(context: context)
+        placeEntity.uid = place.uid
+        placeEntity.title = place.title
+        placeEntity.type = place.type.rawValue
+        placeEntity.subtitle = place.subtitle
+        placeEntity.thumbnailImageURL = place.thumbnailImageURL
+        return placeEntity
     }
     
     private static func convertToPlanModel(_ entity: PlanEntity) -> PlanModel? {
         guard let uid = entity.uid else { return nil }
+        let place = entity.placeModel?.toPlaceModel() ?? PlaceModel.empty()
         
         return PlanModel(
             uid: uid,
             index: Int(entity.index),
             memo: entity.memo ?? "",
-            placeModel: PlaceModel.empty(),
+            placeModel: place,
             files: []
+        )
+    }
+}
+
+extension PlaceEntity {
+    func toPlaceModel() -> PlaceModel {
+        return PlaceModel(
+            uid: uid ?? "",
+            address: AddressModel(
+                addressUID: "",
+                addressLat: 0.0,
+                addressLon: 0.0,
+                addressTitle: "",
+                sido: "",
+                gungu: "",
+                dong: "",
+                fullAddress: ""
+            ),
+            type: PlaceType(rawValue: type ?? "") ?? .restaurant,
+            title: title ?? "",
+            subtitle: subtitle,
+            thumbnailImageURL: thumbnailImageURL,
+            workingTimes: [],
+            reviews: [],
+            bookMarks: [],
+            stars: []
         )
     }
 }

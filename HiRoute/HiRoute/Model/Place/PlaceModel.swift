@@ -13,7 +13,7 @@ struct PlaceModel: Codable {
     let type: PlaceType
     let title: String // api 제공
     let subtitle: String? // api제공
-    let thumbanilImageURL : String? // 썸네일 이미지 주소
+    let thumbnailImageURL : String? // 썸네일 이미지 주소
     
     var workingTimes : [WorkingTimeModel] // 운영시간
     var reviews : [ReviewModel] // 리뷰
@@ -48,7 +48,7 @@ extension PlaceModel {
             type: .restaurant, // 기본값
             title: "",
             subtitle: nil,
-            thumbanilImageURL: nil,
+            thumbnailImageURL: nil,
             workingTimes: [],
             reviews: [],
             bookMarks: [],

@@ -74,31 +74,41 @@ struct TimeLineCell : View {
             )
     }
        
+    
     @ViewBuilder
     private func contentCard() -> some View {
         VStack(alignment: .leading, spacing: 8) {
             
-            Text(getModel.placeModel.title)
-                      .font(.system(size: 14, weight: .semibold))
-                      .foregroundColor(Color.getColour(.label_strong))
-                      .lineLimit(1)
+            // ✅ 장소 제목 표시 (항상 표시)
+            Text(getModel.placeModel.title.isEmpty ? "제목 없음" : getModel.placeModel.title)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color.getColour(.label_strong))
+                .lineLimit(1)
             
+            // ✅ 장소 타입 표시 (항상 표시)
             Text(getModel.placeModel.type.displayText)
                 .font(.system(size: 12, weight: .light))
                 .foregroundColor(Color.getColour(.label_alternative))
                 .lineLimit(1)
             
+            // ✅ 메모가 있을 때만 메모 표시 (기존 로직 수정)
             if !getModel.memo.isEmpty {
-                Text(getModel.placeModel.title)
+                Text(getModel.memo) // ✅ memo를 표시 (title 아님)
                     .font(.system(size: 14))
-                    .foregroundColor(Color.getColour(.label_strong))
+                    .foregroundColor(Color.getColour(.label_normal))
                     .lineLimit(2)
             }
 
+            // ✅ 파일이 있을 때만 파일 정보 표시
             if !getModel.files.isEmpty {
-                Text(getModel.memo)
-                    .font(.system(size: 14))
-                    .foregroundColor(Color.getColour(.label_neutral))
+                HStack(spacing: 4) {
+                    Image(systemName: "paperclip")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color.getColour(.label_alternative))
+                    Text("\(getModel.files.count)개 첨부")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color.getColour(.label_alternative))
+                }
             }
         }
         .padding(12)
@@ -115,6 +125,22 @@ struct TimeLineCell : View {
         }
     }
     
+    private func debugPlaceData() -> String {
+        let title = getModel.placeModel.title
+        let type = getModel.placeModel.type.displayText
+        let memo = getModel.memo
+        let index = getModel.index
+        
+        return """
+        Debug Info:
+        - Index: \(index)
+        - Title: '\(title)'
+        - Type: '\(type)'
+        - Memo: '\(memo)'
+        - Files: \(getModel.files.count)개
+        """
+    }
+    
     
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
@@ -122,5 +148,9 @@ struct TimeLineCell : View {
             contentCard()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear {
+            // ✅ 디버그: 데이터 확인
+            print("TimeLineCell Debug - \(debugPlaceData())")
+        }
     }
 }

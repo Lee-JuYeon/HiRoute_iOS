@@ -63,7 +63,7 @@ struct RecommendPlaceCell : View {
     private func placeContent() -> some View {
         VStack(spacing: 0) {
             ServerImageView(
-                setImageURL: model.thumbanilImageURL ?? ""
+                setImageURL: model.thumbnailImageURL ?? ""
             )
             .frame(
                 width: imageSize,
