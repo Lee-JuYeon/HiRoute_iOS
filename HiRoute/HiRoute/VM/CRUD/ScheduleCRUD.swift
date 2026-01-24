@@ -21,7 +21,7 @@ struct ScheduleCRUD {
         self.vm = vm
     }
     
-    func create(title: String, memo: String, dDay: Date, result: @escaping (Bool) -> Void) {
+    func create(title: String, memo: String, dDay: Date, planList : [PlanModel], result: @escaping (Bool) -> Void) {
         print("ScheduleCRUD, create // 일정 생성 시작 - \(title)")
         guard let vm = vm else { return  }
 
@@ -33,7 +33,7 @@ struct ScheduleCRUD {
             memo: memo,
             editDate: Date(),
             d_day: dDay,
-            planList: []
+            planList: planList
         )
         
         // UI 상태 업데이트
@@ -279,31 +279,34 @@ struct ScheduleCRUD {
     }
        
     func updateScheduleInfo(uid: String, title: String, memo: String, dDay: Date, completion: @escaping (Bool) -> Void = { _ in }) {
-        print("ScheduleCRUD, updateScheduleInfo // Info : 일정 정보 업데이트 시작 - \(uid)")
         guard let vm = vm else { return }
         
-        // 기존 일정 정보 확인
-        guard let currentSchedule = vm.schedules.first(where: { $0.uid == uid }) else {
-            print("ScheduleCRUD, updateScheduleInfo // Warning : 업데이트할 일정을 찾을 수 없음")
-            vm.handleError(ScheduleError.notFound)
-            return
-        }
-        
-        // 새로운 ScheduleModel 생성 (planList는 그대로 유지)
-        let updatedSchedule = ScheduleModel(
-            uid: currentSchedule.uid,
-            index: currentSchedule.index,
-            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-            memo: memo,
-            editDate: Date(), // 편집 날짜 자동 갱신
-            d_day: dDay,
-            planList: currentSchedule.planList // 기존 방문장소 유지
-        )
-        
-        // 기본 update 메서드 호출
-        update(updatedSchedule, completion: completion)
+        vm.scheduleService.updateScheduleInfo(uid: uid, title: title, memo: memo, dDay: dDay)
+            .receive(on: DispatchQueue.main)  // ✅ 메인 스레드 강제
+            .sink(
+                receiveCompletion: { [weak vm] completion in
+                    switch completion {
+                    case .finished:
+                        break
+                    case .failure(let error):
+                        vm?.handleError(error)
+                        print("ScheduleCRUD, updateScheduleInfo // Exception : \(error.localizedDescription)")
+                    }
+                },
+                receiveValue: { [weak vm] updatedSchedule in
+                    guard let vm = vm else { return }
+                    
+                    // ✅ 메인 스레드에서 안전하게 UI 업데이트
+                    if let index = vm.schedules.firstIndex(where: { $0.uid == updatedSchedule.uid }) {
+                        vm.schedules[index] = updatedSchedule
+                    }
+                    
+                    completion(true)
+                    print("ScheduleCRUD, updateScheduleInfo // Success : DB 우선 업데이트 완료")
+                }
+            )
+            .store(in: &vm.cancellables)
     }
-    
     func refreshScheduleList(){
         
     }

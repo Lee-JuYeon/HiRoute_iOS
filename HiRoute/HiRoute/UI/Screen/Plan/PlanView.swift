@@ -33,7 +33,14 @@ struct PlanView : View {
     @State private var isShowDate : Bool = false
     @State private var showUnsavedAlert: Bool = false // 변경사항 알림
     
-    private func handleExit(forceExit: Bool = false) {
+    @State private var currentPlanModel : PlanModel? = nil
+    
+    // 키보드 해제 헬퍼 함수
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+
+    private func exit(forceExit: Bool = false) {
         switch getModeType {
         case .CREATE:
             if scheduleVM.hasChanges && !forceExit {
@@ -65,15 +72,15 @@ struct PlanView : View {
         }
     }
     
-    private func handleBackButton(){
-        handleExit(forceExit: false)  // ✅ 일반 뒤로가기
+    private func back(){
+        exit(forceExit: false)  // ✅ 일반 뒤로가기
     }
     
-    private func handleOptionButton(){
+    private func showOptionSheet(){
         isShowOptionSheet = true
     }
     
-    private func handleDeleteSchedule(){
+    private func deleteSchedule(){
         isShowOptionSheet = false
         
         if let scheduleModel = scheduleVM.selectedSchedule {
@@ -82,16 +89,15 @@ struct PlanView : View {
         }
     }
     
-    private func handleCellClick(_ planModel : PlanModel){
-        scheduleVM.selectedPlanModel = planModel
+    private func onCellClick(_ planModel : PlanModel){
+       currentPlanModel = planModel
     }
     
-    private func handleAnnotationClick(_ planModel : PlanModel){
-        // PlanVM을 통한 장소 선택
-        scheduleVM.selectedPlanModel = planModel
+    private func onAnnotaionClick(_ planModel : PlanModel){
+        currentPlanModel = planModel
     }
     
-    private func handleEditSchedule(){
+    private func editSchedule(){
         isShowOptionSheet = false
         getModeType = .UPDATE
         
@@ -101,13 +107,15 @@ struct PlanView : View {
         }
     }
     
-    private func handleSaveSchedule(){
+    private func saveSchedule(){
         switch getModeType {
         case .CREATE:
+            guard let schedule = scheduleVM.selectedSchedule else { return }
             scheduleVM.createSchedule(
-                title: scheduleVM.scheduleTitle,
-                memo: scheduleVM.scheduleMemo,
-                dDay: scheduleVM.scheduleDday
+                title: schedule.title,
+                memo: schedule.memo,
+                dDay: schedule.d_day,
+                planList: schedule.planList
             ){ success in
                 if success {
                     print("새 일정 생성 완료")
@@ -118,83 +126,34 @@ struct PlanView : View {
             return
             
         case .UPDATE:
-            let originalCount = getScheduleModel.planList.count
-            let currentCount = scheduleVM.selectedSchedule?.planList.count ?? 0
-            let hasChanges = scheduleVM.hasChanges
-            
-            print("=== 저장 시도 ===")
-            print("원본 Plan: \(originalCount)개")
-            print("현재 Plan: \(currentCount)개")
-            print("변경사항: \(hasChanges)")
-            print("================")
-            
-            // Plan 개수가 다르거나 기본 변경사항이 있으면 저장
-            if hasChanges || originalCount != currentCount {
-                scheduleVM.updateScheduleInfo(
-                    uid: scheduleVM.selectedSchedule!.uid,
-                    title: scheduleVM.scheduleTitle,
-                    memo: scheduleVM.scheduleMemo,
-                    dDay: scheduleVM.scheduleDday
-                ) { success in
-                    print("✅ 저장 완료: \(success)")
-                    scheduleVM.selectedSchedule = nil
-                    presentationMode.wrappedValue.dismiss()
-                }
+            if scheduleVM.hasChanges {
+                scheduleVM.finishEditing()
+                print("✅ 저장 완료")
             } else {
                 print("저장할 변경사항 없음")
-                scheduleVM.selectedSchedule = nil
-                presentationMode.wrappedValue.dismiss()
             }
-            return
-                   
+            scheduleVM.selectedSchedule = nil
+            presentationMode.wrappedValue.dismiss()
         case .READ:
             break
         }
     }
     
-    @ViewBuilder
-    private func optionBar() -> some View {
-        HStack(){
-            ImageButton(imageURL : "icon_back",imageSize: 30) {
-                handleBackButton()
-            }
-            
-            Spacer()
-          
-            switch getModeType {
-            case .READ:
-                TextButton(
-                    text: "편집",
-                    textSize: 16,
-                    textColour: Color.blue
-                ) {
-                    handleOptionButton()
-                }
-            case .CREATE:
-                TextButton(
-                    text: "저장",
-                    textSize: 16,
-                    textColour: Color.blue
-                ) {
-                    handleSaveSchedule()
-                }
-            case .UPDATE:
-                TextButton(
-                    text: "저장",
-                    textSize: 16,
-                    textColour: Color.blue
-                ) {
-                    handleSaveSchedule()
-                }
-            }
-        }
-        .padding(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
-    }
-    
- 
+   
     var body: some View {
         VStack(alignment: HorizontalAlignment.leading){
-            optionBar()
+            PlanOptionBar(
+                onBack: {
+                    back()
+                },
+                onSave: {
+                    saveSchedule()
+                },
+                onEdit: {
+                    showOptionSheet()
+                },
+                getModeType: getModeType
+            )
             
             // READ 타입일때만 일정 카운트 뷰 보여지게 하기 (update, create때는 굳이 필요 없어보임)
             if getModeType == ModeType.READ {
@@ -203,7 +162,12 @@ struct PlanView : View {
             }
             
             EditableTextView(
-                setTitle: $scheduleVM.scheduleTitle,
+                setTitle: Binding(
+                    get: { scheduleVM.selectedSchedule?.title ?? "" },
+                    set: { newTitle in
+                        scheduleVM.updateUiTitle(newTitle) // 메모리 업데이트 (저장버튼 클릭시 db 업뎃)
+                    }
+                ),
                 setHint: "클릭하여 일정 제목을 입력하세요",
                 setEditMode: $getModeType
             ) {
@@ -218,7 +182,12 @@ struct PlanView : View {
             }
             
             EditableTextView(
-                setTitle: $scheduleVM.scheduleMemo,
+                setTitle: Binding(
+                    get: { scheduleVM.selectedSchedule?.memo ?? "" },
+                    set: { newMemo in
+                        scheduleVM.updateUiMemo(newMemo)
+                    }
+                ),
                 setHint: "클릭하여 일정 내용을 입력하세요",
                 setEditMode: $getModeType,
                 setAlignment: .vertical,
@@ -236,7 +205,12 @@ struct PlanView : View {
             }
             
             DateTextView(
-                date: $scheduleVM.scheduleDday,
+                date: Binding(
+                    get: { scheduleVM.selectedSchedule?.d_day ?? Date() },
+                    set: { newD_day in
+                        scheduleVM.updateUiDDay(newD_day)
+                    }
+                ),
                 nationalityType: localVM.nationality,
                 modeType: getModeType,
                 onDateChanged: {
@@ -247,11 +221,11 @@ struct PlanView : View {
             PlanBottomSection(
                 setVisitPlaceList: scheduleVM.selectedSchedule?.planList ?? [],
                 setModeType: getModeType,
-                onClickCell: { clickedVisitPlaceModel in
-                    handleCellClick(clickedVisitPlaceModel)
+                onClickCell: { clickedPlanModel in
+                    onCellClick(clickedPlanModel)
                 },
-                onClickAnnotation: { selectedVisitPlaceModel in
-                    handleAnnotationClick(selectedVisitPlaceModel)
+                onClickAnnotation: { clickedPlanModel in
+                    onAnnotaionClick(clickedPlanModel)
                 }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -264,49 +238,26 @@ struct PlanView : View {
                 Text("저장하지 않은 변경사항은 손실됩니다.")
                 HStack(alignment: VerticalAlignment.top){
                     Button("저장") {
-//                        // ✅ 1. bottomSheet 먼저 닫기
-//                        showUnsavedAlert = false
-//                        
-//                        // ✅ 2. 모드별 저장 처리
-//                        switch getModeType {
-//                        case .CREATE:
-//                            scheduleVM.createSchedule(
-//                                title: scheduleVM.scheduleTitle,
-//                                memo: scheduleVM.scheduleMemo,
-//                                dDay: scheduleVM.scheduleDday
-//                            ) { success in
-//                                if success {
-//                                    print("새 일정 생성 완료")
-//                                }
-//                                scheduleVM.selectedSchedule = nil
-//                                presentationMode.wrappedValue.dismiss()
-//                            }
-//                            
-//                        case .UPDATE:
-//                            _ = scheduleVM.finishEditingIfChanged { success in
-//                                if success {
-//                                    print("변경사항 저장 완료")
-//                                } else {
-//                                    print("저장할 변경사항 없음")
-//                                }
-//                                scheduleVM.selectedSchedule = nil
-//                                presentationMode.wrappedValue.dismiss()
-//                            }
-//                            
-//                        case .READ:
-//                            break
-//                        }
                         showUnsavedAlert = false
-                        handleExit(forceExit: true)  // ✅ 강제 종료
+                                        
+                        // 실제 저장 수행
+                        if scheduleVM.hasChanges {
+                            scheduleVM.finishEditing()  // 저장
+                            print("바텀시트에서 저장 완료")
+                        }
+                        
+                        // 저장 후 종료
+                        scheduleVM.selectedSchedule = nil
+                        presentationMode.wrappedValue.dismiss()
                     }
                     
                     Spacer()
                     
                     Button("나가기") {
-                        // ✅ 1. bottomSheet 먼저 닫기
+                        // 1. bottomSheet 먼저 닫기
                         showUnsavedAlert = false
                         
-                        // ✅ 2. 모든 케이스에서 변경사항 취소하고 완전히 나가기
+                        // 2. 모든 케이스에서 변경사항 취소하고 완전히 나가기
                         switch getModeType {
                         case .CREATE:
                             scheduleVM.cancelEditing()
@@ -314,9 +265,9 @@ struct PlanView : View {
                             presentationMode.wrappedValue.dismiss()
                             
                         case .UPDATE:
-                            scheduleVM.cancelEditing()           // ✅ 변경사항 취소
-                            scheduleVM.selectedSchedule = nil    // ✅ 선택 해제
-                            presentationMode.wrappedValue.dismiss()  // ✅ 화면 닫기
+                            scheduleVM.cancelEditing()
+                            scheduleVM.selectedSchedule = nil
+                            presentationMode.wrappedValue.dismiss()
                             
                         case .READ:
                             scheduleVM.selectedSchedule = nil
@@ -329,46 +280,76 @@ struct PlanView : View {
         .bottomSheet(isOpen: $isShowOptionSheet) {
             SheetPlanOptionView(
                 setOnClickDeleteOption: {
-                    handleDeleteSchedule()
+                    deleteSchedule()
                 },
                 setOnClickEditOption: {
-                    handleEditSchedule()
+                    editSchedule()
                 }
             )
         }
         .topSheet(isOpen: $isShowTitleWriting, setContent: {
             SheetTextFieldView(
                 setHint: "일정 제목을 입력하세요",
-                setText: $scheduleVM.scheduleTitle,
+                setText: Binding(
+                    get: { scheduleVM.selectedSchedule?.title ?? "" },
+                    set: { newTitle in
+                        scheduleVM.updateUiTitle(newTitle) // 메모리 업데이트 (저장버튼 클릭시 db 업뎃)
+                    }
+                ),
                 setToolBarTitle: "일정 제목",
                 callBackCancel: {
                     // 취소 버튼 추가
                     scheduleVM.cancelEditing()
                     isShowTitleWriting = false
+                    
+                    // 약간의 딜레이 후 키보드 해제
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        hideKeyboard()
+                    }
                 },
                 callBackSave: {
                     // 저장 로직
                     isShowTitleWriting = false
+                    
+                    // 약간의 딜레이 후 키보드 해제
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        hideKeyboard()
+                    }
                 }
             )
         })
         .topSheet(isOpen: $isShowMemoWriting, setContent: {
             SheetTextFieldView(
                 setHint: "일정 내용을 입력하세요",
-                setText: $scheduleVM.scheduleMemo,
+                setText: Binding(
+                    get: { scheduleVM.selectedSchedule?.memo ?? "" },
+                    set: { newMemo in
+                        scheduleVM.updateUiMemo(newMemo)
+                    }
+                ),
                 setToolBarTitle: "일정 내용",
                 callBackCancel: {
                     // 취소 버튼 추가
                     scheduleVM.cancelEditing()
                     isShowMemoWriting = false
+                    
+                    // 약간의 딜레이 후 키보드 해제
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        hideKeyboard()
+                    }
                 },
                 callBackSave: {
                     // 저장 로직
                     isShowMemoWriting = false
+                    
+                    // 약간의 딜레이 후 키보드 해제
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        hideKeyboard()
+                    }
                 }
             )
         })
-        .fullScreenCover(item: $scheduleVM.selectedPlanModel) { planModel in
+        .fullScreenCover(item: $currentPlanModel) { planModel in
             PlaceView(
                 setPlanModel: planModel,
                 setPlaceModeType : placeModeType
@@ -378,12 +359,7 @@ struct PlanView : View {
             switch getModeType {
             case .READ:
                 scheduleVM.selectedSchedule = getScheduleModel
-                
-                scheduleVM.scheduleTitle = getScheduleModel.title
-                scheduleVM.scheduleMemo = getScheduleModel.memo
-                scheduleVM.scheduleDday = getScheduleModel.d_day
                 print("READ 모드입니다.")
-                
             case .CREATE:
                 // 아무것도 하지 않음 (이미 ScheduleView에서 처리됨)
                 print("CREATE 모드입니다.")
@@ -395,16 +371,6 @@ struct PlanView : View {
             }
         }
         .onDisappear {
-            // 편집 중이고 변경사항이 있으면 로컬 저장
-//            if scheduleVM.isEditing && scheduleVM.hasChanges {
-//                scheduleVM.finishEditing()
-//            } else if scheduleVM.isEditing {
-//                scheduleVM.cancelEditing()
-//            }
-            
-            // ✅ 수정: 메모리 안전한 클리어 처리
-//            scheduleVM.clearSelection()
-//            planVM.clearSelection()
             // 메모리 정리만 (자동 저장 제거)
             if (scheduleVM.selectedSchedule != nil){
                 scheduleVM.selectedSchedule = nil

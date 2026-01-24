@@ -33,14 +33,14 @@ struct ScheduleView: View {
     private func filterEditButtons() -> some View{
         HStack(alignment: VerticalAlignment.center, spacing: 0){
             ScheduleListFilterButton { listFilterType in
-                switch listFilterType {
-                case .DEFAULT :
-                    scheduleVM.filteredSchedules
-                case .NEWEST :
-                    scheduleVM.filteredSchedules
-                case .OLDEST :
-                    scheduleVM.filteredSchedules
-                }
+//                switch listFilterType {
+//                case .DEFAULT :
+//                    scheduleVM.filteredSchedules
+//                case .NEWEST :
+//                    scheduleVM.filteredSchedules
+//                case .OLDEST :
+//                    scheduleVM.filteredSchedules
+//                }
             }
             
             Spacer()

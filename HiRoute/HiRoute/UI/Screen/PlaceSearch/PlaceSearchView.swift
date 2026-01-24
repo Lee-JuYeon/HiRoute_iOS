@@ -29,7 +29,34 @@ struct PlaceSearchView : View {
     }
     
     private func handleAddPlace(selectedPlaceModel : PlaceModel){
-        scheduleVM.createPlan(placeModel: selectedPlaceModel)
+        guard let schedule = scheduleVM.selectedSchedule else { return }
+
+        // 1. 새로운 Plan 생성
+        let newPlan = PlanModel(
+            uid: UUID().uuidString,
+            index: schedule.planList.count, // 마지막 index
+            memo: "",
+            placeModel: selectedPlaceModel,
+            files: []
+        )
+        
+        // 2. planList에 추가
+        var updatedPlanList = schedule.planList
+        updatedPlanList.append(newPlan)
+        
+        // 3. 새로운 ScheduleModel로 교체
+        let updatedSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: schedule.title,
+            memo: schedule.memo,
+            editDate: schedule.editDate,
+            d_day: schedule.d_day,
+            planList: updatedPlanList
+        )
+        
+        scheduleVM.selectedSchedule = updatedSchedule
+        
         presentationMode.wrappedValue.dismiss()
         print("PlaceSearchView, handleAddPlace(Place추가) : \(selectedPlaceModel)")
     }

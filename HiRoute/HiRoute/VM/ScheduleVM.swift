@@ -20,29 +20,33 @@ final class ScheduleVM: ObservableObject {
     
     // MARK: - Published Properties (UI 상태)
     @Published var schedules: [ScheduleModel] = []
-    @Published var selectedSchedule: ScheduleModel?
-    @Published var filteredSchedules: [ScheduleModel] = []
     
-    @Published var files: [FileModel] = []
+    @Published var selectedSchedule: ScheduleModel?
+    private var originalSchedule: ScheduleModel?
 
-    @Published var selectedPlanModel: PlanModel?  // ✅ 이것만 추가하면 끝!
+    
+    var currentPlans: [PlanModel] {
+        selectedSchedule?.planList ?? []
+    }
+
+    var currentPlaces: [PlaceModel] {
+        selectedSchedule?.planList.map { $0.placeModel } ?? []
+    }
+    
+    var currentFiles: [FileModel] {
+        selectedSchedule?.planList.flatMap { $0.files } ?? []
+    }
+    
+    func getFilesForPlan(planUID: String) -> [FileModel] {
+        selectedSchedule?.planList.first { $0.uid == planUID }?.files ?? []
+    }
+
 
     @Published var searchText = ""
     
-    @Published var isUploadingFile = false
-    @Published var fileUploadProgress: Double = 0.0
-    
-    // MARK: - Dependencies & Components
-    
     @Published var isLoading = false
     @Published var errorMessage: String?
-    
-    
-    @Published var scheduleTitle = ""
-    @Published var scheduleMemo = ""
-    @Published var scheduleDday = Date()
-    private var originalSchedule: ScheduleModel?
-
+    @Published var progress: Double = 0.0
     
     internal let scheduleService: ScheduleService
     internal let planService: PlanService
@@ -89,12 +93,10 @@ final class ScheduleVM: ObservableObject {
         isLoading = loading
     }
     
-    internal func setFileUploading(_ uploading: Bool) {
-        isUploadingFile = uploading
-    }
+
     
-    internal func updateFileUploadProgress(_ progress: Double) {
-        fileUploadProgress = progress
+    internal func setProgress(_ getProgress: Double) {
+        progress = getProgress
     }
     
     // 에러 처리 (internal로 노출)
@@ -116,8 +118,8 @@ final class ScheduleVM: ObservableObject {
     
     
     // schedule crud
-    func createSchedule(title: String, memo: String, dDay: Date, result: @escaping (Bool) -> Void) {
-        scheduleCRUD.create(title: title, memo: memo, dDay: dDay, result: result)
+    func createSchedule(title: String, memo: String, dDay: Date, planList : [PlanModel], result: @escaping (Bool) -> Void) {
+        scheduleCRUD.create(title: title, memo: memo, dDay: dDay, planList: planList, result: result)
     }
     
     func readAllSchedule() {
@@ -140,6 +142,84 @@ final class ScheduleVM: ObservableObject {
         scheduleCRUD.updateScheduleInfo(uid: uid, title: title, memo: memo, dDay: dDay, completion: completion)
     }
     
+    // ScheduleVM에서 기존 메서드 수정
+    internal func updateUiSchedule(_ plan: PlanModel) {
+        guard let schedule = selectedSchedule else { return }
+        
+        var updatedPlanList = schedule.planList
+        if let index = updatedPlanList.firstIndex(where: { $0.uid == plan.uid }) {
+            updatedPlanList[index] = plan
+        } else {
+            updatedPlanList.append(plan)
+        }
+        
+        // updateModel 제거, 직접 할당
+        let newSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: schedule.title,
+            memo: schedule.memo,
+            editDate: schedule.editDate,
+            d_day: schedule.d_day,
+            planList: updatedPlanList
+        )
+        
+        selectedSchedule = newSchedule // 직접 할당
+        print("ScheduleVM, updateCurrentScheduleWithPlan // Success : Plan 업데이트 완료")
+    }
+    
+    func updateUiTitle(_ title: String) {
+        guard let schedule = selectedSchedule else { return }
+        selectedSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: title,
+            memo: schedule.memo,
+            editDate: schedule.editDate,
+            d_day: schedule.d_day,
+            planList: schedule.planList
+        )
+    }
+    
+    func updateUiMemo(_ memo: String) {
+        guard let schedule = selectedSchedule else { return }
+        selectedSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: schedule.title,
+            memo: memo,
+            editDate: schedule.editDate,
+            d_day: schedule.d_day,
+            planList: schedule.planList
+        )
+    }
+
+    func updateUiDDay(_ dDay: Date) {
+        guard let schedule = selectedSchedule else { return }
+        selectedSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: schedule.title,
+            memo: schedule.memo,
+            editDate: schedule.editDate,
+            d_day: dDay,
+            planList: schedule.planList
+        )
+    }
+    
+    func updateUiEditDate() {
+        guard let schedule = selectedSchedule else { return }
+        selectedSchedule = ScheduleModel(
+            uid: schedule.uid,
+            index: schedule.index,
+            title: schedule.title,
+            memo: schedule.memo,
+            editDate: Date(), 
+            d_day: schedule.d_day,
+            planList: schedule.planList
+        )
+    }
+    
     // 일정 선택
     func selectSchedule(_ schedule: ScheduleModel) {
         selectedSchedule = schedule
@@ -153,68 +233,36 @@ final class ScheduleVM: ObservableObject {
     
     // 편집 시작 (일정 선택시)
     func startEditing(_ schedule: ScheduleModel) {
-        selectedSchedule = schedule
-        scheduleTitle = schedule.title
-        scheduleMemo = schedule.memo
-        scheduleDday = schedule.d_day
-        
         /*
          원본 백업
          왜 originalTitle,Memo,DDay를 변수 선언했냐면 planview에서 실제로 수정이 일어났다는걸을 확인한 이후에 로컬과 서버에 변경요청해야한다.
          하지만 originalTitle,Memo,DDay없이 실질적으로 수정이 어디서 일어났는지 확인하기가 어려워 확인용으로 변수 선언함.
          */
+        selectedSchedule = schedule
         originalSchedule = schedule
     }
     
     // 편집 완료 (확인 버튼)
     func finishEditing() {
         guard let schedule = selectedSchedule else { return }
-        
-        // ✅ 업데이트된 전체 schedule 저장 (plan 포함)
-        let updatedSchedule = ScheduleModel(
-            uid: schedule.uid,
-            index: schedule.index,
-            title: scheduleTitle,
-            memo: scheduleMemo,
-            editDate: Date(),
-            d_day: scheduleDday,
-            planList: schedule.planList  // 현재 planList 포함
-        )
-        
-        updateSchedule(schedule: updatedSchedule)
+        updateSchedule(schedule: schedule) // selectedSchedule 그대로 저장
     }
     
     // 편집 취소
     func cancelEditing() {
-        guard let original = originalSchedule else { return }
-        
-        // UI 상태 원복
-        scheduleTitle = original.title
-        scheduleMemo = original.memo
-        scheduleDday = original.d_day
-        
-        // selectedSchedule 전체 원복 (plan 포함)
-        selectedSchedule = original
+        selectedSchedule = originalSchedule // 원본으로 복구
     }
 
     
     // 변경사항 확인
     var hasChanges: Bool {
-        guard let original = originalSchedule else { return false }
+        guard let original = originalSchedule,
+              let current = selectedSchedule else { return false }
         
-        let basicChanges = scheduleTitle != original.title ||
-                          scheduleMemo != original.memo ||
-                          scheduleDday != original.d_day
-        
-        let planChanges = (selectedSchedule?.planList.count ?? 0) != original.planList.count
-        
-        let totalChanges = basicChanges || planChanges
-        
-        if totalChanges {
-            print("ScheduleVM, hasChanges // 변경감지: 기본=\(basicChanges), Plan=\(planChanges)")
-        }
-        
-        return totalChanges
+        return current.title != original.title ||
+               current.memo != original.memo ||
+               current.d_day != original.d_day ||
+               current.planList.count != original.planList.count
     }
     
     
@@ -232,10 +280,10 @@ final class ScheduleVM: ObservableObject {
         let updatedSchedule = ScheduleModel(
             uid: schedule.uid,
             index: schedule.index,
-            title: scheduleTitle,
-            memo: scheduleMemo,
+            title: schedule.title,
+            memo: schedule.memo,
             editDate: Date(),
-            d_day: scheduleDday,
+            d_day: schedule.d_day,
             planList: schedule.planList
         )
         
@@ -246,12 +294,6 @@ final class ScheduleVM: ObservableObject {
 
     func clearSelection() {
         selectedSchedule = nil
-        selectedPlanModel = nil
-        
-        // 편집 상태 초기화
-        scheduleTitle = ""
-        scheduleMemo = ""
-        scheduleDday = Date()
         originalSchedule = nil
     }
 
@@ -309,32 +351,36 @@ final class ScheduleVM: ObservableObject {
         fileCRUD.delete(fileUID: fileUID)
     }
     
-    // MARK: - Schedule State Management
-    internal func updateCurrentScheduleWithPlan(_ plan: PlanModel) {
+    internal func updateFiles(planUID: String, newFiles: [FileModel]) {
         guard let schedule = selectedSchedule else { return }
         
         var updatedPlanList = schedule.planList
-        if let index = updatedPlanList.firstIndex(where: { $0.uid == plan.uid }) {
-            updatedPlanList[index] = plan
-        } else {
-            updatedPlanList.append(plan)
+        if let planIndex = updatedPlanList.firstIndex(where: { $0.uid == planUID }) {
+            let updatedPlan = PlanModel(
+                uid: updatedPlanList[planIndex].uid,
+                index: updatedPlanList[planIndex].index,
+                memo: updatedPlanList[planIndex].memo,
+                placeModel: updatedPlanList[planIndex].placeModel,
+                files: newFiles // ✅ 새 파일 리스트로 업데이트
+            )
+            
+            updatedPlanList[planIndex] = updatedPlan
+            
+            // selectedSchedule 업데이트
+            let newSchedule = ScheduleModel(
+                uid: schedule.uid,
+                index: schedule.index,
+                title: schedule.title,
+                memo: schedule.memo,
+                editDate: schedule.editDate,
+                d_day: schedule.d_day,
+                planList: updatedPlanList
+            )
+            
+            selectedSchedule = newSchedule
+            print("ScheduleVM, updatePlanFiles // Success : Plan 파일 업데이트 완료 - \(newFiles.count)개")
         }
-        
-        // 기존 updateModel 메서드 활용
-        let newScheduleModel = ScheduleModel(
-            uid: schedule.uid,
-            index: schedule.index,
-            title: schedule.title,
-            memo: schedule.memo,
-            editDate: schedule.editDate,
-            d_day: schedule.d_day,
-            planList: updatedPlanList
-        )
-        
-        selectedSchedule = schedule.updateModel(newScheduleModel)
-        print("ScheduleVM, updateCurrentScheduleWithPlan // Success : Plan 업데이트 완료")
     }
-
     
     internal func removeCurrentSchedulePlan(planUID: String) {
         guard let schedule = selectedSchedule else { return }
@@ -356,37 +402,38 @@ final class ScheduleVM: ObservableObject {
     }
     
     // MARK: - File Cache Management
-    internal func updateSavedFilesForPlan(planUID: String, files: [FileModel]) {
-        self.files = self.files.filter { !($0.isSaved && $0.filePath.contains(planUID)) }
-        
-        let savedFiles = files.map { file in
-            FileModel.saved(
-                fileName: file.fileName,
-                fileType: file.fileType,
-                fileSize: file.fileSize,
-                filePath: file.filePath,
-                createdDate: file.createdDate
+    internal func updateSavedFilesForPlan(planUID: String, newFiles: [FileModel]) {
+        guard let schedule = selectedSchedule else { return }
+        var updatedPlanList = schedule.planList
+
+        if let planIndex = updatedPlanList.firstIndex(where: { $0.uid == planUID }) {
+            let updatedPlan = PlanModel(
+                uid: updatedPlanList[planIndex].uid,
+                index: updatedPlanList[planIndex].index,
+                memo: updatedPlanList[planIndex].memo,
+                placeModel: updatedPlanList[planIndex].placeModel,
+                files: newFiles
             )
+            
+            updatedPlanList[planIndex] = updatedPlan
+
+            let newSchedule = ScheduleModel(
+                uid: schedule.uid,
+                index: schedule.index,
+                title: schedule.title,
+                memo: schedule.memo,
+                editDate: schedule.editDate,
+                d_day: schedule.d_day,
+                planList: updatedPlanList
+            )
+            
+            selectedSchedule = newSchedule
+            print("ScheduleVM, updatePlanFiles // Success : Plan 파일 업데이트 완료 - \(newFiles.count)개")
         }
-        self.files.append(contentsOf: savedFiles)
-        print("ScheduleVM, updateSavedFilesForPlan // Success : 파일 캐시 업데이트 - \(savedFiles.count)개")
+        
+    
     }
     
-    internal func updateSavedFilesFromPlan(_ plan: PlanModel) {
-        files.removeAll { $0.isPendingUpload }
-        
-        let savedFileModels = plan.files.map { file in
-            FileModel.saved(
-                fileName: file.fileName,
-                fileType: file.fileType,
-                fileSize: file.fileSize,
-                filePath: file.filePath,
-                createdDate: file.createdDate
-            )
-        }
-        files.append(contentsOf: savedFileModels)
-        print("ScheduleVM, updateSavedFilesFromPlan // Success : Plan 파일 동기화 완료 - \(savedFileModels.count)개")
-    }
     
     deinit {
         cancellables.removeAll()

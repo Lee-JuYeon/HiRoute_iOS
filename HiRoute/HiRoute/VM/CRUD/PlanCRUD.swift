@@ -37,17 +37,12 @@ struct PlanCRUD {
             return nil
         }
         
-        if !fileList.isEmpty {
-            vm.setFileUploading(true)
-        }
-        
         vm.planService.createPlan(newPlan, scheduleUID: scheduleUID, fileList: fileList)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak vm] completion in
                     vm?.setLoading(false)
-                    vm?.setFileUploading(false)
-                    vm?.updateFileUploadProgress(0.0)
+                    vm?.setProgress(0.0)
                     
                     switch completion {
                     case .finished:
@@ -60,7 +55,7 @@ struct PlanCRUD {
                 receiveValue: { [weak vm] createdPlan in
                     guard let schedule = vm?.selectedSchedule else { return }
                         
-                    // ✅ 생성된 Plan의 인덱스를 현재 리스트 끝으로 설정
+                    // 생성된 Plan의 인덱스를 현재 리스트 끝으로 설정
                     let correctedPlan = PlanModel(
                         uid: createdPlan.uid,
                         index: schedule.planList.count, // 새 Plan은 맨 끝 인덱스
@@ -72,7 +67,7 @@ struct PlanCRUD {
                     var updatedPlanList = schedule.planList
                     updatedPlanList.append(correctedPlan)
                     
-                    // ✅ 모든 Plan의 인덱스를 순차적으로 재할당
+                    // 모든 Plan의 인덱스를 순차적으로 재할당
                     var reindexedPlanList: [PlanModel] = []
                     for (index, plan) in updatedPlanList.enumerated() {
                         let updatedPlan = PlanModel(
@@ -83,7 +78,6 @@ struct PlanCRUD {
                             files: plan.files
                         )
                         reindexedPlanList.append(updatedPlan)
-                        print("PlanCRUD, create // Debug : Plan[\(index)] - \(plan.placeModel.title) 인덱스 설정")
                     }
                     
                     // selectedSchedule 업데이트
@@ -98,7 +92,9 @@ struct PlanCRUD {
                     )
                     
                     vm?.selectedSchedule = schedule.updateModel(newScheduleModel)
-                    vm?.updateSavedFilesFromPlan(correctedPlan)
+                    if !createdPlan.files.isEmpty {
+                        vm?.updateFiles(planUID: createdPlan.uid, newFiles: createdPlan.files)
+                    }
                     print("PlanCRUD, create // Success : selectedSchedule 업데이트 완료 - 인덱스 재정렬")
                 }
             )
@@ -126,7 +122,7 @@ struct PlanCRUD {
                     }
                 },
                 receiveValue: { [weak vm] plan in
-                    vm?.updateCurrentScheduleWithPlan(plan)
+                    vm?.updateUiSchedule(plan)
                     vm?.fileCRUD.readAll(planUID: plan.uid)
                 }
             )
@@ -194,7 +190,7 @@ struct PlanCRUD {
                     }
                 },
                 receiveValue: { [weak vm] updatedPlan in
-                    vm?.updateCurrentScheduleWithPlan(updatedPlan)
+                    vm?.updateUiSchedule(updatedPlan)
                     print("PlanCRUD, update // Success : selectedSchedule 업데이트 완료")
                 }
             )
@@ -223,7 +219,6 @@ struct PlanCRUD {
                 },
                 receiveValue: { [weak vm] _ in
                     vm?.removeCurrentSchedulePlan(planUID: planUID)
-                    vm?.files.removeAll { $0.filePath.contains(planUID) }
                     print("PlanCRUD, delete // Success : selectedSchedule에서 Plan 제거 완료")
                 }
             )
@@ -251,7 +246,7 @@ struct PlanCRUD {
                     }
                 },
                 receiveValue: { [weak vm] updatedPlan in
-                    vm?.updateCurrentScheduleWithPlan(updatedPlan)
+                    vm?.updateUiSchedule(updatedPlan)
                     print("PlanCRUD, updateMemo // Success : selectedSchedule 메모 업데이트 완료")
                 }
             )

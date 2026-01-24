@@ -46,47 +46,84 @@ struct ScheduleDAO {
     
     /// Schedule 업데이트 - 비동기
     static func update(_ schedule: ScheduleModel, context: NSManagedObjectContext, completion: @escaping (Bool) -> Void) {
-        context.perform { // 백그라운드 큐에서 비동기 실행
+        context.perform {
             do {
                 let request: NSFetchRequest<ScheduleEntity> = ScheduleEntity.fetchRequest()
                 request.predicate = NSPredicate(format: "uid == %@", schedule.uid)
                 
                 if let existingEntity = try context.fetch(request).first {
-                    // 기존 관계 데이터 삭제
-                    if let plans = existingEntity.planList as? Set<PlanEntity> {
-                        for plan in plans {
-                            // 기존 데이터 삭제후 재생성하는 방식으로 업데이트 진행하기 위해 삭제.
-                            context.delete(plan)
-                        }
-                    }
                     
-                    // 2. 기본 속성 직접 업데이트
+                    // ✅ 기본 속성 업데이트
                     existingEntity.title = schedule.title
                     existingEntity.memo = schedule.memo
                     existingEntity.editDate = schedule.editDate
                     existingEntity.d_day = schedule.d_day
                     existingEntity.index = Int32(schedule.index)
                     
-                    // 새 Plan들 추가
-                    for plan in schedule.planList {
-                        let planEntity = PlanEntityMapper.toEntity(plan, schedule: existingEntity, context: context)
-                        existingEntity.addToPlanList(planEntity)
+                    // ✅ Plan 디버깅 정보 출력
+                    let existingPlans = existingEntity.planList as? Set<PlanEntity> ?? []
+                    let existingUIDs = existingPlans.compactMap { $0.uid }
+                    let newUIDs = schedule.planList.map { $0.uid }
+                    
+                    print("ScheduleDAO, update // DEBUG: 기존 Plan UIDs: \(existingUIDs)")
+                    print("ScheduleDAO, update // DEBUG: 새로운 Plan UIDs: \(newUIDs)")
+                    
+                    // ✅ Plan 매핑
+                    let existingPlanMap = [String: PlanEntity](uniqueKeysWithValues: existingPlans.compactMap {
+                        guard let uid = $0.uid else { return nil }
+                        return (uid, $0)
+                    })
+                    
+                    let newPlanUIDs = Set(schedule.planList.map { $0.uid })
+                    
+                    // ✅ 삭제할 Plan들 확인
+                    let plansToDelete = existingPlans.filter { !newPlanUIDs.contains($0.uid ?? "") }
+                    print("ScheduleDAO, update // DEBUG: 삭제할 Plan UIDs: \(plansToDelete.compactMap { $0.uid })")
+                    
+                    // ✅ 삭제 처리
+                    plansToDelete.forEach { planEntity in
+                        existingEntity.removeFromPlanList(planEntity)
+                        context.delete(planEntity)
                     }
+                    print("ScheduleDAO, update // Info: \(plansToDelete.count)개 Plan 삭제")
+                    
+                    // ✅ 추가/업데이트 처리
+                    var addedCount = 0
+                    var updatedCount = 0
+                    
+                    for newPlan in schedule.planList {
+                        if let existingPlan = existingPlanMap[newPlan.uid] {
+                            // 기존 Plan 업데이트
+                            existingPlan.index = Int32(newPlan.index)
+                            existingPlan.memo = newPlan.memo
+                            updatedCount += 1
+                            print("ScheduleDAO, update // DEBUG: Plan 업데이트 - \(newPlan.uid)")
+                            
+                        } else {
+                            // 새 Plan 추가
+                            let newPlanEntity = PlanEntityMapper.toEntity(newPlan, schedule: existingEntity, context: context)
+                            existingEntity.addToPlanList(newPlanEntity)
+                            addedCount += 1
+                            print("ScheduleDAO, update // DEBUG: Plan 추가 - \(newPlan.uid)")
+                        }
+                    }
+                    
+                    print("ScheduleDAO, update // Info: Plan 추가 \(addedCount)개, 업데이트 \(updatedCount)개")
                     
                     try context.save()
                     completion(true)
-                    print("ScheduleDAO, update // Success : 일정 업데이트 완료 - \(schedule.title)")
+                    print("ScheduleDAO, update // Success: 일정 업데이트 완료")
+                    
                 } else {
                     completion(false)
-                    print("ScheduleDAO, update // Warning : 업데이트할 일정을 찾을 수 없음")
+                    print("ScheduleDAO, update // Warning: 업데이트할 일정을 찾을 수 없음")
                 }
             } catch {
                 completion(false)
-                print("ScheduleDAO, update // Exception : \(error.localizedDescription)")
+                print("ScheduleDAO, update // Exception: \(error)")
             }
         }
     }
-    
     /// Schedule 삭제 - 비동기
     static func delete(scheduleUID: String, context: NSManagedObjectContext, completion: @escaping (Bool) -> Void) {
         context.perform {

@@ -46,20 +46,4 @@ struct PlanBindings {
             }
         )
     }
-    
-    /**
-     * Plan 선택 바인딩 - 현재 선택된 Plan
-     */
-    var selectedPlan: Binding<PlanModel?> {
-        guard let vm = vm else { return .constant(nil) }
-        
-        return Binding(
-            get: { [weak vm] in
-                vm?.selectedPlanModel
-            },
-            set: { [weak vm] newValue in
-                vm?.selectedPlanModel = newValue
-            }
-        )
-    }
 }

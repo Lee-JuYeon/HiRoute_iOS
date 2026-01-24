@@ -23,8 +23,8 @@ struct FileCRUD {
         print("FileCRUD, create // Info : 파일 생성 시작")
         guard let vm = vm else { return }
         
-        vm.setFileUploading(true)
-        vm.updateFileUploadProgress(0.0)
+        vm.setLoading(true)
+        vm.setProgress(0.0)
                
         let fileDataList: [(Data, String, String)]
         
@@ -41,13 +41,13 @@ struct FileCRUD {
             print("FileCRUD, create // Info : 다중 파일 생성 - \(files.count)개")
         } else {
             print("FileCRUD, create // Warning : 생성할 파일이 없음")
-            vm.setFileUploading(false)
+            vm.setLoading(false)
             return
         }
                
         guard !fileDataList.isEmpty else {
             print("FileCRUD, create // Warning : 유효한 파일 데이터가 없음")
-            vm.setFileUploading(false)
+            vm.setLoading(false)
             return
         }
                
@@ -66,8 +66,8 @@ struct FileCRUD {
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak vm] completion in
-                    vm?.setFileUploading(false)
-                    vm?.updateFileUploadProgress(0.0)
+                    vm?.setLoading(false)
+                    vm?.setProgress(0.0)
                     
                     switch completion {
                     case .finished:
@@ -79,7 +79,7 @@ struct FileCRUD {
                     }
                 },
                 receiveValue: { [weak vm] savedFiles in
-                    addSavedFilesToList(savedFiles)  // ✅ private 메서드 호출
+                    vm?.updateFiles(planUID: planUID, newFiles: savedFiles) // ✅ 새 메서드 사용
                     print("FileCRUD, create // Success : 파일 로컬 업데이트 완료 - \(savedFiles.count)개")
                 }
             )
@@ -95,9 +95,7 @@ struct FileCRUD {
         
         print("FileCRUD, read // Info : 단일 파일 조회 - \(fileUID)")
         
-        let readFilePublisher: AnyPublisher<FileModel, Error> = vm.planService.getFile(fileUID: fileUID)
-        
-        readFilePublisher
+        vm.planService.getFile(fileUID: fileUID)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { completion in
@@ -139,7 +137,7 @@ struct FileCRUD {
                     }
                 },
                 receiveValue: { [weak vm] attachedFiles in
-                    vm?.updateSavedFilesForPlan(planUID: planUID, files: attachedFiles)
+                    vm?.updateFiles(planUID: planUID, newFiles: attachedFiles)
                     print("FileCRUD, read // Success : 파일 목록 업데이트 완료 - \(attachedFiles.count)개")
                 }
             )
@@ -153,14 +151,14 @@ struct FileCRUD {
         print("FileCRUD, update // Info : 파일 수정 - \(fileUID) → \(newFileName)")
         guard let vm = vm else { return }
         
+        guard let planUID = findPlanUID(for: fileUID, in: vm.currentPlans) else {
+            print("FileCRUD, update // Error : 파일이 속한 Plan을 찾을 수 없음")
+            return
+        }
+        
         vm.setLoading(true)
         
-        let updateFilePublisher: AnyPublisher<FileModel, Error> = vm.planService.renameFile(
-            fileUID: fileUID,
-            newFileName: newFileName
-        )
-        
-        updateFilePublisher
+        vm.planService.renameFile(fileUID: fileUID, newFileName: newFileName)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak vm] completion in
@@ -176,7 +174,7 @@ struct FileCRUD {
                     }
                 },
                 receiveValue: { [weak vm] updatedFile in
-                    updateFileInList(updatedFile)
+                    vm?.readAllFiles(planUID: planUID)
                     print("FileCRUD, update // Success : 파일 로컬 업데이트 완료 - \(updatedFile.fileName)")
                 }
             )
@@ -190,15 +188,15 @@ struct FileCRUD {
         print("FileCRUD, delete // Info : 파일 삭제 - \(fileUID)")
         guard let vm = vm else { return }
         
-        let backupFiles = vm.files
+        // 해당 파일이 속한 Plan 찾기
+        guard let planUID = findPlanUID(for: fileUID, in: vm.currentPlans) else {
+            print("FileCRUD, delete // Error : 파일이 속한 Plan을 찾을 수 없음")
+            return
+        }
         
-        // 낙관적 업데이트: 로컬에서 먼저 제거
-        vm.files.removeAll { $0.id.uuidString == fileUID }
         vm.setLoading(true)
-        
-        let deleteFilePublisher: AnyPublisher<Void, Error> = vm.planService.removeFile(fileUID: fileUID)
-        
-        deleteFilePublisher
+                
+        vm.planService.removeFile(fileUID: fileUID)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak vm] completion in
@@ -209,110 +207,46 @@ struct FileCRUD {
                         print("FileCRUD, delete // Success : 파일 삭제 완료")
                         
                     case .failure(let error):
-                        // 실패시 백업 데이터로 롤백
-                        vm?.files = backupFiles
                         vm?.handleError(error)
                         print("FileCRUD, delete // Exception : 파일 삭제 실패, 롤백 - \(error.localizedDescription)")
                     }
                 },
                 receiveValue: { [weak vm] _ in
+                    vm?.readAllFiles(planUID: planUID)
                     print("FileCRUD, delete // Success : 파일 삭제 서버 동기화 완료")
                 }
             )
             .store(in: &vm.cancellables)
     }
-    // MARK: - ✅ Helper Methods
-    
-    
-    private func getPendingFiles() -> [FileModel] {
-        guard let vm = vm else { return [] }
-        return vm.files.filter { $0.isPendingUpload }
+
+    private func findPlanUID(for fileUID: String, in plans: [PlanModel]) -> String? {
+        return plans.first { plan in
+            plan.files.contains { $0.id.uuidString == fileUID }
+        }?.uid
     }
-    
-    private func getSavedFiles() -> [FileModel] {
-        guard let vm = vm else { return [] }
-        return vm.files.filter { $0.isSaved }
-    }
-    
+        
+ 
     func getFileCount(for planUID: String) -> Int {
-        return getSavedFiles().filter { $0.filePath.contains(planUID) }.count
+        guard let vm = vm else { return 0 }
+        return vm.getFilesForPlan(planUID: planUID).count // ✅ 기존 computed property 활용
     }
     
-    func getTotalPendingFileSize() -> Int64 {
-        return getPendingFiles().reduce(0) { $0 + $1.fileSize }
+    func getTotalFileSize() -> Int64 {
+        guard let vm = vm else { return 0 }
+        return vm.currentFiles.reduce(0) { $0 + $1.fileSize } // ✅ computed property 활용
     }
+
     
     func getFileCountByType() -> [String: Int] {
         guard let vm = vm else { return [:] }
         
         var typeCounts: [String: Int] = [:]
-        for file in vm.files {
+        for file in vm.currentFiles {
             let type = file.fileType.lowercased()
             typeCounts[type] = (typeCounts[type] ?? 0) + 1
         }
         return typeCounts
     }
     
-    // MARK: - Private File List Management
-    
-    private func addSavedFileToList(_ savedFile: FileModel) {
-        guard let vm = vm else { return }
-        
-        let fileModel = FileModel.saved(
-            fileName: savedFile.fileName,
-            fileType: savedFile.fileType,
-            fileSize: savedFile.fileSize,
-            filePath: savedFile.filePath,
-            createdDate: savedFile.createdDate
-        )
-        vm.files.append(fileModel)
-    }
-    
-    private func addSavedFilesToList(_ savedFiles: [FileModel]) {
-        guard let vm = vm else { return }
-        
-        let fileModels = savedFiles.map { file in
-            FileModel.saved(
-                fileName: file.fileName,
-                fileType: file.fileType,
-                fileSize: file.fileSize,
-                filePath: file.filePath,
-                createdDate: file.createdDate
-            )
-        }
-        vm.files.append(contentsOf: fileModels)
-    }
-       
-    
-    private func addMultipleSavedFilesToList(_ savedFiles: [FileModel]) {
-        guard let vm = vm else { return }
-        
-        // 저장된 파일들 추가
-        let fileModels = savedFiles.map { file in
-            FileModel.saved(
-                fileName: file.fileName,
-                fileType: file.fileType,
-                fileSize: file.fileSize,
-                filePath: file.filePath,
-                createdDate: file.createdDate
-            )
-        }
-        vm.files.append(contentsOf: fileModels)
-    }
 
-    
-    private func updateFileInList(_ updatedFile: FileModel) {
-        guard let vm = vm else { return }
-        
-        if let index = vm.files.firstIndex(where: { $0.id.uuidString == updatedFile.id.uuidString }) {
-            let savedFile = FileModel.saved(
-                fileName: updatedFile.fileName,
-                fileType: updatedFile.fileType,
-                fileSize: updatedFile.fileSize,
-                filePath: updatedFile.filePath,
-                createdDate: updatedFile.createdDate
-            )
-            vm.files[index] = savedFile
-        }
-    }
 }
