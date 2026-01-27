@@ -10,20 +10,24 @@ import PDFKit
 
 struct FileListView: View {
     
-    @Binding private var presentDocumentPicker : Bool
+    @Binding private var presentDocumentPicker: Bool
+    @Binding private var fileList: [FileModel]
+    private let onFilesChanged: (([FileModel]) -> Void)?
     
     init(
-        isPresentDocumentPicker : Binding<Bool>
-    ){
+        isPresentDocumentPicker: Binding<Bool>,
+        fileList: Binding<[FileModel]>,
+        onFilesChanged: (([FileModel]) -> Void)? = nil
+    ) {
         self._presentDocumentPicker = isPresentDocumentPicker
+        self._fileList = fileList
+        self.onFilesChanged = onFilesChanged
     }
     
-    @State private var fileList: [FileModel] = []
     @State private var currentIndex = 0
     @State private var selectedFileURL: URL?
     @State private var showFileDetail = false
     @State private var selectedFileModel: FileModel?
-       
     
     @ViewBuilder
     private func fileContentView(_ fileModel: FileModel) -> some View {
@@ -150,6 +154,8 @@ struct FileListView: View {
         if currentIndex >= fileList.count && !fileList.isEmpty {
             currentIndex = fileList.count - 1
         }
+        
+        onFilesChanged?(fileList)
     }
     
     private func getFileIcon(for fileType: String) -> String {
@@ -160,6 +166,12 @@ struct FileListView: View {
             return "photo"
         case "txt":
             return "doc.plaintext"
+        case "doc", "docx":
+            return "doc.richtext"
+        case "xls", "xlsx":
+            return "tablecells"
+        case "ppt", "pptx":
+            return "tv"
         default:
             return "doc"
         }
@@ -245,6 +257,9 @@ struct FileListView: View {
                 fileList.append(fileModel)
                 currentIndex = fileList.count - 1
                 selectedFileURL = nil
+                
+                // 파일 추가시에도 변경사항 알림
+                onFilesChanged?(fileList)
             }
         }
     }

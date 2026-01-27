@@ -8,8 +8,22 @@ import SwiftUI
 
 struct FileView : View {
     
-    @State private var presentDocumentPicker : Bool = false
+    @Binding private var addButtonVisible: Bool
+    @Binding private var fileList: [FileModel]
+    private let onFilesChanged: (([FileModel]) -> Void)?
+
+    init(
+        visibleAddButton: Binding<Bool>,
+        fileList: Binding<[FileModel]>,
+        onFilesChanged: (([FileModel]) -> Void)? = nil
+    ) {
+        self._addButtonVisible = visibleAddButton
+        self._fileList = fileList
+        self.onFilesChanged = onFilesChanged
+    }
     
+    @State private var presentDocumentPicker : Bool = false
+
     @ViewBuilder
     private func addFileButton() -> some View {
         Button {
@@ -43,10 +57,14 @@ struct FileView : View {
     
     var body: some View {
         VStack(alignment: HorizontalAlignment.leading, spacing: 10){
-            addFileButton()
+            if addButtonVisible { addFileButton() }
             
             FileListView(
-                isPresentDocumentPicker: $presentDocumentPicker
+                isPresentDocumentPicker: $presentDocumentPicker,
+                fileList: $fileList,
+                onFilesChanged: { updatedFiles in  // 변경시마다 호출
+                    onFilesChanged?(updatedFiles)
+                }
             )
         }
     }

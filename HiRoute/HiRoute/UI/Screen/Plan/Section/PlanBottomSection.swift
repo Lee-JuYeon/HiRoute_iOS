@@ -12,9 +12,14 @@ struct PlanBottomSection: View {
     private var getOnClickCell : (PlanModel) -> Void
     private var getOnClickAnnotation : (PlanModel) -> Void
     private var getModeType : ModeType
+    
+    @Binding private var getFileList: [FileModel]
+    private let onFilesChanged: (([FileModel]) -> Void)?
     init(
         setVisitPlaceList : [PlanModel],
         setModeType : ModeType,
+        setFileList: Binding<[FileModel]>,
+        onFilesChanged: (([FileModel]) -> Void)? = nil,
         onClickCell : @escaping (PlanModel) -> Void,
         onClickAnnotation : @escaping (PlanModel) -> Void
     ){
@@ -22,6 +27,8 @@ struct PlanBottomSection: View {
         self.getModeType = setModeType
         self.getOnClickCell = onClickCell
         self.getOnClickAnnotation = onClickAnnotation
+        self._getFileList = setFileList
+        self.onFilesChanged = onFilesChanged
     }
     
     @State private var selectedTabIndex = 0
@@ -73,8 +80,18 @@ struct PlanBottomSection: View {
             )
             .tag(1)
             
-            FileView()
-                .tag(2)
+            FileView(
+                visibleAddButton: .constant({
+                    let shouldShow = getModeType == .CREATE || getModeType == .UPDATE 
+                       print("🔍 FileView 버튼 가시성 - 모드: \(getModeType), 보이기: \(shouldShow)")
+                       return shouldShow
+                   }()),
+                fileList: $getFileList,
+                onFilesChanged: { updatedFileList in
+                    onFilesChanged?(updatedFileList)
+                }
+            )
+            .tag(2)
           
         }
 //        .allowsHitTesting(false) // 터치 비활성화 (스크롤 막힘)

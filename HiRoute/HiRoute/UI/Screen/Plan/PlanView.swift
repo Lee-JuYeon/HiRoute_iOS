@@ -35,6 +35,8 @@ struct PlanView : View {
     
     @State private var currentPlanModel : PlanModel? = nil
     
+   
+    
     // 키보드 해제 헬퍼 함수
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -221,6 +223,27 @@ struct PlanView : View {
             PlanBottomSection(
                 setVisitPlaceList: scheduleVM.selectedSchedule?.planList ?? [],
                 setModeType: getModeType,
+                setFileList: Binding(
+                    get: { currentPlanModel?.files ?? [] },
+                    set: { newFiles in
+                        guard let planModel = currentPlanModel else {
+                            print("❌ Plan이 선택되지 않아 파일 추가 불가")
+                            return
+                        }
+                        
+                        let updatedPlan = PlanModel(
+                            uid: planModel.uid,
+                            index: planModel.index,
+                            memo: planModel.memo,
+                            placeModel: planModel.placeModel,
+                            files: newFiles
+                        )
+                        currentPlanModel = updatedPlan
+                    }
+                ),  
+                onFilesChanged: { updatedFileList in
+                    // setfilelist가 binding이라 setfilelist에서 알아서처리하니 비워도 됨
+                },
                 onClickCell: { clickedPlanModel in
                     onCellClick(clickedPlanModel)
                 },
