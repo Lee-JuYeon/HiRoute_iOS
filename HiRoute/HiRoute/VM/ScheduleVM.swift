@@ -33,6 +33,11 @@ final class ScheduleVM: ObservableObject {
         selectedSchedule?.planList.map { $0.placeModel } ?? []
     }
     
+    func getFiles(planUID: String) -> [FileModel] {
+        selectedSchedule?.planList.first { $0.uid == planUID }?.files ?? []
+    }
+
+    
     var currentFiles: [FileModel] {
         selectedSchedule?.planList.flatMap { $0.files } ?? []
     }
@@ -42,6 +47,7 @@ final class ScheduleVM: ObservableObject {
     }
 
 
+    
     @Published var searchText = ""
     
     @Published var isLoading = false
@@ -218,6 +224,36 @@ final class ScheduleVM: ObservableObject {
             d_day: schedule.d_day,
             planList: schedule.planList
         )
+    }
+    
+    // ScheduleVM.swift
+    func updateUiPlanMemo(planUID: String, newMemo: String) {
+        guard let schedule = selectedSchedule else { return }
+        
+        var updatedPlanList = schedule.planList
+        if let planIndex = updatedPlanList.firstIndex(where: { $0.uid == planUID }) {
+            let updatedPlan = PlanModel(
+                uid: updatedPlanList[planIndex].uid,
+                index: updatedPlanList[planIndex].index,
+                memo: newMemo,  
+                placeModel: updatedPlanList[planIndex].placeModel,
+                files: updatedPlanList[planIndex].files
+            )
+            
+            updatedPlanList[planIndex] = updatedPlan
+            
+            selectedSchedule = ScheduleModel(
+                uid: schedule.uid,
+                index: schedule.index,
+                title: schedule.title,
+                memo: schedule.memo,
+                editDate: schedule.editDate,
+                d_day: schedule.d_day,
+                planList: updatedPlanList
+            )
+            
+            print("ScheduleVM, updateUiPlanMemo // Success : Plan 메모 메모리 업데이트 완료")
+        }
     }
     
     // 일정 선택

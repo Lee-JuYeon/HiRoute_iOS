@@ -32,7 +32,7 @@ struct PlanBottomSection: View {
     }
     
     @State private var selectedTabIndex = 0
-    private let tabTitles = ["타임라인", "지도", "문서"]
+    private let tabTitles = ["타임라인", "지도"]
     
     @ViewBuilder
     private func tabHeader() -> some View {
@@ -79,20 +79,6 @@ struct PlanBottomSection: View {
                 }
             )
             .tag(1)
-            
-            FileView(
-                visibleAddButton: .constant({
-                    let shouldShow = getModeType == .CREATE || getModeType == .UPDATE 
-                       print("🔍 FileView 버튼 가시성 - 모드: \(getModeType), 보이기: \(shouldShow)")
-                       return shouldShow
-                   }()),
-                fileList: $getFileList,
-                onFilesChanged: { updatedFileList in
-                    onFilesChanged?(updatedFileList)
-                }
-            )
-            .tag(2)
-          
         }
 //        .allowsHitTesting(false) // 터치 비활성화 (스크롤 막힘)
 //        .disabled(true)

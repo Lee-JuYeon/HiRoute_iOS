@@ -375,7 +375,8 @@ struct PlanView : View {
         .fullScreenCover(item: $currentPlanModel) { planModel in
             PlaceView(
                 setPlanModel: planModel,
-                setPlaceModeType : placeModeType
+                setPlaceModeType : placeModeType,
+                setModeType: $getModeType
             )
         }
         .onAppear {

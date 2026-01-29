@@ -181,6 +181,8 @@ struct FileListView: View {
         VStack {
             if fileList.isEmpty {
                 VStack(alignment: .center, spacing: 16) {
+                    Spacer(minLength: 32)
+
                     Image(systemName: "folder")
                         .font(.system(size: 60))
                         .foregroundColor(.gray)
@@ -188,6 +190,8 @@ struct FileListView: View {
                     Text("추가된 파일이 없습니다")
                         .foregroundColor(.gray)
                         .font(.body)
+                    
+                    Spacer(minLength: 32)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             } else {

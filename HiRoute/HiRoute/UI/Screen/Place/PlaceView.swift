@@ -10,12 +10,15 @@ struct PlaceView : View {
     
     private var getVisitPlaceModel : PlanModel
     private var getPlaceModeType : PlaceModeType
+    @Binding private var getModeType : ModeType
     init(
         setPlanModel : PlanModel,
-        setPlaceModeType : PlaceModeType
+        setPlaceModeType : PlaceModeType,
+        setModeType : Binding<ModeType>
     ){
         self.getVisitPlaceModel = setPlanModel
         self.getPlaceModeType = setPlaceModeType
+        self._getModeType = setModeType
     }
     
     @Environment(\.presentationMode) private var presentationMode
@@ -142,6 +145,7 @@ struct PlaceView : View {
                         setVisitPlaceModel: getVisitPlaceModel,
                         setNationalityType: localVM.nationality,
                         setPlaceModeType: getPlaceModeType,
+                        setModeType: $getModeType,
                         onClickReviewCell: { reviewModel in
                             // PlaceVM을 통한 리뷰 셀 클릭이벤트
                             handleReviewDetail(reviewModel)

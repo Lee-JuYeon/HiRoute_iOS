@@ -8,20 +8,23 @@ import SwiftUI
 
 struct PlaceBottomSection : View {
     
-    private var getVisitPlaceModel : PlanModel
+    private var getPlanModel : PlanModel
     private var getNationalityType : NationalityType
     private var getPlaceModeType : PlaceModeType
     private var getOnClickReviewCell : (ReviewModel) -> Void
     private var getOnClickWriteReview : (String) -> Void
+    @Binding private var getModeType : ModeType
     init(
         setVisitPlaceModel : PlanModel,
         setNationalityType : NationalityType,
         setPlaceModeType : PlaceModeType,
+        setModeType : Binding<ModeType>,
         onClickReviewCell : @escaping (ReviewModel) -> Void,
         onCallBackWriteReview : @escaping (String) -> Void
     ){
-        self.getVisitPlaceModel = setVisitPlaceModel
+        self.getPlanModel = setVisitPlaceModel
         self.getNationalityType = setNationalityType
+        self._getModeType = setModeType
         self.getOnClickReviewCell = onClickReviewCell
         self.getOnClickWriteReview = onCallBackWriteReview
         self.getPlaceModeType = setPlaceModeType
@@ -34,7 +37,7 @@ struct PlaceBottomSection : View {
     private func tabTitles() -> [String] {
         switch getPlaceModeType {
         case .MY :
-            return ["메모", "리뷰"]
+            return ["메모", "문서", "리뷰"]
         case .OTHER :
             return ["리뷰"]
         }
@@ -72,84 +75,67 @@ struct PlaceBottomSection : View {
         case .MY :
             switch selectedTabIndex {
             case 0:
-//                MultiLineMemoView(
-//                    setHint: "메모를 입력해보세요",
-//                    setText: scheduleVM.bindingScheduleMemo,
-//                    setModeType: ModeType.READ
-//                )
-                ReviewListView(
-                    setPlaceModel: getVisitPlaceModel.placeModel,
-                    setNationalityType: getNationalityType,
-                    setOnClickCell: { clickedModel in
-                        // 리뷰 셀 클릭이벤트
-                        getOnClickReviewCell(clickedModel)
-                    },
-                    setOnClickWriteReview: {
-                        // 리뷰 작성뷰로 이동
-                        getOnClickWriteReview(getVisitPlaceModel.placeModel.uid)
-                        
+                VStack(){
+                    Spacer(minLength: 32)
+
+                    // 메모
+                    EditableTextView(
+                        setTitle: scheduleVM.planBindings.memo(for: getPlanModel.uid),
+                        setHint: "클릭하여 해당 장소에 대해 메모가 필요한 경우 작성해주세요.",
+                        setEditMode: $getModeType,
+                        setAlignment: .vertical,
+                        isMultiLine: true
+                    ) {
+                        // 클릭시 편집 모드 활성화
+                        getModeType = .UPDATE
+                    }
+                    
+                    Spacer(minLength: 32)
+                }
+            case 1:
+                // 문서
+                FileView(
+                    visibleAddButton: .constant(getModeType == .CREATE || getModeType == .UPDATE),
+                    fileList: scheduleVM.planBindings.files(for: getPlanModel.uid),
+                    onFilesChanged: { updatedFileList in
+                        print("🔍 Place에서 파일 변경: \(updatedFileList.count)개")
                     }
                 )
-            case 1:
+            case 2:
+                // 리뷰
                 ReviewListView(
-                    setPlaceModel: getVisitPlaceModel.placeModel,
+                    setPlaceModel: getPlanModel.placeModel,
                     setNationalityType: getNationalityType,
                     setOnClickCell: { clickedModel in
-                        // 리뷰 셀 클릭이벤트
                         getOnClickReviewCell(clickedModel)
                     },
                     setOnClickWriteReview: {
-                        // 리뷰 작성뷰로 이동
-                        getOnClickWriteReview(getVisitPlaceModel.placeModel.uid)
-                        
+                        getOnClickWriteReview(getPlanModel.placeModel.uid)
                     }
                 )
             default:
                 ReviewListView(
-                    setPlaceModel: getVisitPlaceModel.placeModel,
+                    setPlaceModel: getPlanModel.placeModel,
                     setNationalityType: getNationalityType,
                     setOnClickCell: { clickedModel in
-                        // 리뷰 셀 클릭이벤트
                         getOnClickReviewCell(clickedModel)
                     },
                     setOnClickWriteReview: {
-                        // 리뷰 작성뷰로 이동
-                        getOnClickWriteReview(getVisitPlaceModel.placeModel.uid)
-                        
+                        getOnClickWriteReview(getPlanModel.placeModel.uid)
                     }
                 )
             }
         case .OTHER :
-            switch selectedTabIndex {
-            case 0:
-                ReviewListView(
-                    setPlaceModel: getVisitPlaceModel.placeModel,
-                    setNationalityType: getNationalityType,
-                    setOnClickCell: { clickedModel in
-                        // 리뷰 셀 클릭이벤트
-                        getOnClickReviewCell(clickedModel)
-                    },
-                    setOnClickWriteReview: {
-                        // 리뷰 작성뷰로 이동
-                        getOnClickWriteReview(getVisitPlaceModel.placeModel.uid)
-                        
-                    }
-                )
-            default:
-                ReviewListView(
-                    setPlaceModel: getVisitPlaceModel.placeModel,
-                    setNationalityType: getNationalityType,
-                    setOnClickCell: { clickedModel in
-                        // 리뷰 셀 클릭이벤트
-                        getOnClickReviewCell(clickedModel)
-                    },
-                    setOnClickWriteReview: {
-                        // 리뷰 작성뷰로 이동
-                        getOnClickWriteReview(getVisitPlaceModel.placeModel.uid)
-                        
-                    }
-                )
-            }
+            ReviewListView(
+                setPlaceModel: getPlanModel.placeModel,
+                setNationalityType: getNationalityType,
+                setOnClickCell: { clickedModel in
+                    getOnClickReviewCell(clickedModel)
+                },
+                setOnClickWriteReview: {
+                    getOnClickWriteReview(getPlanModel.placeModel.uid)
+                }
+            )
         }
     }
     
