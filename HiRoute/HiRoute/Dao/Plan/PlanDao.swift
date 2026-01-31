@@ -93,6 +93,20 @@ struct PlanDAO {
                     existingEntity.index = Int32(plan.index)
                     existingEntity.memo = plan.memo
                     
+                    // 파일 업데이트 추가
+                    if let existingFiles = existingEntity.files as? Set<FileEntity> {
+                        for file in existingFiles {
+                            existingEntity.removeFromFiles(file)
+                            context.delete(file)
+                        }
+                    }
+                    
+                    let newFileEntities = FileEntityMapper.toEntitiesForPlan(plan.files, planEntity: existingEntity, context: context)
+                    for fileEntity in newFileEntities {
+                        existingEntity.addToFiles(fileEntity)
+                    }
+                                  
+                    
                     try context.save()
                     print("PlanDAO, update // Success : Plan 업데이트 완료 - \(plan.uid)")
                     completion(true)

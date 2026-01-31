@@ -295,10 +295,34 @@ final class ScheduleVM: ObservableObject {
         guard let original = originalSchedule,
               let current = selectedSchedule else { return false }
         
-        return current.title != original.title ||
-               current.memo != original.memo ||
-               current.d_day != original.d_day ||
-               current.planList.count != original.planList.count
+        // Schedule 레벨 변경사항
+        let scheduleChanged = current.title != original.title ||
+                             current.memo != original.memo ||
+                             current.d_day != original.d_day ||
+                             current.planList.count != original.planList.count
+        
+        // Plan 레벨 변경사항 확인
+        for currentPlan in current.planList {
+            if let originalPlan = original.planList.first(where: { $0.uid == currentPlan.uid }) {
+                // 메모 변경 체크
+                if currentPlan.memo != originalPlan.memo {
+                    print("🔍 Plan 메모 변경 감지: '\(originalPlan.memo)' → '\(currentPlan.memo)'")
+                    return true
+                }
+                
+                // 파일 ID 배열 비교
+                let originalFileIDs = Set(originalPlan.files.map { $0.id })
+                let currentFileIDs = Set(currentPlan.files.map { $0.id })
+                
+                if originalFileIDs != currentFileIDs {
+                    print("🔍 Plan 파일 변경 감지: \(originalPlan.files.count)개 → \(currentPlan.files.count)개 (내용 변경)")
+                    return true
+                }
+            }
+        }
+            
+        
+        return scheduleChanged
     }
     
     
