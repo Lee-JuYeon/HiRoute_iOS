@@ -23,7 +23,7 @@ struct FileView : View {
     }
     
     @State private var presentDocumentPicker : Bool = false
-
+    
     @ViewBuilder
     private func addFileButton() -> some View {
         Button {
@@ -58,7 +58,7 @@ struct FileView : View {
     var body: some View {
         VStack(alignment: HorizontalAlignment.leading, spacing: 10){
             if addButtonVisible { addFileButton() }
-            
+                        
             FileListView(
                 isPresentDocumentPicker: $presentDocumentPicker,
                 fileList: $fileList,

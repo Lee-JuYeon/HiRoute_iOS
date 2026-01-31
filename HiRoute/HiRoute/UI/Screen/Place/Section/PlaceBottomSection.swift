@@ -14,11 +14,13 @@ struct PlaceBottomSection : View {
     private var getOnClickReviewCell : (ReviewModel) -> Void
     private var getOnClickWriteReview : (String) -> Void
     @Binding private var getModeType : ModeType
+    private let onFilesChanged: (([FileModel]) -> Void)?
     init(
         setVisitPlaceModel : PlanModel,
         setNationalityType : NationalityType,
         setPlaceModeType : PlaceModeType,
         setModeType : Binding<ModeType>,
+        onFilesChanged: (([FileModel]) -> Void)? = nil,
         onClickReviewCell : @escaping (ReviewModel) -> Void,
         onCallBackWriteReview : @escaping (String) -> Void
     ){
@@ -28,6 +30,7 @@ struct PlaceBottomSection : View {
         self.getOnClickReviewCell = onClickReviewCell
         self.getOnClickWriteReview = onCallBackWriteReview
         self.getPlaceModeType = setPlaceModeType
+        self.onFilesChanged = onFilesChanged
     }
     
   
@@ -95,10 +98,14 @@ struct PlaceBottomSection : View {
             case 1:
                 // 문서
                 FileView(
-                    visibleAddButton: .constant(getModeType == .CREATE || getModeType == .UPDATE),
+                    visibleAddButton: .constant({
+                        let shouldShow = getModeType == .CREATE || getModeType == .UPDATE
+                           print("🔍 FileView 버튼 가시성 - 모드: \(getModeType), 보이기: \(shouldShow)")
+                           return shouldShow
+                       }()),
                     fileList: scheduleVM.planBindings.files(for: getPlanModel.uid),
                     onFilesChanged: { updatedFileList in
-                        print("🔍 Place에서 파일 변경: \(updatedFileList.count)개")
+                        onFilesChanged?(updatedFileList)
                     }
                 )
             case 2:

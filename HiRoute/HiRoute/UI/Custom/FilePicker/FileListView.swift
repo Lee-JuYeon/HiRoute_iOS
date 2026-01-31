@@ -28,6 +28,7 @@ struct FileListView: View {
     @State private var selectedFileURL: URL?
     @State private var showFileDetail = false
     @State private var selectedFileModel: FileModel?
+       
     
     @ViewBuilder
     private func fileContentView(_ fileModel: FileModel) -> some View {
@@ -154,7 +155,6 @@ struct FileListView: View {
         if currentIndex >= fileList.count && !fileList.isEmpty {
             currentIndex = fileList.count - 1
         }
-        
         onFilesChanged?(fileList)
     }
     
@@ -166,23 +166,34 @@ struct FileListView: View {
             return "photo"
         case "txt":
             return "doc.plaintext"
-        case "doc", "docx":
-            return "doc.richtext"
-        case "xls", "xlsx":
-            return "tablecells"
-        case "ppt", "pptx":
-            return "tv"
         default:
             return "doc"
         }
     }
     
+//    private func getFileIcon(for fileType: String) -> String {
+//        switch fileType.lowercased() {
+//        case "pdf":
+//            return "doc.text"
+//        case "jpg", "jpeg", "png", "gif":
+//            return "photo"
+//        case "txt":
+//            return "doc.plaintext"
+//        case "doc", "docx":
+//            return "doc.richtext"
+//        case "xls", "xlsx":
+//            return "tablecells"
+//        case "ppt", "pptx":
+//            return "tv"
+//        default:
+//            return "doc"
+//        }
+//    }
+    
     var body: some View {
         VStack {
             if fileList.isEmpty {
                 VStack(alignment: .center, spacing: 16) {
-                    Spacer(minLength: 32)
-
                     Image(systemName: "folder")
                         .font(.system(size: 60))
                         .foregroundColor(.gray)
@@ -190,18 +201,10 @@ struct FileListView: View {
                     Text("추가된 파일이 없습니다")
                         .foregroundColor(.gray)
                         .font(.body)
-                    
-                    Spacer(minLength: 32)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             } else {
                 VStack {
-                    // 파일 네비게이션
-                    if fileList.count > 1 {
-                        Text("\(currentIndex + 1) / \(fileList.count)")
-                            .font(.caption)
-                            .foregroundColor(Color.getColour(.label_alternative))
-                    }
                     
                     // 파일 뷰어
                     if #available(iOS 14.0, *) {
@@ -240,9 +243,51 @@ struct FileListView: View {
                             }
                         }
                     }
+                    
+                    if fileList.count > 0 {
+                        HStack {
+                            // 이전 버튼
+                            Button(action: {
+                                if currentIndex > 0 {
+                                    currentIndex -= 1
+                                }
+                            }) {
+                                Image(systemName: "chevron.left")
+                                    .foregroundColor(currentIndex > 0 ? Color.getColour(.label_normal) : Color.getColour(.label_alternative))
+                                    .font(.system(size: 16, weight: .medium))
+                            }
+                            .disabled(currentIndex == 0)
+                            
+                            Spacer()
+                            
+                            // 파일 네비게이션
+                            Text("\(currentIndex + 1) / \(fileList.count)")
+                                .font(.caption)
+                                .foregroundColor(Color.getColour(.label_alternative))
+                            
+                            Spacer()
+                            
+                            // 다음 버튼
+                            Button(action: {
+                                if currentIndex < fileList.count - 1 {
+                                    currentIndex += 1
+                                }
+                            }) {
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(currentIndex < fileList.count - 1 ? Color.getColour(.label_normal) : Color.getColour(.label_alternative))
+                                    .font(.system(size: 16, weight: .medium))
+                            }
+                            .disabled(currentIndex == fileList.count - 1)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(EdgeInsets(top: 16, leading: 8, bottom: 16, trailing: 8))
+                        
+                    }
+                    
                 }
             }
         }
+        .frame(minHeight: 100, idealHeight: 300, maxHeight: 500)
         .sheet(isPresented: $presentDocumentPicker) {
             DocumentPickerView(selectedFileURL: $selectedFileURL)
         }
