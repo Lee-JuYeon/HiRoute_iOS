@@ -96,9 +96,25 @@ struct ScheduleDAO {
                             // 기존 Plan 업데이트
                             existingPlan.index = Int32(newPlan.index)
                             existingPlan.memo = newPlan.memo
-                            updatedCount += 1
-                            print("ScheduleDAO, update // DEBUG: Plan 업데이트 - \(newPlan.uid)")
                             
+                            // ✅ 파일 업데이트 추가
+                            // 기존 파일들 삭제
+                            if let existingFiles = existingPlan.files as? Set<FileEntity> {
+                                for file in existingFiles {
+                                    existingPlan.removeFromFiles(file)
+                                    context.delete(file)
+                                }
+                            }
+                            
+                            // 새 파일들 추가
+                            let newFileEntities = FileEntityMapper.toEntitiesForPlan(newPlan.files, planEntity: existingPlan, context: context)
+                            for fileEntity in newFileEntities {
+                                existingPlan.addToFiles(fileEntity)
+                            }
+                            
+                            updatedCount += 1
+                            print("ScheduleDAO, update // DEBUG: Plan 업데이트 (파일 포함) - \(newPlan.uid)")
+
                         } else {
                             // 새 Plan 추가
                             let newPlanEntity = PlanEntityMapper.toEntity(newPlan, schedule: existingEntity, context: context)

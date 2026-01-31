@@ -84,7 +84,7 @@ struct PlanDAO {
     
     /// Plan 업데이트 - 비동기
     static func update(_ plan: PlanModel, context: NSManagedObjectContext, completion: @escaping (Bool) -> Void) {
-        context.perform { // 백그라운드 큐에서 비동기 실행
+        context.perform {
             do {
                 let request: NSFetchRequest<PlanEntity> = PlanEntity.fetchRequest()
                 request.predicate = NSPredicate(format: "uid == %@", plan.uid)
@@ -92,6 +92,9 @@ struct PlanDAO {
                 if let existingEntity = try context.fetch(request).first {
                     existingEntity.index = Int32(plan.index)
                     existingEntity.memo = plan.memo
+                    
+                    // 기존 파일 확인
+                    print("🔍 PlanDAO.update // 기존 파일 개수: \(existingEntity.files?.count ?? 0)")
                     
                     // 파일 업데이트 추가
                     if let existingFiles = existingEntity.files as? Set<FileEntity> {
@@ -101,18 +104,20 @@ struct PlanDAO {
                         }
                     }
                     
+                    // 새 파일 생성
                     let newFileEntities = FileEntityMapper.toEntitiesForPlan(plan.files, planEntity: existingEntity, context: context)
+                    print("🔍 PlanDAO.update // 새로 생성할 파일 개수: \(newFileEntities.count)")
+                    
                     for fileEntity in newFileEntities {
+                        print("🔍 PlanDAO.update // FileEntity 추가: \(fileEntity.fileName ?? "unknown")")
                         existingEntity.addToFiles(fileEntity)
                     }
-                                  
                     
+                    // 저장 후 확인
                     try context.save()
-                    print("PlanDAO, update // Success : Plan 업데이트 완료 - \(plan.uid)")
+                    print("🔍 PlanDAO.update // 저장 후 파일 개수: \(existingEntity.files?.count ?? 0)")
+                    
                     completion(true)
-                } else {
-                    print("PlanDAO, update // Warning : Plan을 찾을 수 없음 - \(plan.uid)")
-                    completion(false)
                 }
             } catch {
                 print("PlanDAO, update // Exception : \(error.localizedDescription)")
@@ -120,7 +125,6 @@ struct PlanDAO {
             }
         }
     }
-    
     /// Plan 메모만 업데이트 - 비동기
     static func updateMemo(planUID: String, memo: String, context: NSManagedObjectContext, completion: @escaping (Bool) -> Void) {
         context.perform { // 백그라운드 큐에서 비동기 실행
