@@ -9,6 +9,82 @@
 
 ---
 
+## AR 구현 메모
+
+### 현재 사용 중인 Apple AR 스택
+
+현재 GeoObject AR 테스트는 서드파티 SDK가 아니라 Apple 기본 AR 스택을 사용한다.
+
+| 영역 | 사용 기술 | 역할 |
+|------|-----------|------|
+| 공간 추적 | ARKit `ARWorldTrackingConfiguration` | 카메라 위치, 회전, 월드 좌표 추적 |
+| 렌더링 | RealityKit `ARView` | 카메라 화면 위에 3D 오브젝트 렌더링 |
+| 오브젝트 | RealityKit `AnchorEntity`, `ModelEntity` | 월드 좌표에 빨간 큐브 배치 |
+| 거리/방향 UI | RealityKit camera transform | 사용자 기준 큐브 방향과 거리 계산 |
+| Depth occlusion | ARKit frame semantics + RealityKit people occlusion | 지원 기기에서 사람/손이 큐브를 가리는 효과 |
+
+현재 진입 화면은 `AppNavigationView`의 `.splash` 분기에서 `GeoObjectARView()`를 띄운다.
+
+### Depth occlusion 동작 방식
+
+Depth occlusion은 실제 물체가 AR 오브젝트보다 카메라에 가까이 있을 때 AR 오브젝트를 가려 보이게 만드는 기능이다.
+
+현재 코드는 아래 조건을 만족하는 기기에서만 depth 기반 사람 가림을 켠다.
+
+```swift
+if ARWorldTrackingConfiguration.supportsFrameSemantics(.personSegmentationWithDepth) {
+    configuration.frameSemantics.insert(.personSegmentationWithDepth)
+    view.renderOptions.remove(.disablePersonOcclusion)
+} else {
+    view.renderOptions.insert(.disablePersonOcclusion)
+}
+```
+
+핵심 기준은 기기 이름을 직접 비교하는 것이 아니라 `supportsFrameSemantics(.personSegmentationWithDepth)` 결과다. Apple도 frame semantics를 켜기 전에 `supportsFrameSemantics(_:)`로 지원 여부를 확인하라고 안내한다.
+
+### 지원/미지원 기기 기준
+
+정확한 최종 판단은 앱 실행 시점의 `supportsFrameSemantics(.personSegmentationWithDepth)` 결과를 따른다.
+
+| 구분 | 기준 | 앱 동작 |
+|------|------|---------|
+| 지원 기기 | `personSegmentationWithDepth` 지원 | `Depth ON`, 사람/손이 큐브를 가릴 수 있음 |
+| 미지원 기기 | `personSegmentationWithDepth` 미지원 | `Depth OFF`, 큐브는 손으로 가려도 그대로 보임 |
+
+대표적으로 미지원으로 봐야 하는 기기:
+
+- iPhone 8 / iPhone 8 Plus
+- iPhone X
+- A11 Bionic 이하 기기
+- 후면 depth/segmentation 성능이 부족한 구형 iPad
+
+대표적으로 지원 가능성이 높은 기기:
+
+- A12 Bionic 이상 기기 중 `personSegmentationWithDepth`를 지원하는 모델
+- LiDAR Scanner가 있는 iPhone Pro / Pro Max 계열
+- LiDAR Scanner가 있는 iPad Pro 계열
+
+LiDAR가 있는 기기는 scene depth 품질이 좋기 때문에 AR 내부 탐험, 실내 공간 occlusion, 거리 기반 배치에 더 적합하다. 단, 이 프로젝트의 현재 구현은 기기명을 하드코딩하지 않고 런타임 지원 여부만 본다.
+
+### 현재 제약
+
+- iPhone 8급 기기에서는 `Depth OFF`가 정상이다.
+- `Depth OFF` 상태에서는 손으로 큐브를 가릴 수 없다.
+- `personSegmentationWithDepth`는 사람/손 중심의 occlusion이며, 책상/벽/물건 전체를 정확히 가리는 일반 scene depth와는 다르다.
+- 손 가장자리는 흔들릴 수 있다.
+- depth 기능은 성능 비용이 있으므로 지원 기기에서만 켠다.
+
+### 참고 문서
+
+- Apple Developer Documentation: `personSegmentationWithDepth`
+  - https://developer.apple.com/documentation/arkit/arconfiguration/framesemantics-swift.struct/personsegmentationwithdepth
+- Apple Developer Documentation: `supportsFrameSemantics(_:)`
+  - https://developer.apple.com/documentation/arkit/arconfiguration/supportsframesemantics%28_%3A%29
+- Apple Developer Documentation: ARKit configuration objects
+  - https://developer.apple.com/documentation/arkit/configuration-objects
+
+---
+
 ## 💡 스택 선정 이유
 
 디자인이 완성되지 않은 상태였고 뷰 구조가 수시로 변경되는 상황이였습니다. 추가적으로 단기간에 구현해야하는 상태여서 UIKit보다는 SwiftUI를 채택하였습니다.
@@ -85,5 +161,3 @@ Google Places API를 사용해야 했지만,
 (여기에 배포 이후에 성과가 나오면 성과 과정 작성)
 
 이 경험을 통해 저는 환경 제약을 기술적 대안으로 극복하는 문제 해결력, 서비스 품질과 효율을 동시에 잡는 설계 능력, 그리고 데이터 기반으로 성과를 만들어내는 실행력을 함께 키울 수 있었습니다.
-
-
