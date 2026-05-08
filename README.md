@@ -66,6 +66,61 @@ if ARWorldTrackingConfiguration.supportsFrameSemantics(.personSegmentationWithDe
 
 LiDAR가 있는 기기는 scene depth 품질이 좋기 때문에 AR 내부 탐험, 실내 공간 occlusion, 거리 기반 배치에 더 적합하다. 단, 이 프로젝트의 현재 구현은 기기명을 하드코딩하지 않고 런타임 지원 여부만 본다.
 
+### 3D 오브젝트 포맷 운영 기준
+
+Android, Web, iOS에서 같은 3D 오브젝트를 각각 따로 제작/관리하지 않는다. 원본 관리는 `GLB` 하나로 통일하고, iOS 배포용 `USDZ`는 서버 파이프라인에서 자동 생성한다.
+
+| 영역 | 포맷 | 책임 |
+|------|------|------|
+| 원본 관리 | `GLB` | 서버/관리툴에서 업로드, 버전 관리 |
+| Web 배포 | `GLB` | Web 클라이언트가 직접 로드 |
+| Android 배포 | `GLB` | Android 클라이언트가 직접 로드 |
+| iOS 배포 | `USDZ` | 서버에서 `GLB`를 변환한 뒤 iOS 클라이언트가 로드 |
+
+iOS 프론트엔드는 `GLB`를 직접 변환하지 않는다. iOS 앱은 서버가 내려주는 검수 완료 `usdz_url`만 다운로드하고, 로컬 캐시 후 RealityKit에서 로드한다.
+
+권장 파이프라인:
+
+```text
+GLB 업로드
+-> 서버가 GLB 저장
+-> 서버가 USDZ 자동 변환
+-> 관리자/작업자가 변환된 USDZ 품질 검수
+-> 승인
+-> iOS 앱은 승인된 USDZ만 다운로드
+```
+
+서버에서 변환해야 하는 이유:
+
+- iOS 앱 용량과 런타임 부하를 줄일 수 있다.
+- 사용자 기기에서 변환 실패가 발생하는 상황을 피할 수 있다.
+- 변환된 `USDZ`의 텍스처, 머티리얼, 스케일, pivot, 애니메이션 상태를 배포 전에 사람이 검수할 수 있다.
+- 기기 성능 차이와 변환 시간 문제를 앱에서 제거할 수 있다.
+
+변환 후 검수해야 하는 항목:
+
+- 모델 메시가 깨지지 않았는지
+- 텍스처가 누락되지 않았는지
+- 색감, roughness, metallic, alpha, emissive 등 머티리얼이 과하게 달라지지 않았는지
+- scale, rotation, pivot이 맞는지
+- 애니메이션이 있다면 정상 동작하는지
+- 실제 iPhone AR 화면에서 성능 문제가 없는지
+
+iOS 앱이 받을 모델 응답 예시:
+
+```json
+{
+  "id": "building_001",
+  "usdz_url": "https://cdn.nunulala.com/ar/building_001.usdz",
+  "version": 3,
+  "scale": 1.0,
+  "latitude": 37.5547,
+  "longitude": 126.9706,
+  "altitude": 35.0,
+  "yaw": 120.0
+}
+```
+
 ### 현재 제약
 
 - iPhone 8급 기기에서는 `Depth OFF`가 정상이다.
