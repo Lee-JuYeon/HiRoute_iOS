@@ -13,12 +13,12 @@ struct AuthNavigationView: View {
     var body: some View {
         NavigationView {
             Group {
-                switch currentAuthDestination {
-                case .login:
-                    LoginScreen(onNavigateToRegister: { showingRegister = true })
-                case .register:
-                    RegisterScreen()
-                }
+//                switch currentAuthDestination {
+//                case .login:
+//                    LoginScreen(onNavigateToRegister: { showingRegister = true })
+//                case .register:
+//                    RegisterScreen()
+//                }
             }
         }
         .navigationViewStyle(StackNavigationViewStyle())

@@ -23,18 +23,18 @@ class BookMarkService {
     }
     
     // Repository 메서드 + 캐싱 로직
-    func toggleBookMark(placeUID: String, userUID: String) -> AnyPublisher<Bool, Error> {
-        bookMarkProtocol.toggleBookMark(placeUID: placeUID, userUID: userUID)
+    func toggleBookMark(placeUid: String, userUid: String) -> AnyPublisher<Bool, Error> {
+        bookMarkProtocol.toggleBookMark(placeUid: placeUid, userUid: userUid)
             .handleEvents(receiveOutput: { [weak self] newState in
-                let cacheKey = "\(placeUID)-\(userUID)" as NSString
+                let cacheKey = "\(placeUid)-\(userUid)" as NSString
                 self?.cache.setObject(NSNumber(value: newState), forKey: cacheKey)
-                print("📌 Bookmark \(newState ? "added" : "removed"): \(placeUID)")
+                print("📌 Bookmark \(newState ? "added" : "removed"): \(placeUid)")
             })
             .eraseToAnyPublisher()
     }
     
-    func isPlaceBookMarked(placeUID: String, userUID: String) -> AnyPublisher<Bool, Error> {
-        let cacheKey = "\(placeUID)-\(userUID)" as NSString
+    func isPlaceBookMarked(placeUid: String, userUid: String) -> AnyPublisher<Bool, Error> {
+        let cacheKey = "\(placeUid)-\(userUid)" as NSString
         
         if let cached = cache.object(forKey: cacheKey) {
             return Just(cached.boolValue)
@@ -42,19 +42,19 @@ class BookMarkService {
                 .eraseToAnyPublisher()
         }
         
-        return bookMarkProtocol.isPlaceBookMarked(placeUID: placeUID, userUID: userUID)
+        return bookMarkProtocol.isPlaceBookMarked(placeUid: placeUid, userUid: userUid)
             .handleEvents(receiveOutput: { [weak self] isBookmarked in
                 self?.cache.setObject(NSNumber(value: isBookmarked), forKey: cacheKey)
             })
             .eraseToAnyPublisher()
     }
     
-    func getPlaceBookMarkCount(placeUID: String) -> AnyPublisher<Int, Error> {
-        bookMarkProtocol.getPlaceBookMarkCount(placeUID: placeUID)
+    func getPlaceBookMarkCount(placeUid: String) -> AnyPublisher<Int, Error> {
+        bookMarkProtocol.getPlaceBookMarkCount(placeUid: placeUid)
     }
     
-    func getUserBookMarkPlaces(userUID: String, page: Int, itemsPerPage: Int) -> AnyPublisher<[PlaceModel], Error> {
-        bookMarkProtocol.getUserBookMarkPlaces(userUID: userUID, page: page, itemsPerPage: itemsPerPage)
+    func getUserBookMarkPlaces(userUid: String, page: Int, itemsPerPage: Int) -> AnyPublisher<[PlaceModel], Error> {
+        bookMarkProtocol.getUserBookMarkPlaces(userUid: userUid, page: page, itemsPerPage: itemsPerPage)
     }
     
     // 🚀 Service만의 편의 기능들
@@ -62,10 +62,10 @@ class BookMarkService {
         cache.removeAllObjects()
     }
     
-    func getBookmarkCountForPlaces(_ placeUIDs: [String]) -> AnyPublisher<[String: Int], Error> {
-        let publishers = placeUIDs.map { placeUID in
-            getPlaceBookMarkCount(placeUID: placeUID)
-                .map { count in (placeUID, count) }
+    func getBookmarkCountForPlaces(_ placeUids: [String]) -> AnyPublisher<[String: Int], Error> {
+        let publishers = placeUids.map { placeUid in
+            getPlaceBookMarkCount(placeUid: placeUid)
+                .map { count in (placeUid, count) }
                 .eraseToAnyPublisher()
         }
         

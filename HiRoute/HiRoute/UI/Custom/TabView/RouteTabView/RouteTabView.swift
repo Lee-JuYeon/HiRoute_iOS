@@ -45,7 +45,9 @@ struct RouteTabView<ContentView : View> : View {
             maxWidth: .infinity,
             alignment: .leading
         )
-        .padding(EdgeInsets(top: 0, leading: 0, bottom: 24, trailing: 0))
+        .padding(EdgeInsets(
+            top: 16, leading: 16, bottom: 16, trailing: 16
+        ))
     }
     
     var body: some View {

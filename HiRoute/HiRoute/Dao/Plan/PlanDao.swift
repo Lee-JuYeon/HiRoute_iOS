@@ -96,22 +96,31 @@ struct PlanDAO {
                     // 기존 파일 확인
                     print("🔍 PlanDAO.update // 기존 파일 개수: \(existingEntity.files?.count ?? 0)")
                     
-                    // 파일 업데이트 추가
-                    if let existingFiles = existingEntity.files as? Set<FileEntity> {
-                        for file in existingFiles {
-                            existingEntity.removeFromFiles(file)
-                            context.delete(file)
+                    // [2026-05-26 Phase 3] 파일도 soft delete + 복구 가능.
+                    let now = Date()
+                    let newFileIDs = Set(plan.files.map { $0.id.uuidString })
+                    let existingFiles = (existingEntity.files as? Set<FileEntity>) ?? []
+                    let existingFileIDs = Set(existingFiles.compactMap { $0.id })
+
+                    // 활성 파일 중 신규에 없는 것 soft delete
+                    for file in existingFiles where file.deletedAt == nil {
+                        if !newFileIDs.contains(file.id ?? "") {
+                            file.deletedAt = now
                         }
                     }
-                    
-                    // 새 파일 생성
-                    let newFileEntities = FileEntityMapper.toEntitiesForPlan(plan.files, planEntity: existingEntity, context: context)
-                    print("🔍 PlanDAO.update // 새로 생성할 파일 개수: \(newFileEntities.count)")
-                    
+                    // 기존 soft-deleted 중 신규에 다시 있으면 복구
+                    for file in existingFiles where file.deletedAt != nil {
+                        if newFileIDs.contains(file.id ?? "") {
+                            file.deletedAt = nil
+                        }
+                    }
+                    // 진짜 신규만 add
+                    let filesToAdd = plan.files.filter { !existingFileIDs.contains($0.id.uuidString) }
+                    let newFileEntities = FileEntityMapper.toEntitiesForPlan(filesToAdd, planEntity: existingEntity, context: context)
                     for fileEntity in newFileEntities {
-                        print("🔍 PlanDAO.update // FileEntity 추가: \(fileEntity.fileName ?? "unknown")")
                         existingEntity.addToFiles(fileEntity)
                     }
+                    print("🔍 PlanDAO.update // 신규 추가: \(filesToAdd.count)개, soft-deleted/복구는 in-place")
                     
                     // 저장 후 확인
                     try context.save()
@@ -172,16 +181,17 @@ struct PlanDAO {
     }
     
     /// Plan 삭제 - 비동기
+    /// [2026-05-26 Phase 3] soft delete — 7일 후 GC가 hard delete.
     static func delete(planUID: String, context: NSManagedObjectContext, completion: @escaping (Bool) -> Void) {
         context.perform { // 백그라운드 큐에서 비동기 실행
             do {
                 let request: NSFetchRequest<PlanEntity> = PlanEntity.fetchRequest()
                 request.predicate = NSPredicate(format: "uid == %@", planUID)
-                
+
                 if let entity = try context.fetch(request).first {
-                    context.delete(entity)
+                    entity.deletedAt = Date()
                     try context.save()
-                    print("PlanDAO, delete // Success : Plan 삭제 완료 - \(planUID)")
+                    print("PlanDAO, delete // Success : Plan soft-deleted - \(planUID)")
                     completion(true)
                 } else {
                     print("PlanDAO, delete // Warning : Plan을 찾을 수 없음 - \(planUID)")

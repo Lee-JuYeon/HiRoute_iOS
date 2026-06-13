@@ -29,11 +29,11 @@ class FileSingleton {
     
     // MARK: - File System URLs
     private lazy var documentsDirectory: URL = {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }()
     
     private lazy var cacheDirectory: URL = {
-        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
     }()
     
     // MARK: - Constants
@@ -220,12 +220,12 @@ class FileSingleton {
         }
         
         // 2. 네트워크에서 다운로드
-        guard let imageURL = URL(string: url) else {
+        guard let imageUrl = URL(string: url) else {
             return Fail(error: FileError.invalidURL)
                 .eraseToAnyPublisher()
         }
         
-        return URLSession.shared.dataTaskPublisher(for: imageURL)
+        return URLSession.shared.dataTaskPublisher(for: imageUrl)
             .map(\.data)
             .tryMap { [weak self] data in
                 guard let self = self else { throw FileError.operationFailed }
@@ -263,18 +263,18 @@ class FileSingleton {
         var imagePublishers: [AnyPublisher<(String, String), Error>] = []
         
         // 1. 썸네일 이미지
-        if let thumbnailURL = place.thumbnailImageURL, !thumbnailURL.isEmpty {
+        if let thumbnailURL = place.thumbnailImage?.imageUrl, !thumbnailURL.isEmpty {
             let publisher = saveImage(url: thumbnailURL)
                 .map { localPath in (thumbnailURL, localPath) }
                 .eraseToAnyPublisher()
             imagePublishers.append(publisher)
         }
-        
+
         // 2. 리뷰 이미지들
-        for review in place.reviews {
+        for review in (place.reviews ?? []) {
             for reviewImage in review.images {
-                let publisher = saveImage(url: reviewImage.imageURL)
-                    .map { localPath in (reviewImage.imageURL, localPath) }
+                let publisher = saveImage(url: reviewImage.imageUrl)
+                    .map { localPath in (reviewImage.imageUrl, localPath) }
                     .eraseToAnyPublisher()
                 imagePublishers.append(publisher)
             }
@@ -343,18 +343,45 @@ class FileSingleton {
      */
     func loadFileData(filePath: String) -> Result<Data, Error> {
         do {
-            let compressedData = try Data(contentsOf: URL(fileURLWithPath: filePath))
-            
+            let fileURL = resolveFilePath(filePath)
+            let compressedData = try Data(contentsOf: fileURL)
+
             // 파일 확장자 확인하여 압축 해제
-            let fileExtension = URL(fileURLWithPath: filePath).pathExtension
+            let fileExtension = fileURL.pathExtension
             let decompressedData = compressionManager.decompressFile(data: compressedData, fileType: fileExtension)
-            
+
             print("FileService, loadFileData // Success : 파일 로드 및 압축해제 완료 - \(filePath)")
             return .success(decompressedData)
         } catch {
             print("FileService, loadFileData // Exception : \(error.localizedDescription)")
             return .failure(FileError.loadFailed)
         }
+    }
+
+    /// 상대 경로 or 절대 경로를 현재 Documents 기준 URL로 변환
+    func resolveFilePath(_ path: String) -> URL {
+        // 이미 절대 경로이고 파일이 존재하면 그대로 사용
+        if path.hasPrefix("/") && FileManager.default.fileExists(atPath: path) {
+            return URL(fileURLWithPath: path)
+        }
+        // 상대 경로면 Documents 기준으로 해석
+        if !path.hasPrefix("/") {
+            return documentsDirectory.appendingPathComponent(path)
+        }
+        // 절대 경로인데 파일이 없으면 (샌드박스 변경) → 파일명 추출 후 Documents에서 찾기
+        let fileName = (path as NSString).lastPathComponent
+        // files/ 디렉토리에서 찾기
+        let filesURL = documentsDirectory.appendingPathComponent("files").appendingPathComponent(fileName)
+        if FileManager.default.fileExists(atPath: filesURL.path) {
+            return filesURL
+        }
+        // FileCache/ 디렉토리에서 찾기
+        let cacheURL = documentsDirectory.appendingPathComponent("FileCache").appendingPathComponent(fileName)
+        if FileManager.default.fileExists(atPath: cacheURL.path) {
+            return cacheURL
+        }
+        // 최후의 수단: 원래 경로 반환
+        return URL(fileURLWithPath: path)
     }
     
     /**
@@ -509,11 +536,13 @@ class FileSingleton {
     
     /**
      * Documents 폴더에 파일 저장
+     * 상대 경로 반환 (앱 재설치에도 유효)
      */
     private func saveFileToDocuments(data: Data, fileName: String) throws -> String {
         let fileURL = documentsDirectory.appendingPathComponent("files").appendingPathComponent(fileName)
         try data.write(to: fileURL)
-        return fileURL.path
+        // 상대 경로로 저장: "files/UUID_filename.ext"
+        return "files/\(fileName)"
     }
     
     /**
@@ -553,44 +582,29 @@ class FileSingleton {
      */
     private func convertPlaceURLsToLocalPaths(place: PlaceModel, urlToPathMap: [String: String]) -> PlaceModel {
         // 썸네일 이미지 URL 변환
-        let localThumbnailURL = place.thumbnailImageURL.flatMap { urlToPathMap[$0] } ?? place.thumbnailImageURL
-        
-        // 리뷰 이미지 URL들 변환
-        let updatedReviews = place.reviews.map { review in
-            let updatedImages = review.images.map { reviewImage in
-                let localImageURL = urlToPathMap[reviewImage.imageURL] ?? reviewImage.imageURL
-                return ReviewImageModel(
-                    uid: reviewImage.uid,           // 기존 uid 유지
-                    userUID: reviewImage.userUID,   // 기존 userUID 유지
-                    date: reviewImage.date,         // 기존 date 유지
-                    imageURL: localImageURL         // URL만 로컬 경로로 변경
-                )
-            }
-            
-            return ReviewModel(
-                reviewUID: review.reviewUID,        // 리뷰 고유 UID
-                reviewText: review.reviewText,      // 리뷰 내용
-                userUID: review.userUID,            // 작성자 UID
-                userName: review.userName,          // 작성자 이름
-                visitDate: review.visitDate,        // 방문 날짜
-                usefulCount: review.usefulCount,    // 도움돼요 수
-                images: updatedImages,              // 업데이트된 이미지들
-                usefulList: review.usefulList       // 유용함 목록
-            )
+        var updatedThumbnail = place.thumbnailImage
+        if let thumbUrl = place.thumbnailImage?.imageUrl,
+           let localPath = urlToPathMap[thumbUrl] {
+            updatedThumbnail?.imageUrl = localPath
         }
-        
-        return PlaceModel(
-            uid: place.uid,
-            address: place.address,                 // 주소 모델
-            type: place.type,                       // 장소 타입
-            title: place.title,
-            subtitle: place.subtitle,
-            thumbnailImageURL: localThumbnailURL,   // 변환된 썸네일 URL
-            workingTimes: place.workingTimes,       // 운영시간 배열
-            reviews: updatedReviews,                // URL 변환된 리뷰들
-            bookMarks: place.bookMarks,             // 북마크 목록
-            stars: place.stars                      // 별점 목록
-        )
+
+        // 리뷰 이미지 URL들 변환
+        let updatedReviews = (place.reviews ?? []).map { review -> ReviewModel in
+            let updatedImages = review.images.map { reviewImage -> ImageModel in
+                let localImageURL = urlToPathMap[reviewImage.imageUrl] ?? reviewImage.imageUrl
+                var updated = reviewImage
+                updated.imageUrl = localImageURL
+                return updated
+            }
+            var updatedReview = review
+            updatedReview.images = updatedImages
+            return updatedReview
+        }
+
+        var updatedPlace = place
+        updatedPlace.thumbnailImage = updatedThumbnail
+        updatedPlace.reviews = updatedReviews
+        return updatedPlace
     }
     
     deinit {

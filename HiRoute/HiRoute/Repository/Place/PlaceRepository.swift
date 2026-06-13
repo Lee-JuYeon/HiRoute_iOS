@@ -1,5 +1,5 @@
 //
-//  PlanrepositoryProtocol.swift
+//  PlaceRepository.swift
 //  HiRoute
 //
 //  Created by Jupond on 7/26/25.
@@ -9,93 +9,131 @@ import Foundation
 import Combine
 
 class PlaceRepository: PlaceProtocol {
-    
-    // 메모리 캐시 - 최대 100개 항목만 유지
+
+    // MARK: - Cache
+
     private var cache = NSCache<NSString, AnyObject>()
-    private let cacheQueue = DispatchQueue(label: "com.place.cache", qos: .utility)
-    
-    init() {
-        setupCache()
-//        loadInitialData()
+    private let visitSeoulStore = VisitSeoulPlaceStore.shared
+
+    private static let listKeyPrefix = "place_list"
+    private static let detailKeyPrefix = "place_detail_"
+
+    // MARK: - Cache Helpers (NSCache requires AnyObject wrappers for value types)
+
+    private func listCacheKey(page: Int, limit: Int, type: String?, subtype: String?) -> NSString {
+        "\(PlaceRepository.listKeyPrefix)_p\(page)_l\(limit)_t\(type ?? "")_s\(subtype ?? "")" as NSString
     }
-    
-    // ✅ 캐시 설정 추가
-    private func setupCache() {
-        cache.countLimit = 100
-        cache.totalCostLimit = 10 * 1024 * 1024 // 10MB
+
+    private func getCachedPlaces(page: Int, limit: Int, type: String?, subtype: String?) -> [PlaceModel]? {
+        (cache.object(forKey: listCacheKey(page: page, limit: limit, type: type, subtype: subtype)) as? PlaceListCacheWrapper)?.places
     }
-    
-    // ✅ 캐시 정리 메소드 추가
-    func clearCache() {
-        cacheQueue.async { [weak self] in
-            self?.cache.removeAllObjects()
-        }
+
+    private func setCachedPlaces(_ places: [PlaceModel], page: Int, limit: Int, type: String?, subtype: String?) {
+        cache.setObject(PlaceListCacheWrapper(places), forKey: listCacheKey(page: page, limit: limit, type: type, subtype: subtype))
     }
-    
-    func optimizeCache() {
-        cacheQueue.async { [weak self] in
-            guard let self = self else { return }
-            let oldLimit = self.cache.totalCostLimit
-            self.cache.totalCostLimit = oldLimit / 2
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                self.cache.totalCostLimit = oldLimit
-            }
-        }
+
+    private func getCachedPlace(uid: String) -> PlaceModel? {
+        let key = "\(PlaceRepository.detailKeyPrefix)\(uid)" as NSString
+        return (cache.object(forKey: key) as? PlaceCacheWrapper)?.place
     }
-    
+
+    private func setCachedPlace(_ place: PlaceModel, uid: String) {
+        let key = "\(PlaceRepository.detailKeyPrefix)\(uid)" as NSString
+        cache.setObject(PlaceCacheWrapper(place), forKey: key)
+    }
+
+    // MARK: - PlaceProtocol
+
     func createPlace(_ place: PlaceModel) -> AnyPublisher<PlaceModel, Error> {
+        // Admin-only operation - return placeholder for now
         Future { promise in
             DispatchQueue.global(qos: .userInitiated).async {
-                // API 호출 시뮬레이션
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     promise(.success(place))
                 }
             }
         }.eraseToAnyPublisher()
     }
-    
-    func readPlace(placeUID: String) -> AnyPublisher<PlaceModel, Error> {
-        Future { promise in
-            DispatchQueue.global().asyncAfter(deadline: .now() + 0.3) {
-                if let place = DummyPack.samplePlaces.first(where: { $0.uid == placeUID }) {
-                    promise(.success(place))
-                } else {
-                    promise(.failure(ServiceError.dataNotFound))
+
+    func readPlace(placeUid: String) -> AnyPublisher<PlaceModel, Error> {
+        if let memCached = getCachedPlace(uid: placeUid) {
+            return Just(memCached)
+                .setFailureType(to: Error.self)
+                .eraseToAnyPublisher()
+        }
+
+        let diskCacheKey = "place_detail_\(placeUid)"
+        let diskCached: PlaceModel? = JsonFileCache.shared.load(forKey: diskCacheKey)
+
+        let apiPublisher = visitSeoulStore.readPlace(placeUid: placeUid)
+            .handleEvents(receiveOutput: { [weak self] model in
+                self?.setCachedPlace(model, uid: placeUid)
+                JsonFileCache.shared.save(model, forKey: diskCacheKey)
+            })
+            .eraseToAnyPublisher()
+
+        if let diskCached = diskCached {
+            return Just(diskCached)
+                .setFailureType(to: Error.self)
+                .merge(with: apiPublisher.catch { _ in Empty<PlaceModel, Error>() })
+                .eraseToAnyPublisher()
+        }
+
+        return apiPublisher
+            .eraseToAnyPublisher()
+    }
+
+    func readPlaceList(page: Int, itemsPerPage: Int, type: String? = nil, subtype: String? = nil) -> AnyPublisher<[PlaceModel], Error> {
+        let apiPage = max(page, 1)
+
+        guard apiPage >= 1, itemsPerPage > 0 else {
+            print("PlaceRepository, readPlaceList // Warning : 잘못된 페이지 파라미터 - page:\(page), itemsPerPage:\(itemsPerPage)")
+            return Just([])
+                .setFailureType(to: Error.self)
+                .eraseToAnyPublisher()
+        }
+
+        let diskCacheKey = "place_list_p\(apiPage)_l\(itemsPerPage)_t\(type ?? "")_s\(subtype ?? "")"
+        let diskCached: [PlaceModel]? = JsonFileCache.shared.load(forKey: diskCacheKey)
+
+        let apiPublisher = visitSeoulStore.readPlaceList(page: apiPage, itemsPerPage: itemsPerPage)
+            .map { models -> [PlaceModel] in
+                guard type != nil || subtype != nil else { return models }
+                return models.filter { place in
+                    let typeMatch = type == nil || place.type.rawValue == type
+                    let subtypeMatch = subtype == nil || place.subtype == subtype
+                    return typeMatch && subtypeMatch
                 }
             }
-        }.eraseToAnyPublisher()
-    }
-    
-    func readPlaceList(page: Int, itemsPerPage: Int) -> AnyPublisher<[PlaceModel], Error> {
-        Future { promise in
-            DispatchQueue.global().asyncAfter(deadline: .now() + 0.4) {
-                
-                // ✅ 페이지 값 검증
-                guard page >= 0, itemsPerPage > 0 else {
-                    print("PlaceRepository, readPlaceList // Warning : 잘못된 페이지 파라미터 - page:\(page), itemsPerPage:\(itemsPerPage)")
-                    promise(.success([]))
-                    return
+            .handleEvents(receiveOutput: { [weak self] models in
+                self?.setCachedPlaces(models, page: page, limit: itemsPerPage, type: type, subtype: subtype)
+                JsonFileCache.shared.save(models, forKey: diskCacheKey)
+            })
+            .eraseToAnyPublisher()
+
+        if let diskCached = diskCached, apiPage == 1 {
+            return Just(diskCached)
+                .setFailureType(to: Error.self)
+                .merge(with: apiPublisher.catch { _ in Empty<[PlaceModel], Error>() })
+                .eraseToAnyPublisher()
+        }
+
+        // 캐시 없거나 페이지네이션: API + 캐시 fallback
+        return apiPublisher
+            .catch { [weak self] error -> AnyPublisher<[PlaceModel], Error> in
+                if let diskCached = diskCached {
+                    return Just(diskCached).setFailureType(to: Error.self).eraseToAnyPublisher()
                 }
-                
-                // ✅ 수정: 0부터 시작하는 페이지 계산
-                let startIndex = page * itemsPerPage
-                let endIndex = min(startIndex + itemsPerPage, DummyPack.samplePlaces.count)
-                
-                // ✅ 범위 검증 강화
-                guard startIndex >= 0 && startIndex < DummyPack.samplePlaces.count else {
-                    print("PlaceRepository, readPlaceList // Info : 요청된 페이지 범위 초과 - page:\(page)")
-                    promise(.success([]))
-                    return
+                if let memCached = self?.getCachedPlaces(page: page, limit: itemsPerPage, type: type, subtype: subtype) {
+                    return Just(memCached).setFailureType(to: Error.self).eraseToAnyPublisher()
                 }
-                
-                let pageData = Array(DummyPack.samplePlaces[startIndex..<endIndex])
-                print("PlaceRepository, readPlaceList // Success : 페이지 데이터 조회 완료 - page:\(page), count:\(pageData.count)")
-                promise(.success(pageData))
+                return Fail(error: error).eraseToAnyPublisher()
             }
-        }.eraseToAnyPublisher()
+            .eraseToAnyPublisher()
     }
-    
+
     func updatePlace(_ place: PlaceModel) -> AnyPublisher<PlaceModel, Error> {
+        // Admin-only operation - return placeholder for now
         Future { promise in
             DispatchQueue.global(qos: .userInitiated).async {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
@@ -104,31 +142,37 @@ class PlaceRepository: PlaceProtocol {
             }
         }.eraseToAnyPublisher()
     }
-    
-    func deletePlace(placeUID: String) -> AnyPublisher<PlaceModel, Error> {
+
+    func deletePlace(placeUid: String) -> AnyPublisher<PlaceModel, Error> {
+        // Admin-only operation - return placeholder for now
         Future { promise in
             DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
-                // 삭제하려는 Place 찾기
-                if let deletedPlace = DummyPack.samplePlaces.first(where: { $0.uid == placeUID }) {
-                    // 실제 구현에서는 여기서 서버에서 삭제하고, 삭제된 모델을 반환
-                    promise(.success(deletedPlace))
-                } else {
-                    promise(.failure(ServiceError.dataNotFound))
-                }
+                promise(.failure(ServiceError.unauthorized))
             }
         }.eraseToAnyPublisher()
     }
-        
-    
-    func requestPlaceInfoEdit(placeUID: String, userUID: String, reportType: ReportType.RawValue, reason: String) -> AnyPublisher<Void, Error> {
-        Future { promise in
-            DispatchQueue.global().asyncAfter(deadline: .now() + 1.0) {
-                print("📝 Place info edit requested: \(placeUID) - \(reportType)")
-                promise(.success(()))
-            }
-        }.eraseToAnyPublisher()
+
+    func requestPlaceInfoEdit(placeUid: String, userUid: String, reportType: ReportType.RawValue, reason: String) -> AnyPublisher<Void, Error> {
+        _ = placeUid
+        _ = userUid
+        _ = reportType
+        _ = reason
+        return Fail(error: ServiceError.unsupportedFeature).eraseToAnyPublisher()
     }
 }
 
+// MARK: - NSCache Wrappers (NSCache requires AnyObject; PlaceModel is a struct)
 
+private final class PlaceCacheWrapper: NSObject {
+    let place: PlaceModel
+    init(_ place: PlaceModel) {
+        self.place = place
+    }
+}
 
+private final class PlaceListCacheWrapper: NSObject {
+    let places: [PlaceModel]
+    init(_ places: [PlaceModel]) {
+        self.places = places
+    }
+}

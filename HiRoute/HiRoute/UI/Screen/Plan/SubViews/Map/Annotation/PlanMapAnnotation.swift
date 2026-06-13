@@ -8,37 +8,43 @@ import SwiftUI
 
 struct PlanMapAnnotation : View {
     let visitPlaceModel: PlanModel
-    let onClick: (PlanModel) -> Void
-    
+    @EnvironmentObject private var scheduleVM: ScheduleVM
+    @EnvironmentObject private var navigationVM: NavigationVM
+
     var body: some View {
-        Button(action: {
-            onClick(visitPlaceModel)
-        }) {
-            VStack(spacing: 0) {
-                // 물방울 모양 배경 + 인덱스 텍스트
-                ZStack {
-                    // 물방울 모양 (원 + 삼각형)
-                    VStack(spacing: 0) {
-                        Circle()
-                            .fill(Color.getColour(.label_strong))
-                            .frame(width: 30, height: 30)
-                            .customElevation(.normal)
-                        
-                        // 아래쪽 뾰족한 부분
-                        Triangle()
-                            .fill(Color.getColour(.label_strong))
-                            .frame(width: 8, height: 6)
-                            .offset(y: -1)
-                    }
-                    
-                    // 인덱스 텍스트
-                    Text("\(visitPlaceModel.index)")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(Color.getColour(.background_white))
-                        .offset(y: -3) // 삼각형 때문에 약간 위로 조정
+        VStack(spacing: 0) {
+            ZStack {
+                VStack(spacing: 0) {
+                    Circle()
+                        .fill(Color.getColour(.label_strong))
+                        .frame(width: 30, height: 30)
+                        .customElevation(.normal)
+
+                    Triangle()
+                        .fill(Color.getColour(.label_strong))
+                        .frame(width: 8, height: 6)
+                        .offset(y: -1)
                 }
+
+                Text("\(visitPlaceModel.index)")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(Color.getColour(.background_white))
+                    .offset(y: -3)
             }
+
+            Text(visitPlaceModel.placeModel.title)
+                .font(.caption2)
+                .foregroundColor(Color.getColour(.label_strong))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.getColour(.background_white).opacity(0.9))
+                .cornerRadius(4)
+                .padding(.top, 2)
         }
-        .buttonStyle(PlainButtonStyle())
+        .contentShape(Rectangle())
+        .onTapGesture {
+            scheduleVM.planEvent.selectPlan(visitPlaceModel)
+            navigationVM.navigateTo(setDestination: .place)
+        }
     }
 }

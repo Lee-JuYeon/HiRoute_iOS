@@ -14,7 +14,7 @@ class PlanRepository: PlanProtocol, FileProtocol {
     private let documentsDirectory: URL
     
     init() {
-        documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
         setupFileDirectories()
         print("PlanRepository, init // Success : Repository 초기화 완료")
     }
@@ -508,15 +508,31 @@ class PlanRepository: PlanProtocol, FileProtocol {
     }
     
     private func searchFileInAllPlans(fileUID: String, completion: @escaping (FileModel?) -> Void) {
-        // TODO: LocalDB에 모든 Plan 조회 메서드 필요
-        // 임시로 nil 반환
-        completion(nil)
+        localDB.readAllSchedules { schedules in
+            for schedule in schedules {
+                for plan in schedule.planList {
+                    if let file = plan.files.first(where: { $0.id.uuidString == fileUID }) {
+                        completion(file)
+                        return
+                    }
+                }
+            }
+            completion(nil)
+        }
     }
-    
+
     private func findPlanContainingFile(fileUID: String, completion: @escaping ((PlanModel, Int)?) -> Void) {
-        // TODO: LocalDB에 모든 Plan 조회 메서드 필요
-        // 임시로 nil 반환
-        completion(nil)
+        localDB.readAllSchedules { schedules in
+            for schedule in schedules {
+                for plan in schedule.planList {
+                    if let index = plan.files.firstIndex(where: { $0.id.uuidString == fileUID }) {
+                        completion((plan, index))
+                        return
+                    }
+                }
+            }
+            completion(nil)
+        }
     }
     
     // MARK: - Helper Methods (동기)

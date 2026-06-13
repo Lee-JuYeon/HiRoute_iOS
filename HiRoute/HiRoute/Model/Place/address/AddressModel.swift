@@ -7,27 +7,27 @@
 import Foundation
 
 struct AddressModel : Hashable, Codable {
-    let addressUID : String // 장소 uid
-    let addressLat : Double // 장소 위도
-    let addressLon : Double // 장소 경도
-    let addressTitle : String // 장소 이름
-    let sido : String // 시,도
-    let gungu : String // 군,구
-    let dong : String // 읍,면,동
-    let fullAddress : String // 전체 주소
+    let uid : String
+    let lat : Double
+    let lon : Double
+    let addressTitle : String?
+    let addressBlock1 : String?
+    let addressBlock2 : String?
+    let addressBlock3 : String?
+    let fullAddress : String?
+
 }
 
-// MARK: - AddressModel Extension 추가
 extension AddressModel {
     static func empty() -> AddressModel {
         return AddressModel(
-            addressUID: "",
-            addressLat: 0.0,
-            addressLon: 0.0,
+            uid: "",
+            lat: 0.0,
+            lon: 0.0,
             addressTitle: "",
-            sido: "",
-            gungu: "",
-            dong: "",
+            addressBlock1: "",
+            addressBlock2: "",
+            addressBlock3: "",
             fullAddress: ""
         )
     }

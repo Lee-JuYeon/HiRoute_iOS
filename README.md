@@ -66,6 +66,105 @@ if ARWorldTrackingConfiguration.supportsFrameSemantics(.personSegmentationWithDe
 
 LiDAR가 있는 기기는 scene depth 품질이 좋기 때문에 AR 내부 탐험, 실내 공간 occlusion, 거리 기반 배치에 더 적합하다. 단, 이 프로젝트의 현재 구현은 기기명을 하드코딩하지 않고 런타임 지원 여부만 본다.
 
+### 3D 오브젝트 포맷 운영 기준
+
+Android, Web, iOS에서 같은 3D 오브젝트를 각각 따로 제작/관리하지 않는다. 원본 관리는 `GLB` 하나로 통일하고, iOS 배포용 `USDZ`는 서버 파이프라인에서 자동 생성한다.
+
+| 영역 | 포맷 | 책임 |
+|------|------|------|
+| 원본 관리 | `GLB` | 서버/관리툴에서 업로드, 버전 관리 |
+| Web 배포 | `GLB` | Web 클라이언트가 직접 로드 |
+| Android 배포 | `GLB` | Android 클라이언트가 직접 로드 |
+| iOS 배포 | `USDZ` | 서버에서 `GLB`를 변환한 뒤 iOS 클라이언트가 로드 |
+
+iOS 프론트엔드는 `GLB`를 직접 변환하지 않는다. iOS 앱은 서버가 내려주는 검수 완료 `usdz_url`만 다운로드하고, 로컬 캐시 후 RealityKit에서 로드한다.
+
+권장 파이프라인:
+
+```text
+GLB 업로드
+-> 서버가 GLB 저장
+-> 서버가 USDZ 자동 변환
+-> 관리자/작업자가 변환된 USDZ 품질 검수
+-> 승인
+-> iOS 앱은 승인된 USDZ만 다운로드
+```
+
+서버에서 변환해야 하는 이유:
+
+- iOS 앱 용량과 런타임 부하를 줄일 수 있다.
+- 사용자 기기에서 변환 실패가 발생하는 상황을 피할 수 있다.
+- 변환된 `USDZ`의 텍스처, 머티리얼, 스케일, pivot, 애니메이션 상태를 배포 전에 사람이 검수할 수 있다.
+- 기기 성능 차이와 변환 시간 문제를 앱에서 제거할 수 있다.
+
+변환 후 검수해야 하는 항목:
+
+- 모델 메시가 깨지지 않았는지
+- 텍스처가 누락되지 않았는지
+- 색감, roughness, metallic, alpha, emissive 등 머티리얼이 과하게 달라지지 않았는지
+- scale, rotation, pivot이 맞는지
+- 애니메이션이 있다면 정상 동작하는지
+- 실제 iPhone AR 화면에서 성능 문제가 없는지
+
+iOS 앱이 받을 모델 응답 예시:
+
+```json
+{
+  "id": "building_001",
+  "usdz_url": "https://cdn.nunulala.com/ar/building_001.usdz",
+  "version": 3,
+  "scale": 1.0,
+  "latitude": 37.5547,
+  "longitude": 126.9706,
+  "altitude": 35.0,
+  "yaw": 120.0
+}
+```
+
+### 오디오 포맷 운영 기준
+
+AR 오브젝트에 입체적인 음향을 붙일 때는 오디오 파일 자체가 입체감을 만드는 것이 아니라, 앱의 3D 오디오 엔진이 소리의 위치를 계산한다.
+
+오디오는 Android, iOS, Web에서 공통으로 재생 가능한 `M4A(AAC-LC)`를 기본 배포 포맷으로 사용한다.
+
+| 항목 | 기준 |
+|------|------|
+| 파일 확장자 | `.m4a` |
+| 코덱 | `AAC-LC` |
+| 샘플레이트 | `44.1kHz` 또는 `48kHz` |
+| 비트레이트 | `128~192kbps` |
+| 채널 | `mono` 또는 `stereo` |
+
+플랫폼 호환성:
+
+| 플랫폼 | `.m4a + AAC-LC` |
+|--------|------------------|
+| iOS | 지원 좋음 |
+| Android | 지원 좋음 |
+| Web | 대부분 지원 |
+
+AR 위치 기반 음향은 보통 `mono m4a`가 더 적합하다. 앱이 사용자 위치와 방향을 기준으로 소리를 3D 공간에 배치하기 쉽기 때문이다.
+
+오디오 운영 결론:
+
+```text
+3D 오브젝트 모델: iOS = USDZ, Android/Web = GLB
+오디오: 공통 = M4A(AAC-LC)
+```
+
+서버 응답에서는 모델과 오디오를 분리해서 내려준다.
+
+```json
+{
+  "id": "red_cube",
+  "usdz_url": "https://cdn.nunulala.com/ar/red_cube.usdz",
+  "glb_url": "https://cdn.nunulala.com/ar/red_cube.glb",
+  "audio_url": "https://cdn.nunulala.com/ar/red_cube.m4a",
+  "audio_channel": "mono",
+  "audio_spatial": true
+}
+```
+
 ### 현재 제약
 
 - iPhone 8급 기기에서는 `Depth OFF`가 정상이다.

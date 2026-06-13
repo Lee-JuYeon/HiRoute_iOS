@@ -1,5 +1,24 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23788" systemVersion="24F74" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="QuestAssetEntity" representedClassName="QuestAssetEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="altitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="animationName" optional="YES" attributeType="String"/>
+        <attribute name="assetId" optional="YES" attributeType="String"/>
+        <attribute name="assetType" optional="YES" attributeType="String"/>
+        <attribute name="downloadedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="duration" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="fileHash" optional="YES" attributeType="String"/>
+        <attribute name="fileSize" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="isDownloaded" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="latitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="localRelativePath" optional="YES" attributeType="String"/>
+        <attribute name="longitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="mimeType" optional="YES" attributeType="String"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="questId" optional="YES" attributeType="String"/>
+        <attribute name="remoteURL" optional="YES" attributeType="String"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
     <entity name="AddressEntity" representedClassName="AddressEntity" syncable="YES" codeGenerationType="class">
         <attribute name="addressLat" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="addressLon" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
@@ -12,16 +31,20 @@
         <relationship name="place" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PlaceEntity" inverseName="address" inverseEntity="PlaceEntity"/>
     </entity>
     <entity name="BookmarkEntity" representedClassName="BookmarkEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="placeUID" optional="YES" attributeType="String"/>
         <attribute name="userUID" optional="YES" attributeType="String"/>
         <relationship name="place" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PlaceEntity" inverseName="bookMarks" inverseEntity="PlaceEntity"/>
     </entity>
     <entity name="FileEntity" representedClassName="FileEntity" syncable="YES" codeGenerationType="class">
         <attribute name="createdDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="fileName" optional="YES" attributeType="String"/>
         <attribute name="filePath" optional="YES" attributeType="String"/>
         <attribute name="fileSize" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="fileType" optional="YES" attributeType="String"/>
         <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="isAIGenerated" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="serverFileUrl" optional="YES" attributeType="String"/>
         <relationship name="visitPlace" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PlanEntity" inverseName="files" inverseEntity="PlanEntity"/>
     </entity>
     <entity name="InfoEditRequestEntity" representedClassName="InfoEditRequestEntity" syncable="YES" codeGenerationType="class">
@@ -32,6 +55,7 @@
         <attribute name="userUID" optional="YES" attributeType="String"/>
     </entity>
     <entity name="PlaceEntity" representedClassName="PlaceEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="isAIGenerated" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="subtitle" optional="YES" attributeType="String"/>
         <attribute name="thumbnailImageURL" optional="YES" attributeType="String"/>
         <attribute name="title" optional="YES" attributeType="String"/>
@@ -44,6 +68,7 @@
         <relationship name="workingTimes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="WorkingTimeEntity" inverseName="place" inverseEntity="WorkingTimeEntity"/>
     </entity>
     <entity name="PlanEntity" representedClassName="PlanEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="index" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="memo" optional="YES" attributeType="String"/>
         <attribute name="uid" optional="YES" attributeType="String"/>
@@ -52,6 +77,7 @@
         <relationship name="schedule" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ScheduleEntity" inverseName="planList" inverseEntity="ScheduleEntity"/>
     </entity>
     <entity name="ReviewEntity" representedClassName="ReviewEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="rating" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="reviewText" optional="YES" attributeType="String"/>
         <attribute name="reviewUID" optional="YES" attributeType="String"/>
         <attribute name="usefulCount" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
@@ -65,25 +91,57 @@
     <entity name="ReviewImageEntity" representedClassName="ReviewImageEntity" syncable="YES" codeGenerationType="class">
         <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="imageURL" optional="YES" attributeType="String"/>
+        <attribute name="isAIGenerated" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="uid" optional="YES" attributeType="String"/>
         <attribute name="userUID" optional="YES" attributeType="String"/>
         <relationship name="review" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ReviewEntity" inverseName="images" inverseEntity="ReviewEntity"/>
     </entity>
     <entity name="ScheduleEntity" representedClassName="ScheduleEntity" syncable="YES" codeGenerationType="class">
         <attribute name="d_day" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="editDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="index" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="memo" optional="YES" attributeType="String"/>
         <attribute name="title" optional="YES" attributeType="String"/>
         <attribute name="uid" optional="YES" attributeType="String"/>
         <relationship name="planList" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="PlanEntity" inverseName="schedule" inverseEntity="PlanEntity"/>
+        <relationship name="chatHistory" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ScheduleChatEntity" inverseName="schedule" inverseEntity="ScheduleChatEntity"/>
+    </entity>
+    <entity name="ScheduleChatEntity" representedClassName="ScheduleChatEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="uid" optional="YES" attributeType="String"/>
+        <attribute name="role" optional="YES" attributeType="String"/>
+        <attribute name="content" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="attachedPlacesJSON" optional="YES" attributeType="String"/>
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="schedule" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ScheduleEntity" inverseName="chatHistory" inverseEntity="ScheduleEntity"/>
     </entity>
     <entity name="StarEntity" representedClassName="StarEntity" syncable="YES" codeGenerationType="class">
         <attribute name="star" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="userUID" optional="YES" attributeType="String"/>
         <relationship name="place" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PlaceEntity" inverseName="stars" inverseEntity="PlaceEntity"/>
     </entity>
+    <entity name="UserEntity" representedClassName="UserEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="uid" optional="YES" attributeType="String"/>
+        <attribute name="encryptedName" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedNationality" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedGender" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedAge" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedAgreedService" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedAgreedServiceDate" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedAgreedPrivacy" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedAgreedPrivacyDate" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedAgreedLocation" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedAgreedLocationDate" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedAgreedMarketing" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedAgreedMarketingDate" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedAgreedPush" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedAgreedPushDate" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedCreatedDate" optional="YES" attributeType="Binary"/>
+        <attribute name="encryptedEditDate" optional="YES" attributeType="Binary"/>
+    </entity>
     <entity name="UsefulEntity" representedClassName="UsefulEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="reviewUID" optional="YES" attributeType="String"/>
         <attribute name="userUID" optional="YES" attributeType="String"/>
         <relationship name="review" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ReviewEntity" inverseName="usefulList" inverseEntity="ReviewEntity"/>
     </entity>

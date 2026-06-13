@@ -22,14 +22,18 @@ struct FileEntityMapper {
             fileType: entity.fileType ?? "",
             fileSize: entity.fileSize,
             filePath: entity.filePath ?? "",
-            createdDate: entity.createdDate ?? Date()
+            createdDate: entity.createdDate ?? Date(),
+            isAiGenerated: entity.isAIGenerated
         )
     }
     
+    /// [2026-05-26 Phase 3] 활성 파일만 반환 (soft-deleted 제외).
     static func toModels(_ entities: Set<FileEntity>?) -> [FileModel] {
         guard let entities = entities else { return [] }
-        
-        return entities.compactMap { toModel($0) }
+
+        return entities
+            .filter { $0.deletedAt == nil }
+            .compactMap { toModel($0) }
             .sorted { $0.createdDate < $1.createdDate } // 생성일순 정렬
     }
     
@@ -41,6 +45,7 @@ struct FileEntityMapper {
         entity.fileSize = model.fileSize
         entity.filePath = model.filePath
         entity.createdDate = model.createdDate
+        entity.isAIGenerated = model.isAiGenerated
         return entity
     }
     

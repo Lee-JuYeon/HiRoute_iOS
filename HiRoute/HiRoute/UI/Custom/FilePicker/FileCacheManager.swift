@@ -50,10 +50,12 @@ class FileCacheManager {
     }
     
     func loadFile(fileModel: FileModel) -> Data? {
-        return try? Data(contentsOf: URL(fileURLWithPath: fileModel.filePath))
+        let resolvedURL = FileSingleton.shared.resolveFilePath(fileModel.filePath)
+        return try? Data(contentsOf: resolvedURL)
     }
-    
+
     func deleteFile(fileModel: FileModel) {
-        try? FileManager.default.removeItem(atPath: fileModel.filePath)
+        let resolvedURL = FileSingleton.shared.resolveFilePath(fileModel.filePath)
+        try? FileManager.default.removeItem(at: resolvedURL)
     }
 }

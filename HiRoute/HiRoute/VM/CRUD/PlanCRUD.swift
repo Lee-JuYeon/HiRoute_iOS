@@ -80,18 +80,11 @@ struct PlanCRUD {
                         reindexedPlanList.append(updatedPlan)
                     }
                     
-                    // selectedSchedule 업데이트
-                    let newScheduleModel = ScheduleModel(
-                        uid: schedule.uid,
-                        index: schedule.index,
-                        title: schedule.title,
-                        memo: schedule.memo,
+                    // [2026-05-26] copy() — chatHistory 자동 preserve.
+                    vm?.selectedSchedule = schedule.copy(
                         editDate: schedule.editDate,
-                        d_day: schedule.d_day,
                         planList: reindexedPlanList  // ← 재정렬된 리스트
                     )
-                    
-                    vm?.selectedSchedule = schedule.updateModel(newScheduleModel)
                     if !createdPlan.files.isEmpty {
                         vm?.updateFiles(planUID: createdPlan.uid, newFiles: createdPlan.files)
                     }
@@ -151,18 +144,12 @@ struct PlanCRUD {
                 },
                 receiveValue: { [weak vm] plans in
                     guard let schedule = vm?.selectedSchedule else { return }
-                    
-                    let updatedSchedule = ScheduleModel(
-                        uid: schedule.uid,
-                        index: schedule.index,
-                        title: schedule.title,
-                        memo: schedule.memo,
+
+                    // [2026-05-26] copy() — chatHistory 자동 preserve.
+                    vm?.selectedSchedule = schedule.copy(
                         editDate: schedule.editDate,
-                        d_day: schedule.d_day,
                         planList: plans
                     )
-                    
-                    vm?.selectedSchedule = schedule.updateModel(updatedSchedule)
                     print("PlanCRUD, readAll // Success : selectedSchedule planList 업데이트 완료 - \(plans.count)개")
                 }
             )
@@ -219,12 +206,19 @@ struct PlanCRUD {
                 },
                 receiveValue: { [weak vm] _ in
                     vm?.removeCurrentSchedulePlan(planUID: planUID)
+                    // [2026-05-27 Phase A.3] 서버 동기화 — schedule 전체 update (chat 보존).
+                    if let schedule = vm?.selectedSchedule {
+                        vm?.scheduleService.update(schedule)
+                            .receive(on: DispatchQueue.main)
+                            .sink(receiveCompletion: { _ in }, receiveValue: { _ in })
+                            .store(in: &vm!.cancellables)
+                    }
                     print("PlanCRUD, delete // Success : selectedSchedule에서 Plan 제거 완료")
                 }
             )
             .store(in: &vm.cancellables)
     }
-    
+
     func updateMemo(planUID: String, newMemo: String) {
         print("PlanCRUD, updateMemo // Info : Plan 메모 업데이트 - \(planUID)")
         guard let vm = vm else { return }
@@ -247,12 +241,19 @@ struct PlanCRUD {
                 },
                 receiveValue: { [weak vm] updatedPlan in
                     vm?.updateUiSchedule(updatedPlan)
+                    // [2026-05-27 Phase A.3] 서버 동기화 — chat 포함 incremental upsert.
+                    if let schedule = vm?.selectedSchedule {
+                        vm?.scheduleService.update(schedule)
+                            .receive(on: DispatchQueue.main)
+                            .sink(receiveCompletion: { _ in }, receiveValue: { _ in })
+                            .store(in: &vm!.cancellables)
+                    }
                     print("PlanCRUD, updateMemo // Success : selectedSchedule 메모 업데이트 완료")
                 }
             )
             .store(in: &vm.cancellables)
     }
-    
+
     func updateIndex(from source: Int, to destination: Int) {
         print("PlanCRUD, changeIndex // Info : Plan 순서 변경 - \(source) → \(destination)")
         guard let vm = vm else { return }
@@ -272,7 +273,26 @@ struct PlanCRUD {
         let movedPlan = tempList.remove(at: source)
         tempList.insert(movedPlan, at: destination)
         let reorderedUIDs = tempList.map { $0.uid }
-        
+
+        // 낙관적 UI 업데이트: DB 응답 전에 즉시 반영
+        if let schedule = vm.selectedSchedule {
+            var reindexedList: [PlanModel] = []
+            for (index, plan) in tempList.enumerated() {
+                reindexedList.append(PlanModel(
+                    uid: plan.uid,
+                    index: index,
+                    memo: plan.memo,
+                    placeModel: plan.placeModel,
+                    files: plan.files
+                ))
+            }
+            // [2026-05-26] copy() — chatHistory 자동 preserve.
+            vm.selectedSchedule = schedule.copy(
+                editDate: schedule.editDate,
+                planList: reindexedList
+            )
+        }
+
         vm.planService.reorderPlans(planUIDs: reorderedUIDs)
             .receive(on: DispatchQueue.main)
             .sink(
@@ -289,18 +309,18 @@ struct PlanCRUD {
                 },
                 receiveValue: { [weak vm] reorderedPlans in
                     guard let schedule = vm?.selectedSchedule else { return }
-                    
-                    let updatedSchedule = ScheduleModel(
-                        uid: schedule.uid,
-                        index: schedule.index,
-                        title: schedule.title,
-                        memo: schedule.memo,
+
+                    // [2026-05-26] copy() — chatHistory 자동 preserve.
+                    let updated = schedule.copy(
                         editDate: schedule.editDate,
-                        d_day: schedule.d_day,
                         planList: reorderedPlans
                     )
-                    
-                    vm?.selectedSchedule = schedule.updateModel(updatedSchedule)
+                    vm?.selectedSchedule = updated
+                    // [2026-05-27 Phase A.3] 서버 동기화 — reorder는 다른 기기에도 즉시 반영해야 함.
+                    vm?.scheduleService.update(updated)
+                        .receive(on: DispatchQueue.main)
+                        .sink(receiveCompletion: { _ in }, receiveValue: { _ in })
+                        .store(in: &vm!.cancellables)
                     print("PlanCRUD, changeIndex // Success : selectedSchedule 순서 업데이트 완료")
                 }
             )
@@ -308,6 +328,10 @@ struct PlanCRUD {
     }
     
     private func extractFileData(from file: FileModel) -> Data? {
-        return nil // 실제 구현 필요
+        if let data = file.data { return data }
+        if !file.filePath.isEmpty {
+            return FileCacheManager.shared.loadFile(fileModel: file)
+        }
+        return nil
     }
 }

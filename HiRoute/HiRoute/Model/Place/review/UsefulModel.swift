@@ -6,7 +6,7 @@
 //
 
 
-struct UsefulModel : Hashable, Codable {
-    var userUID : String // uid
+struct UsefulModel : Hashable, Codable, Identifiable {
+    var id : String { userUid }
+    var userUid : String
 }
-

@@ -9,12 +9,12 @@ import SwiftUI
 
 struct ImageButton : View {
     
-    let imageURL : String
+    let imageUrl : String
     let imageSize : CGFloat
     let callBackClick : () -> Void
     
     var body: some View {
-        Image(imageURL)
+        Image(imageUrl)
             .renderingMode(.template)
             .resizable()
             .aspectRatio(contentMode: ContentMode.fit)

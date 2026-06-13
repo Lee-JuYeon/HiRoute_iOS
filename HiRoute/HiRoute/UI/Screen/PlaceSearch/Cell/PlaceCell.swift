@@ -8,29 +8,29 @@ import SwiftUI
 
 struct PlaceCell : View {
     
-    private var getImageURL : String
-    private var getTheme : String
-    private var getPlaceTitle : String
+    private var getPlaceModel : PlaceModel
     private var getCellType : PlaceCellType
-    private var getCallBackClick : () -> Void
+    private var getIsAlreadyAdded : Bool
+    private var getOnClickAdd : () -> Void
+    private var getOnClickCell : (PlaceModel) -> Void
     init(
-        setImageURL : String,
-        setTheme : String,
-        setTitle : String,
+        setPlaceModel : PlaceModel,
         setPlaceCellType : PlaceCellType,
-        onClick : @escaping () -> Void
+        setIsAlreadyAdded : Bool = false,
+        onClickAdd : @escaping () -> Void,
+        onClickCell : @escaping (PlaceModel) -> Void
     ){
-        self.getImageURL = setImageURL
-        self.getTheme = setTheme
-        self.getPlaceTitle = setTitle
+        self.getPlaceModel = setPlaceModel
         self.getCellType = setPlaceCellType
-        self.getCallBackClick = onClick
+        self.getIsAlreadyAdded = setIsAlreadyAdded
+        self.getOnClickAdd = onClickAdd
+        self.getOnClickCell = onClickCell
     }
    
     var body: some View {
         HStack(alignment : VerticalAlignment.center){
             ServerImageView(
-                setImageURL: getImageURL
+                setImageURL: getPlaceModel.thumbnailImage?.imageUrl ?? ""
             )
             .background(Color.getColour(.background_alternative))
             .frame(
@@ -39,14 +39,15 @@ struct PlaceCell : View {
             )
             .clipShape(RoundedRectangle(cornerRadius: 9.6))
             .clipped()
+            .aiWatermark(isAiGenerated: getPlaceModel.thumbnailImage?.isAiGenerated ?? false, size: .thumbnail)
             
             
             VStack(alignment: HorizontalAlignment.leading){
-                Text(getTheme)
+                Text(getPlaceModel.type.displayText)
                     .font(.system(size: 12))
                     .foregroundColor(Color.getColour(.label_alternative))
                 
-                Text(getPlaceTitle)
+                Text(getPlaceModel.title)
                     .font(.system(size: 14))
                     .foregroundColor(Color.getColour(.label_strong))
                 
@@ -67,19 +68,22 @@ struct PlaceCell : View {
 
             Spacer()
             
-            Text("추가")
+            Text(getIsAlreadyAdded ? "추가됨" : "추가")
                 .padding(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
                 .font(.system(size: 14))
-                .foregroundColor(Color.getColour(.label_strong))
-                .background(Color.getColour(.background_white))
+                .foregroundColor(getIsAlreadyAdded ? Color.getColour(.label_alternative) : Color.getColour(.label_strong))
+                .background(getIsAlreadyAdded ? Color.getColour(.label_disable) : Color.getColour(.background_white))
                 .customElevation(.heavy)
                 .clipShape(RoundedRectangle(cornerRadius: 41))
                 .clipped()
                 .onTapGesture {
-                    getCallBackClick()
+                    getOnClickAdd()
                 }
                 
         }
         .padding(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+        .onTapGesture {
+            getOnClickCell(getPlaceModel)
+        }
     }
 }

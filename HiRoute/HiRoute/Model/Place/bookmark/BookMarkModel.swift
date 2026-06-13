@@ -5,6 +5,7 @@
 //  Created by Jupond on 11/21/25.
 //
 
-struct BookMarkModel : Codable {
-    var userUID : String
+struct BookMarkModel : Codable, Hashable, Identifiable {
+    var id : String { userUid }
+    var userUid : String
 }

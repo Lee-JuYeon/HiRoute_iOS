@@ -27,10 +27,13 @@ struct PlanEntityMapper {
         )
     }
     
+    /// [2026-05-26 Phase 3] 활성 plan만 반환 (soft-deleted 제외).
     static func toModels(_ entities: Set<PlanEntity>?, fullData: Bool = true) -> [PlanModel] {
         guard let entities = entities else { return [] }
-        
-        let sortedPlans = entities.sorted { $0.index < $1.index }
+
+        let sortedPlans = entities
+            .filter { $0.deletedAt == nil }
+            .sorted { $0.index < $1.index }
         return sortedPlans.compactMap { toModel($0, fullData: fullData) }
     }
     

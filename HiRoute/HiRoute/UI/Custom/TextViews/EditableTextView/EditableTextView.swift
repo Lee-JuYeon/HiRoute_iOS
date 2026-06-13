@@ -125,11 +125,7 @@ struct EditableTextView: View {
         ScrollView(getAlignment, showsIndicators: false) {
             customModifier(
                 Group {
-                    if editmode == .READ {
-                        readModeView()
-                    } else {
-                        editModeView()
-                    }
+                    readModeView()
                 }
             )
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -10,15 +10,14 @@ import MapKit
 
 
 struct PlanMapView : View {
-    
-    private var getVisitPlaceList: [PlanModel]
-    private var onClickAnnotation : (PlanModel) -> Void
+
+    private var getPlanList: [PlanModel]
+    @EnvironmentObject private var scheduleVM: ScheduleVM
+
     init(
-        setVisitPlaceList: [PlanModel],
-        setOnClickAnnotation : @escaping (PlanModel) -> Void
+        setVisitPlaceList: [PlanModel]
     ) {
-        self.getVisitPlaceList = setVisitPlaceList
-        self.onClickAnnotation = setOnClickAnnotation
+        self.getPlanList = setVisitPlaceList
     }
     
     @State private var mapRegion = MKCoordinateRegion(
@@ -29,12 +28,12 @@ struct PlanMapView : View {
     
     // 지도 영역을 방문 장소들에 맞게 설정
     private func setupMapRegion() {
-        guard !getVisitPlaceList.isEmpty else { return }
+        guard !getPlanList.isEmpty else { return }
         
-        let coordinates = getVisitPlaceList.map { visitPlace in
+        let coordinates = getPlanList.map { visitPlace in
             CLLocationCoordinate2D(
-                latitude: visitPlace.placeModel.address.addressLat,
-                longitude: visitPlace.placeModel.address.addressLon
+                latitude: visitPlace.placeModel.address.lat,
+                longitude: visitPlace.placeModel.address.lon
             )
         }
         
@@ -60,19 +59,16 @@ struct PlanMapView : View {
             Map(
                 coordinateRegion: $mapRegion,
                 showsUserLocation: false,
-                annotationItems: getVisitPlaceList
+                annotationItems: getPlanList
             ) { visitPlace in
                 MapAnnotation(
                     coordinate: CLLocationCoordinate2D(
-                        latitude: visitPlace.placeModel.address.addressLat,
-                        longitude: visitPlace.placeModel.address.addressLon
+                        latitude: visitPlace.placeModel.address.lat,
+                        longitude: visitPlace.placeModel.address.lon
                     )
                 ) {
                     PlanMapAnnotation(
-                        visitPlaceModel: visitPlace,
-                        onClick: { clickedVisitPlace in
-                            onClickAnnotation(clickedVisitPlace) // ✅ 콜백 연결
-                        }
+                        visitPlaceModel: visitPlace
                     )
                     .zIndex(10) // ✅ 어노테이션을 위로
                 }
@@ -83,7 +79,7 @@ struct PlanMapView : View {
             
             // ✅ overlay로 변경하여 Map 위에 표시
             DashedPath(
-                visitPlaces: getVisitPlaceList,
+                visitPlaces: getPlanList,
                 region: mapRegion
             )
             .zIndex(5) // ✅ 점선을 어노테이션보다 아래

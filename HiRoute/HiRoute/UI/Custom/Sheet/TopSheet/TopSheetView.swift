@@ -1,5 +1,5 @@
 //
-//  RootDetailTitleView.swift
+//  TopSheetView.swift
 //  HiRoute
 //
 //  Created by Jupond on 7/23/25.
@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct TopSheetView<GetView: View>: ViewModifier {
-    
+
     @Binding var isOpen: Bool
     @ViewBuilder private let getContent: GetView
 
@@ -19,31 +19,54 @@ struct TopSheetView<GetView: View>: ViewModifier {
         self._isOpen = isOpen
         self.getContent = setContent()
     }
-    
-    @GestureState private var translation: CGFloat = 0
+
+    @State private var isPresented = false
+    @State private var showContent = false
     @State private var offset: CGFloat = 0
     @State private var isDragging = false
 
-    @ViewBuilder
-    private func topSheetUI() -> some View {
-        ZStack {
+    // MARK: - 닫기
+
+    private func dismissSheet() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil, from: nil, for: nil
+        )
+        withAnimation(.easeInOut(duration: 0.25)) {
+            showContent = false
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            var t = Transaction(animation: nil)
+            t.disablesAnimations = true
+            withTransaction(t) {
+                isPresented = false
+                isOpen = false
+            }
+            offset = 0
+        }
+    }
+
+    // MARK: - 시트 UI
+
+    @ViewBuilder private func topSheetUI() -> some View {
+        ZStack(alignment: .top) {
+            // 배경 탭 영역
             Color.gray.opacity(0.01)
                 .edgesIgnoringSafeArea(.all)
                 .onTapGesture {
-                    withAnimation {
-                        isOpen = false
-                    }
+                    dismissSheet()
                 }
-           
-            GeometryReader { geometry in
+
+            // 시트 컨텐츠
+            if showContent {
                 VStack {
                     VStack {
                         self.getContent
-                        
+
                         RoundedRectangle(cornerRadius: 2.5)
                             .foregroundColor(.gray)
                             .frame(width: 36, height: 5)
-                            .padding(EdgeInsets(top: 16, leading: 0, bottom: 0, trailing: 0))
+                            .padding(.top, 16)
                     }
                     .padding(EdgeInsets(top: 0, leading: 5, bottom: 10, trailing: 5))
                     .background(Color.getColour(.background_white))
@@ -52,66 +75,66 @@ struct TopSheetView<GetView: View>: ViewModifier {
                         BottomRoundedRectangle(radius: 20, corners: [.bottomLeft, .bottomRight])
                             .stroke(Color.black, lineWidth: 0.5)
                     )
-                    .frame(
-                        minWidth: 0,
-                        maxWidth: .infinity,
-                        minHeight: 0,
-                        maxHeight: min(geometry.size.height - geometry.safeAreaInsets.bottom, geometry.size.height * 0.9),
-                        alignment: .top
-                    )
+                    .offset(y: min(offset, 0))
+                    .animation(isDragging ? .none : .easeInOut(duration: 0.25), value: offset)
                     .transition(.move(edge: .top))
-                    // ✅ 수정: 아래로 드래그하면 sheet가 아래로 따라옴
-                    .offset(y: max(offset, 0))  // 양수로 아래쪽 이동
-                    .animation(isDragging ? .none : .easeInOut, value: offset)
-                    
+
                     Spacer()
                 }
                 .padding(EdgeInsets(top: 0, leading: 5, bottom: 0, trailing: 5))
                 .gesture(
                     DragGesture()
-                        .updating($translation) { value, state, _ in
-                            state = value.translation.height
-                        }
                         .onChanged { value in
-                            // ✅ 아래로 드래그할 때 (양수)
-                            if value.translation.height > 0 {
+                            if value.translation.height < 0 {
                                 offset = value.translation.height
                                 isDragging = true
                             }
                         }
                         .onEnded { value in
-                            // ✅ 아래로 충분히 드래그하면 닫기
-                            if offset > geometry.size.height / 3 {
-                                withAnimation {
-                                    isOpen = false
-                                }
+                            if offset < -100 {
+                                dismissSheet()
                             } else {
-                                withAnimation {
+                                withAnimation(.easeInOut(duration: 0.25)) {
                                     offset = 0
                                 }
                             }
                             isDragging = false
                         }
                 )
-                .onDisappear {
-                    offset = 0
-                }
             }
         }
         .background(
             BackgroundBlurView()
                 .edgesIgnoringSafeArea(.all)
         )
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                showContent = true
+            }
+        }
+        .onDisappear {
+            showContent = false
+            offset = 0
+        }
     }
-    
+
+    // MARK: - body
+
     func body(content: Content) -> some View {
         content
-            .fullScreenCover(
-                isPresented: $isOpen,
-                content: {
-                    topSheetUI()
+            .fullScreenCover(isPresented: $isPresented) {
+                topSheetUI()
+            }
+            .onChange(of: isOpen) { newValue in
+                if newValue {
+                    // fullScreenCover 애니메이션 제거 → 즉시 표시
+                    var t = Transaction(animation: nil)
+                    t.disablesAnimations = true
+                    withTransaction(t) {
+                        isPresented = true
+                    }
                 }
-            )
+            }
     }
 }
 

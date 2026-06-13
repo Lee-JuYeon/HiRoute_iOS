@@ -52,8 +52,8 @@ struct WorkingTimeList : View {
     }
     
     private func formatWorkingTimeDisplay(_ workingTime: WorkingTimeModel) -> String {
-        let openTime = WorkingTimeModel.convert12Hour(workingTime.open)
-        let closeTime = WorkingTimeModel.convert12Hour(workingTime.close)
+        let openTime = WorkingTimeModel.convert12Hour(workingTime.open ?? "")
+        let closeTime = WorkingTimeModel.convert12Hour(workingTime.close ?? "")
         
         var timeString = "\(workingTime.dayTitle) \(openTime) - \(closeTime)"
         

@@ -2,14 +2,41 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>NSDocumentsFolderUsageDescription</key>
-    <string>문서를 가져오기 위해 접근 권한이 필요합니다.</string>
-    
-    <key>NSPhotoLibraryUsageDescription</key>
-    <string>사진을 가져오기 위해 접근 권한이 필요합니다.</string>
-    
-    <key>NSCameraUsageDescription</key>
-    <string>사진 촬영을 위해 카메라 접근 권한이 필요합니다.</string>
-    
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>여행 일정에 첨부할 파일을 가져오기 위해 사용됩니다. 선택한 파일만 일정에 저장되며 외부로 전송되지 않습니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>여행 일정에 사진을 첨부하기 위해 사용됩니다. 선택한 사진만 일정에 저장됩니다.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>AR 모드에서 촬영한 사진을 갤러리에 저장하기 위해 사용됩니다.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>AR 오브젝트 보기, 일정 사진 촬영, 리뷰 작성을 위해 사용됩니다. 촬영된 사진은 사용자가 선택한 경우에만 저장됩니다.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>현재 위치 기반 장소 추천, 지도 표시, AR 오브젝트 위치 고정을 위해 사용됩니다. 위치 정보는 외부에 공유되지 않습니다.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>AR 컨텐츠의 오디오 가이드 재생 또는 사용자 음성 메모 녹음을 위해 사용됩니다.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>본 앱은 광고 추적을 사용하지 않습니다. 일부 SDK에서 요청할 수 있으나 거부해도 모든 기능이 정상 동작합니다.</string>
+	<key>GIDClientID</key>
+	<string>583912242734-7j52765gmo8pt50iqac6vrl5kmujnqe6.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.583912242734-7j52765gmo8pt50iqac6vrl5kmujnqe6</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>line3rdp.2009445278</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>lineauth2</string>
+		<string>line</string>
+	</array>
 </dict>
 </plist>

@@ -7,72 +7,48 @@
 import SwiftUI
 import MapKit
 
-/*
- CLLocationCoordinate2D : 위도 경도를 나타내는 구조체, 지구상의 특정 위치를 표현
- MKCoordinateSpan : 지도에서 보여줄 범위 (확대/축소정도)를 나타내는 구조체
- center : 지도의 중심점, 지도가 처음 로드될 때 화면 중앙에 표시될 위치
- span : 지도의 표시 범위,MKCoordinateSpan타입으로 지정, 지도에서 얼마나 넓은 영역을 보여줄지 경정
- */
+struct CustomMapView: View {
 
-struct CustomMapView : View {
-    
     @Binding var region: MKCoordinateRegion
     let searchResults: [MKMapItem]
     let selectedHotPlaceIds: Set<String>
-    
-   
     let listHotPlaces: [HotPlaceModel]
-    @ViewBuilder
-    private func overlayHotPlaces() -> some View {
-        ForEach(listHotPlaces, id: \.id) { hotPlace in
-            if selectedHotPlaceIds.contains(hotPlace.id) {
-                HotPlaceView(coordinates: hotPlace.coordinates, region: region, color: hotPlace.color)
-                
-                if let centerCoordinate = getCenterCoordinate(from: hotPlace.coordinates) {
-                    VStack {
-                        Text("\(hotPlace.emoji) \(hotPlace.name)")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(hotPlace.color)
-                            .cornerRadius(10)
-                            .shadow(radius: 2)
-                    }
-                    .position(coordinateToScreenPoint(centerCoordinate))
-                }
-            }
-        }
-    }
-    
+    let geoObjects: [GeoObjectModel]
     let listAnnotations: [PlaceModel]
     let onClickAnnotation: (PlaceModel) -> Void
-    @ViewBuilder
-    private func overlayAnnotations() -> some View {
-        ForEach(listAnnotations, id: \.uid) { annotation in
-            AnnotationView(
-                model: annotation,
-                onClick: onClickAnnotation
-            )
-            .position(
-                coordinateToScreenPoint(
-                    CLLocationCoordinate2D(
-                        latitude: annotation.address.addressLat,
-                        longitude: annotation.address.addressLon
-                    )
-                )
-            )
-        }
+
+    /// 줌 레벨에 따른 반경 원 크기 (pt)
+    /// 줌 인(latitudeDelta 작음) → 원 커짐, 줌 아웃(latitudeDelta 큼) → 원 작아짐
+    private var radiusCircleSize: CGFloat {
+        let delta = region.span.latitudeDelta
+        // 화면 대비 반경 비율: 쿼리 반경(delta/2)이 뷰포트(delta) 대비 50%
+        // 줌 인할수록 원이 화면을 더 많이 차지하도록 스케일링
+        // 기본 200pt 기준, delta 0.01일 때 200pt → delta 변화에 반비례
+        let baseSize: CGFloat = 200
+        let baseDelta: CGFloat = 0.01
+        let size = baseSize * CGFloat(baseDelta / delta)
+        return min(max(size, 80), 350) // 80~350pt 범위 제한
     }
-   
+
     var body: some View {
         ZStack {
-            Map(coordinateRegion: $region, showsUserLocation: true)
-                .overlay(
-                   overlayAnnotations()
-                )
-               
-            overlayHotPlaces()
+            NativeMapView(
+                region: $region,
+                showsUserLocation: true,
+                annotations: listAnnotations,
+                hotPlaces: listHotPlaces,
+                geoObjects: geoObjects,
+                selectedHotPlaceIds: selectedHotPlaceIds,
+                onAnnotationTap: onClickAnnotation
+            )
+
+            // 뷰포트 반경 시각화 (화면 중앙 고정 HUD, 줌 연동)
+            Circle()
+                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                .background(Circle().fill(Color.gray.opacity(0.07)))
+                .frame(width: radiusCircleSize, height: radiusCircleSize)
+                .allowsHitTesting(false)
+                .animation(.easeOut(duration: 0.2), value: radiusCircleSize)
         }
     }
 }

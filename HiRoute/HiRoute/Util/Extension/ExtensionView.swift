@@ -10,4 +10,8 @@ extension View {
     func customElevation(_ level: Elevation) -> some View {
         self.modifier(ElevationModifier(level: level))
     }
+    
+    func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
 }

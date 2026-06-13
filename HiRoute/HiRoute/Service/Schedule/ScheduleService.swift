@@ -31,13 +31,127 @@ class ScheduleService {
         networkMonitor.startMonitoring { [weak self] networkStatus, connectionType in
             // 네트워크 상태 변화 처리
             print("ScheduleService, setupNetworkMonitoring // 네트워크 상태 변화 처리 : \(networkStatus), \(connectionType)")
-                       
+
             if networkStatus == .connected {
-                self?.processOfflineQueue()
+                self?.performSync()
             }
         }
     }
-    
+
+    // MARK: - 서버 동기화
+
+    /// 앱 시작 / 네트워크 복구 시 호출. CoreData 로드 후 백그라운드에서 실행.
+    ///
+    /// 흐름:
+    /// 1. QueueManager 미동기화 항목 수집 (오프라인 중 create/update/delete)
+    /// 2. POST /api/schedules/sync { last_sync_at, changes }
+    /// 3. server_changes → CoreData upsert
+    /// 4. deleted_on_server → CoreData delete
+    /// 5. last_sync_at UserDefaults 갱신
+    func syncWithServer() -> AnyPublisher<Void, Never> {
+        guard networkMonitor.isConnected else {
+            print("ScheduleService, syncWithServer // Info : 오프라인 - 동기화 건너뜀")
+            return Just(()).eraseToAnyPublisher()
+        }
+
+        let lastSyncAt = UserDefaults.standard.string(forKey: "schedule_last_sync_at") ?? "1970-01-01T00:00:00Z"
+
+        return QueueManager.shared.processQueue()
+            .flatMap { [weak self] queueResults -> AnyPublisher<Void, Never> in
+                guard let self = self else { return Just(()).eraseToAnyPublisher() }
+
+                var created: [ScheduleCreateRequest] = []
+                var updated: [ScheduleSyncUpdateItem] = []
+                var deleted: [String] = []
+
+                for result in queueResults {
+                    switch result.operation {
+                    case .create(let schedule): created.append(schedule.toCreateRequest())
+                    case .update(let schedule): updated.append(schedule.toSyncUpdateItem())
+                    case .delete(let uid):      deleted.append(uid)
+                    default: break
+                    }
+                }
+
+                let request = ScheduleSyncRequest(
+                    lastSyncAt: lastSyncAt,
+                    changes: ScheduleSyncChanges(created: created, updated: updated, deleted: deleted)
+                )
+
+                print("ScheduleService, syncWithServer // Info : 동기화 시작 (create:\(created.count), update:\(updated.count), delete:\(deleted.count))")
+
+                let publisher: AnyPublisher<APIResponse<ScheduleSyncResponse>, Error> =
+                    APIClient.shared.postWithAuth(path: "/api/schedules/sync", body: request)
+
+                return publisher
+                    .flatMap { [weak self] response -> AnyPublisher<Void, Error> in
+                        guard let self = self else {
+                            return Fail(error: ScheduleError.unknown).eraseToAnyPublisher()
+                        }
+                        return self.applyServerSync(response.data)
+                    }
+                    .handleEvents(receiveOutput: {
+                        print("ScheduleService, syncWithServer // Success : 서버 동기화 완료")
+                    })
+                    .catch { error -> Just<Void> in
+                        print("ScheduleService, syncWithServer // Warning : 동기화 실패 - \(error.localizedDescription)")
+                        return Just(())
+                    }
+                    .eraseToAnyPublisher()
+            }
+            .eraseToAnyPublisher()
+    }
+
+    private func applyServerSync(_ sync: ScheduleSyncResponse) -> AnyPublisher<Void, Error> {
+        UserDefaults.standard.set(sync.syncAt, forKey: "schedule_last_sync_at")
+
+        let upserts: [AnyPublisher<Void, Error>] = sync.serverChanges.map { $0.toModel() }.map { [weak self] schedule in
+            guard let self = self else {
+                return Fail(error: ScheduleError.unknown).eraseToAnyPublisher()
+            }
+            return self.repository.update(schedule)
+                .catch { [weak self] error -> AnyPublisher<ScheduleModel, Error> in
+                    guard let self = self else {
+                        return Fail(error: ScheduleError.unknown).eraseToAnyPublisher()
+                    }
+                    // 서버에는 있지만 로컬에 없으면 create
+                    if let se = error as? ScheduleError, case .notFound = se {
+                        return self.repository.create(schedule)
+                    }
+                    return Just(schedule).setFailureType(to: Error.self).eraseToAnyPublisher()
+                }
+                .map { _ in () }
+                .eraseToAnyPublisher()
+        }
+
+        let deletes: [AnyPublisher<Void, Error>] = sync.deletedOnServer.map { [weak self] uid in
+            guard let self = self else {
+                return Fail(error: ScheduleError.unknown).eraseToAnyPublisher()
+            }
+            return self.repository.delete(scheduleUID: uid)
+                .catch { _ in Just(()).setFailureType(to: Error.self).eraseToAnyPublisher() }
+                .eraseToAnyPublisher()
+        }
+
+        let all = upserts + deletes
+        guard !all.isEmpty else {
+            print("ScheduleService, applyServerSync // Info : 서버 변경사항 없음")
+            return Just(()).setFailureType(to: Error.self).eraseToAnyPublisher()
+        }
+
+        print("ScheduleService, applyServerSync // Info : upsert \(upserts.count)개, delete \(deletes.count)개")
+        return Publishers.MergeMany(all)
+            .collect()
+            .map { _ in () }
+            .eraseToAnyPublisher()
+    }
+
+    private func performSync() {
+        syncWithServer()
+            .sink { _ in }
+            .store(in: &cancellables)
+    }
+
     private func processOfflineQueue() {
         QueueManager.shared.processQueue()
             .sink { [weak self] queueResults in
@@ -70,27 +184,122 @@ class ScheduleService {
     
     private func processOfflineCreate(_ schedule: ScheduleModel) {
         print("ScheduleService, processOfflineCreate // Info : 오프라인 생성 작업 서버 동기화 - \(schedule.title)")
-        // TODO: API 호출하여 서버에 생성
+        let request = schedule.toCreateRequest()
+        let publisher: AnyPublisher<APIResponse<ScheduleResponse>, Error> =
+            APIClient.shared.postWithAuth(path: "/api/schedules", body: request)
+        publisher
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        print("ScheduleService, processOfflineCreate // Exception : 서버 동기화 실패 - \(error.localizedDescription)")
+                        // 실패 시 다시 큐에 등록
+                        try? QueueManager.shared.enqueueCreate(schedule: schedule)
+                    }
+                },
+                receiveValue: { response in
+                    print("ScheduleService, processOfflineCreate // Success : 서버 동기화 완료 - \(response.data.title)")
+                }
+            )
+            .store(in: &cancellables)
     }
 
     private func processOfflineUpdate(_ schedule: ScheduleModel) {
         print("ScheduleService, processOfflineUpdate // Info : 오프라인 수정 작업 서버 동기화 - \(schedule.title)")
-        // TODO: API 호출하여 서버에 수정
+        let request = schedule.toUpdateRequest()
+        let publisher: AnyPublisher<APIResponse<ScheduleResponse>, Error> =
+            APIClient.shared.putWithAuth(path: "/api/schedules/\(schedule.uid)", body: request)
+        publisher
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        print("ScheduleService, processOfflineUpdate // Exception : 서버 동기화 실패 - \(error.localizedDescription)")
+                        try? QueueManager.shared.enqueueUpdate(schedule: schedule)
+                    }
+                },
+                receiveValue: { response in
+                    print("ScheduleService, processOfflineUpdate // Success : 서버 동기화 완료 - \(response.data.title)")
+                }
+            )
+            .store(in: &cancellables)
     }
 
     private func processOfflineDelete(_ scheduleUID: String) {
         print("ScheduleService, processOfflineDelete // Info : 오프라인 삭제 작업 서버 동기화 - \(scheduleUID)")
-        // TODO: API 호출하여 서버에서 삭제
+        let publisher: AnyPublisher<APIResponse<ScheduleResponse>, Error> =
+            APIClient.shared.deleteWithAuth(path: "/api/schedules/\(scheduleUID)")
+        publisher
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        print("ScheduleService, processOfflineDelete // Exception : 서버 동기화 실패 - \(error.localizedDescription)")
+                        try? QueueManager.shared.enqueueDelete(scheduleUID: scheduleUID)
+                    }
+                },
+                receiveValue: { response in
+                    print("ScheduleService, processOfflineDelete // Success : 서버 삭제 동기화 완료 - \(scheduleUID)")
+                }
+            )
+            .store(in: &cancellables)
     }
 
     private func processOfflineReadAll() {
         print("ScheduleService, processOfflineReadAll // Info : 서버 전체 목록 동기화")
-        // TODO: API 호출하여 서버에서 전체 목록 가져오기
+        let queryItems = [
+            URLQueryItem(name: "page", value: "1"),
+            URLQueryItem(name: "limit", value: "100")
+        ]
+        let publisher: AnyPublisher<APIResponse<[ScheduleResponse]>, Error> =
+            APIClient.shared.getWithAuth(path: "/api/schedules", queryItems: queryItems)
+        publisher
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        print("ScheduleService, processOfflineReadAll // Exception : 서버 동기화 실패 - \(error.localizedDescription)")
+                    }
+                },
+                receiveValue: { [weak self] response in
+                    guard let self = self else { return }
+                    let serverSchedules = response.data.map { $0.toModel() }
+                    print("ScheduleService, processOfflineReadAll // Success : 서버에서 \(serverSchedules.count)개 일정 수신")
+                    // 서버 데이터를 로컬에 병합 (서버 데이터를 로컬에 upsert)
+                    for schedule in serverSchedules {
+                        self.repository.update(schedule)
+                            .sink(
+                                receiveCompletion: { _ in },
+                                receiveValue: { _ in }
+                            )
+                            .store(in: &self.cancellables)
+                    }
+                }
+            )
+            .store(in: &cancellables)
     }
 
     private func processOfflineRead(_ scheduleUID: String) {
         print("ScheduleService, processOfflineRead // Info : 서버 단일 일정 동기화 - \(scheduleUID)")
-        // TODO: API 호출하여 서버에서 특정 일정 가져오기
+        let publisher: AnyPublisher<APIResponse<ScheduleResponse>, Error> =
+            APIClient.shared.getWithAuth(path: "/api/schedules/\(scheduleUID)")
+        publisher
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        print("ScheduleService, processOfflineRead // Exception : 서버 동기화 실패 - \(error.localizedDescription)")
+                    }
+                },
+                receiveValue: { [weak self] response in
+                    guard let self = self else { return }
+                    let serverSchedule = response.data.toModel()
+                    print("ScheduleService, processOfflineRead // Success : 서버에서 일정 수신 - \(serverSchedule.title)")
+                    // 서버 데이터를 로컬에 병합
+                    self.repository.update(serverSchedule)
+                        .sink(
+                            receiveCompletion: { _ in },
+                            receiveValue: { _ in }
+                        )
+                        .store(in: &self.cancellables)
+                }
+            )
+            .store(in: &cancellables)
     }
     
     
@@ -119,10 +328,35 @@ class ScheduleService {
                 }
                 return self.repository.create(validatedSchedule) // repository 위임
             }
-            // 로깅
+            // 로깅 + 서버 동기화
             .handleEvents(
                 receiveOutput: { [weak self] createdSchedule in
+                    guard let self = self else { return }
                     print("ScheduleService, create // Success : 일정 생성 완료 - \(createdSchedule.title)")
+
+                    // 서버 동기화 (fire-and-forget)
+                    if self.networkMonitor.isConnected {
+                        let request = createdSchedule.toCreateRequest()
+                        let publisher: AnyPublisher<APIResponse<ScheduleResponse>, Error> =
+                            APIClient.shared.postWithAuth(path: "/api/schedules", body: request)
+                        publisher
+                            .sink(
+                                receiveCompletion: { completion in
+                                    if case .failure(let error) = completion {
+                                        print("ScheduleService, create // Warning : 서버 동기화 실패, 큐 등록 - \(error.localizedDescription)")
+                                        try? QueueManager.shared.enqueueCreate(schedule: createdSchedule)
+                                    }
+                                },
+                                receiveValue: { response in
+                                    print("ScheduleService, create // Success : 서버 동기화 완료 - \(response.data.title)")
+                                }
+                            )
+                            .store(in: &self.cancellables)
+                    } else {
+                        // 오프라인: 큐에 등록
+                        try? QueueManager.shared.enqueueCreate(schedule: createdSchedule)
+                        print("ScheduleService, create // Info : 오프라인 - 큐 등록 완료")
+                    }
                 },
                 receiveCompletion: { completion in
                     if case .failure(let error) = completion {
@@ -170,17 +404,6 @@ class ScheduleService {
         print("ScheduleService, readAll // Info : 전체 일정 조회 시작 - page:\(page)")
         
         return repository.readAll(page: page, itemsPerPage: itemsPerPage)
-            .map { [weak self] schedules in
-                // 비즈니스 로직: 사용자 친화적 정렬
-                return schedules.sorted { schedule1, schedule2 in
-                    // 1순위: d_day가 가까운 순서
-                    if schedule1.d_day == schedule2.d_day {
-                        // 2순위: editDate 최신 순서
-                        return schedule1.editDate > schedule2.editDate
-                    }
-                    return schedule1.d_day < schedule2.d_day
-                }
-            }
             .handleEvents(
                 receiveOutput: { schedules in
                     print("ScheduleService, readAll // Success : 전체 조회 완료 - \(schedules.count)개")
@@ -220,7 +443,38 @@ class ScheduleService {
             }
             .handleEvents(
                 receiveOutput: { [weak self] updatedSchedule in
+                    guard let self = self else { return }
                     print("ScheduleService, update // Success : 일정 업데이트 완료 - \(updatedSchedule.title)")
+
+                    // 서버 동기화 (fire-and-forget) — PUT 실패(404) 시 POST로 폴백
+                    if self.networkMonitor.isConnected {
+                        let updateRequest = updatedSchedule.toUpdateRequest()
+                        let publisher: AnyPublisher<APIResponse<ScheduleResponse>, Error> =
+                            APIClient.shared.putWithAuth(path: "/api/schedules/\(updatedSchedule.uid)", body: updateRequest)
+                        publisher
+                            .sink(
+                                receiveCompletion: { [weak self] completion in
+                                    if case .failure(let error) = completion {
+                                        // 404 = 서버에 없음 → CREATE로 폴백
+                                        if let networkError = error as? NetworkError,
+                                           case .serverError(404) = networkError {
+                                            print("ScheduleService, update // Info : 서버에 없음(404), CREATE로 폴백 - \(updatedSchedule.title)")
+                                            self?.syncCreateToServer(updatedSchedule)
+                                        } else {
+                                            print("ScheduleService, update // Warning : 서버 동기화 실패, 큐 등록 - \(error.localizedDescription)")
+                                            try? QueueManager.shared.enqueueUpdate(schedule: updatedSchedule)
+                                        }
+                                    }
+                                },
+                                receiveValue: { response in
+                                    print("ScheduleService, update // Success : 서버 동기화 완료 - \(response.data.title)")
+                                }
+                            )
+                            .store(in: &self.cancellables)
+                    } else {
+                        try? QueueManager.shared.enqueueUpdate(schedule: updatedSchedule)
+                        print("ScheduleService, update // Info : 오프라인 - 큐 등록 완료")
+                    }
                 },
                 receiveCompletion: { completion in
                     if case .failure(let error) = completion {
@@ -230,7 +484,7 @@ class ScheduleService {
             )
             .eraseToAnyPublisher()
     }
-    
+
     /**
      * 일정 삭제
      * - Schedule과 관련된 모든 VisitPlace도 Cascade 삭제됨 (CoreData 설정)
@@ -256,35 +510,33 @@ class ScheduleService {
     }
     
     private func determineDeleteStrategy(uid: String) -> AnyPublisher<CompletionScope, Never> {
-        return Future<CompletionScope, Never> { [weak self] promise in
-            guard let self = self else {
-                promise(.success(.failure(ScheduleError.unknown)))
-                return
-            }
-            
-            if self.networkMonitor.isConnected {
-                // 온라인 전략
-                print("ScheduleService, determineDeleteStrategy // Info : 온라인 모드 감지")
-                
-                // TODO: 향후 API 구현시 .success로 변경
-                // 현재: API 없으므로 localOnly 처리
-                promise(.success(.localOnly))
-                
-            } else {
-                // 오프라인 전략
-                print("ScheduleService, determineDeleteStrategy // Info : 오프라인 모드 감지")
-                
-                do {
-                    // CustomQueueManager에 서버 동기화 작업 등록
-                    try QueueManager.shared.enqueueDelete(scheduleUID: uid)
-                    promise(.success(.localOnly))
-                    
-                } catch {
-                    promise(.success(.failure(error)))
+        if networkMonitor.isConnected {
+            // 온라인: 서버 DELETE 호출 후 결과에 따라 CompletionScope 결정
+            print("ScheduleService, determineDeleteStrategy // Info : 온라인 모드 감지")
+            let publisher: AnyPublisher<APIResponse<ScheduleResponse>, Error> =
+                APIClient.shared.deleteWithAuth(path: "/api/schedules/\(uid)")
+            return publisher
+                .map { response -> CompletionScope in
+                    print("ScheduleService, determineDeleteStrategy // Success : 서버 삭제 완료 - \(uid)")
+                    return .success
                 }
+                .catch { error -> Just<CompletionScope> in
+                    print("ScheduleService, determineDeleteStrategy // Warning : 서버 삭제 실패, 로컬만 삭제 - \(error.localizedDescription)")
+                    // 서버 실패해도 로컬은 삭제하되 큐에 등록
+                    try? QueueManager.shared.enqueueDelete(scheduleUID: uid)
+                    return Just(.localOnly)
+                }
+                .eraseToAnyPublisher()
+        } else {
+            // 오프라인: 큐에 등록 후 로컬만 삭제
+            print("ScheduleService, determineDeleteStrategy // Info : 오프라인 모드 감지")
+            do {
+                try QueueManager.shared.enqueueDelete(scheduleUID: uid)
+                return Just(.localOnly).eraseToAnyPublisher()
+            } catch {
+                return Just(.failure(error)).eraseToAnyPublisher()
             }
         }
-        .eraseToAnyPublisher()
     }
     
     private func handleDeleteResult(uid: String, scope: CompletionScope) -> AnyPublisher<Void, Error> {
@@ -314,32 +566,68 @@ class ScheduleService {
      * @param dDay: 새 D-Day
      * @return: 수정된 일정 Publisher
      */
+    /// [2026-05-26 Phase 2 리팩터] 풀 update 경로 제거.
+    /// 이전엔 read → 새 ScheduleModel 생성 → full update() 였는데, 새 모델 생성 시 chatHistory
+    /// 누락하면 DAO가 replace-all로 채팅 wipe하던 치명 버그. 이제 메타 업데이트 전용 메서드
+    /// updateMeta()로 directly 호출 → 애초에 chatHistory를 거치지 않음.
     func updateScheduleInfo(uid: String, title: String, memo: String, dDay: Date) -> AnyPublisher<ScheduleModel, Error> {
         print("ScheduleService, updateScheduleInfo // Info : 일정 정보 업데이트 - \(uid)")
-        
-        return read(uid: uid)
-            .map { schedule in
-                // Immutable 패턴으로 새 Schedule 생성
-                return ScheduleModel(
-                    uid: schedule.uid,
-                    index: schedule.index,
-                    title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-                    memo: memo,
-                    editDate: Date(), // 편집 날짜 자동 갱신
-                    d_day: dDay,
-                    planList: schedule.planList // 기존 방문장소 유지
-                )
-            }
-            .flatMap { [weak self] updatedSchedule in
-                guard let self = self else {
-                    return Fail<ScheduleModel, Error>(error: ScheduleError.unknown)
-                        .eraseToAnyPublisher()
-                }
-                return self.update(updatedSchedule)
-            }
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return repository.updateMeta(scheduleUID: uid, title: trimmedTitle, memo: memo, dDay: dDay, editDate: Date())
+            .handleEvents(receiveOutput: { updated in
+                print("ScheduleService, updateScheduleInfo // Success : 메타 업데이트 완료 - \(updated.title)")
+            })
             .eraseToAnyPublisher()
     }
     
+    /**
+     * 일정 순서 재정렬
+     * - scheduleUIDs: 새로운 순서대로 정렬된 Schedule UID 배열
+     * - 각 Schedule의 index가 배열 순서에 맞게 업데이트됨
+     */
+    func reorderSchedules(scheduleUIDs: [String]) -> AnyPublisher<[ScheduleModel], Error> {
+        print("ScheduleService, reorderSchedules // Info : Schedule 순서 재정렬 - \(scheduleUIDs.count)개")
+
+        return repository.reorderSchedules(scheduleUIDs: scheduleUIDs)
+            .handleEvents(
+                receiveOutput: { [weak self] schedules in
+                    guard let self = self else { return }
+                    print("ScheduleService, reorderSchedules // Success : Schedule 순서 재정렬 완료 - \(schedules.count)개")
+
+                    // 서버 동기화 (fire-and-forget)
+                    let orders = scheduleUIDs.enumerated().map { index, uid in
+                        ReorderItem(uid: uid, indexOrder: index)
+                    }
+                    let request = ScheduleReorderRequest(orders: orders)
+
+                    if self.networkMonitor.isConnected {
+                        let publisher: AnyPublisher<APIResponse<[ScheduleResponse]>, Error> =
+                            APIClient.shared.putWithAuth(path: "/api/schedules/reorder", body: request)
+                        publisher
+                            .sink(
+                                receiveCompletion: { completion in
+                                    if case .failure(let error) = completion {
+                                        print("ScheduleService, reorderSchedules // Warning : 서버 동기화 실패 - \(error.localizedDescription)")
+                                    }
+                                },
+                                receiveValue: { response in
+                                    print("ScheduleService, reorderSchedules // Success : 서버 순서 동기화 완료")
+                                }
+                            )
+                            .store(in: &self.cancellables)
+                    } else {
+                        print("ScheduleService, reorderSchedules // Info : 오프라인 - 순서 변경은 다음 동기화 시 반영")
+                    }
+                },
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        print("ScheduleService, reorderSchedules // Exception : \(error.localizedDescription)")
+                    }
+                }
+            )
+            .eraseToAnyPublisher()
+    }
+
     /**
      * Schedule 기본 검증
      * - 사용자 편의성 우선으로 최소한의 검증만 수행
@@ -348,6 +636,27 @@ class ScheduleService {
      * @param schedule: 검증할 일정 모델
      * @return: 검증 결과
      */
+    /// 서버에 CREATE 요청 (update 404 폴백용)
+    private func syncCreateToServer(_ schedule: ScheduleModel) {
+        let createRequest = schedule.toCreateRequest()
+        let publisher: AnyPublisher<APIResponse<ScheduleResponse>, Error> =
+            APIClient.shared.postWithAuth(path: "/api/schedules", body: createRequest)
+        publisher
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        print("ScheduleService, syncCreateToServer // Warning : CREATE 폴백도 실패, 큐 등록 - \(error.localizedDescription)")
+                        try? QueueManager.shared.enqueueCreate(schedule: schedule)
+                    }
+                },
+                receiveValue: { response in
+                    print("ScheduleService, syncCreateToServer // Success : 서버에 생성 완료 - \(response.data.title)")
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+
     private func validateSchedule(_ schedule: ScheduleModel) -> Result<Void, ScheduleError> {
         // 최소한의 검증만: 필수 필드 존재 여부
         if schedule.uid.isEmpty {
@@ -363,6 +672,12 @@ class ScheduleService {
         return .success(())
     }
     
+    /// 일정에 채팅 메시지 한 건만 추가 (전체 update보다 가벼움)
+    func appendChatMessage(scheduleUID: String, message: ChatMessageModel) -> AnyPublisher<Void, Error> {
+        return repository.appendChatMessage(scheduleUID: scheduleUID, message: message)
+            .eraseToAnyPublisher()
+    }
+
     deinit {
         networkMonitor.stopMonitoring()
         cancellables.removeAll()

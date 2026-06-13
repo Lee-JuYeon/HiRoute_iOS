@@ -12,10 +12,13 @@ struct ScheduleEntityMapper {
     static func toModel(_ entity: ScheduleEntity?, fullData: Bool = true) -> ScheduleModel? {
         guard let entity = entity,
               let uid = entity.uid else { return nil }
-        
+
         // PlanEntity -> PlanModel 변환
         let plans = PlanEntityMapper.toModels(entity.planList as? Set<PlanEntity>, fullData: fullData)
-        
+
+        // ScheduleChatEntity -> ChatMessageModel 변환
+        let chatHistory = ScheduleChatEntityMapper.toModels(entity.chatHistory as? Set<ScheduleChatEntity>)
+
         return ScheduleModel(
             uid: uid,
             index: Int(entity.index),
@@ -23,14 +26,15 @@ struct ScheduleEntityMapper {
             memo: entity.memo ?? "",
             editDate: entity.editDate ?? Date(),
             d_day: entity.d_day ?? Date(),
-            planList: plans
+            planList: plans,
+            chatHistory: chatHistory
         )
     }
-    
+
     static func toModels(_ entities: [ScheduleEntity], fullData: Bool = true) -> [ScheduleModel] {
         return entities.compactMap { toModel($0, fullData: fullData) }
     }
-    
+
     static func toEntity(_ model: ScheduleModel, context: NSManagedObjectContext) -> ScheduleEntity {
         let entity = ScheduleEntity(context: context)
         /*
@@ -44,7 +48,7 @@ struct ScheduleEntityMapper {
         entity.memo = model.memo
         entity.editDate = model.editDate
         entity.d_day = model.d_day
-        
+
         /*
          관계설정 1:n
          PlanEntity 객체들을 메모리에 생성
@@ -55,7 +59,13 @@ struct ScheduleEntityMapper {
             let planEntity = PlanEntityMapper.toEntity(plan, schedule: entity, context: context)
             entity.addToPlanList(planEntity)
         }
-        
+
+        // ChatHistory 관계 1:n
+        for message in model.chatHistory {
+            let chatEntity = ScheduleChatEntityMapper.toEntity(message, schedule: entity, context: context)
+            entity.addToChatHistory(chatEntity)
+        }
+
         return entity
     }
 }

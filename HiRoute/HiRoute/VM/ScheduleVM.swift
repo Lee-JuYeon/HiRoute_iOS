@@ -1,14 +1,13 @@
 //
-//  FeedViewModel.swift
+//  ScheduleVM.swift
 //  HiRoute
 //
 //  Created by Jupond on 6/3/25.
 //
 import SwiftUI
-import Combine
 import Foundation
-import Combine
 import CoreData
+import Combine
 
 /**
  * ScheduleViewModel (에디팅 상태 방식)
@@ -20,9 +19,22 @@ final class ScheduleVM: ObservableObject {
     
     // MARK: - Published Properties (UI 상태)
     @Published var schedules: [ScheduleModel] = []
+    @Published var currentFilter: ListFilterType = .DEFAULT
+
+    var sortedSchedules: [ScheduleModel] {
+        switch currentFilter {
+        case .DEFAULT:
+            return schedules.sorted { $0.index < $1.index }
+        case .NEWEST:
+            return schedules.sorted { $0.editDate > $1.editDate }
+        case .OLDEST:
+            return schedules.sorted { $0.editDate < $1.editDate }
+        }
+    }
     
     @Published var selectedSchedule: ScheduleModel?
     private var originalSchedule: ScheduleModel?
+    private var isEditing: Bool = false
 
     
     var currentPlans: [PlanModel] {
@@ -53,7 +65,13 @@ final class ScheduleVM: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var progress: Double = 0.0
-    
+
+    // MARK: - PlanView UI State
+    //
+    // 순수 데이터 홀더. 하위 뷰에서 scheduleVM.planEvent.selectPlan()으로 값 설정.
+    // 화면 전환은 NavigationVM.navigateTo()가 담당.
+    @Published var currentPlanModel: PlanModel? = nil
+
     internal let scheduleService: ScheduleService
     internal let planService: PlanService
     
@@ -71,6 +89,13 @@ final class ScheduleVM: ObservableObject {
     internal lazy var planCRUD: PlanCRUD = PlanCRUD(vm: self)
     internal lazy var fileCRUD: FileCRUD = FileCRUD(vm: self)
     internal lazy var scheduleCRUD : ScheduleCRUD = ScheduleCRUD(vm: self)
+    /// PlanEvent: 하위 뷰에서 Plan 관련 이벤트를 VM으로 전달하는 중개자.
+    /// - lazy var: 최초 접근 시점에 한 번만 생성 (불필요한 초기 비용 없음)
+    /// - PlanEvent는 struct이므로 힙 할당 없이 인라인 저장됨
+    /// - 내부에서 weak var로 self(ScheduleVM)를 참조 → 순환 참조 없음
+    /// - 기존 planBindings, planCRUD, fileCRUD, scheduleCRUD와 동일한 패턴
+    internal lazy var planEvent: PlanEvent = PlanEvent(vm: self)
+    internal lazy var scheduleEvent: ScheduleEvent = ScheduleEvent(vm: self)
     
     
     init(scheduleService: ScheduleService, planService: PlanService) {
@@ -83,20 +108,27 @@ final class ScheduleVM: ObservableObject {
     // MARK: - Lifecycle
     
     func initData() {
-        /*
-         TODO :
-         1. 처음 앱을 켜서 보여지는 데이터는 '오프라인 데이터'임.
-         2. 페이지네이션이라던가 새로고침 등이 있을 경우 그제서야 서버로부터 데이터를 호출하는 방향으로.
-         */
-//        schedules = DummyPack.sampleSchedules
+        // 1. CoreData 즉시 로드 → UI 바로 표시
         self.readAllSchedule()
-        print("ScheduleViewModel, loadInitialData // Info : 로컬 데이터 우선 로드 - \(schedules.count)개")
+        print("ScheduleViewModel, initData // Info : 로컬 데이터 우선 로드")
+
+        // 2. 백그라운드 서버 동기화 → 완료 후 UI 갱신
+        scheduleService.syncWithServer()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.readAllSchedule()
+                print("ScheduleViewModel, initData // Info : 서버 동기화 완료, UI 갱신")
+            }
+            .store(in: &cancellables)
     }
     
     
     // 로딩 상태 설정 (internal로 노출)
     internal func setLoading(_ loading: Bool) {
         isLoading = loading
+        if loading {
+            errorMessage = nil
+        }
     }
     
 
@@ -144,6 +176,10 @@ final class ScheduleVM: ObservableObject {
         scheduleCRUD.update(schedule)
     }
       
+    func updateScheduleIndex(from: Int, to: Int) {
+        scheduleCRUD.updateIndex(from: from, to: to)
+    }
+
     func updateScheduleInfo(uid: String, title: String, memo: String, dDay: Date, completion: @escaping (Bool) -> Void = { _ in }){
         scheduleCRUD.updateScheduleInfo(uid: uid, title: title, memo: memo, dDay: dDay, completion: completion)
     }
@@ -151,79 +187,48 @@ final class ScheduleVM: ObservableObject {
     // ScheduleVM에서 기존 메서드 수정
     internal func updateUiSchedule(_ plan: PlanModel) {
         guard let schedule = selectedSchedule else { return }
-        
+
         var updatedPlanList = schedule.planList
         if let index = updatedPlanList.firstIndex(where: { $0.uid == plan.uid }) {
             updatedPlanList[index] = plan
         } else {
             updatedPlanList.append(plan)
         }
-        
-        // updateModel 제거, 직접 할당
-        let newSchedule = ScheduleModel(
-            uid: schedule.uid,
-            index: schedule.index,
-            title: schedule.title,
-            memo: schedule.memo,
+
+        // [2026-05-26] copy() 헬퍼로 chatHistory 자동 preserve.
+        selectedSchedule = schedule.copy(
             editDate: schedule.editDate,
-            d_day: schedule.d_day,
             planList: updatedPlanList
         )
-        
-        selectedSchedule = newSchedule // 직접 할당
+
+        // ✅ currentPlanModel 도 같이 sync — PlaceView/PlaceBottomSection이 이걸 보고 있어서
+        // 안 맞추면 메모/파일 수정 후 화면 갱신 안 됨 (나갔다 돌아와야 보이는 문제).
+        if currentPlanModel?.uid == plan.uid {
+            currentPlanModel = plan
+        }
+
         print("ScheduleVM, updateCurrentScheduleWithPlan // Success : Plan 업데이트 완료")
     }
     
     func updateUiTitle(_ title: String) {
         guard let schedule = selectedSchedule else { return }
-        selectedSchedule = ScheduleModel(
-            uid: schedule.uid,
-            index: schedule.index,
-            title: title,
-            memo: schedule.memo,
-            editDate: schedule.editDate,
-            d_day: schedule.d_day,
-            planList: schedule.planList
-        )
+        // [2026-05-26] copy() — chatHistory 자동 preserve. editDate는 명시적으로 기존 값 유지.
+        selectedSchedule = schedule.copy(title: title, editDate: schedule.editDate)
     }
-    
+
     func updateUiMemo(_ memo: String) {
         guard let schedule = selectedSchedule else { return }
-        selectedSchedule = ScheduleModel(
-            uid: schedule.uid,
-            index: schedule.index,
-            title: schedule.title,
-            memo: memo,
-            editDate: schedule.editDate,
-            d_day: schedule.d_day,
-            planList: schedule.planList
-        )
+        selectedSchedule = schedule.copy(memo: memo, editDate: schedule.editDate)
     }
 
     func updateUiDDay(_ dDay: Date) {
         guard let schedule = selectedSchedule else { return }
-        selectedSchedule = ScheduleModel(
-            uid: schedule.uid,
-            index: schedule.index,
-            title: schedule.title,
-            memo: schedule.memo,
-            editDate: schedule.editDate,
-            d_day: dDay,
-            planList: schedule.planList
-        )
+        selectedSchedule = schedule.copy(editDate: schedule.editDate, d_day: dDay)
     }
-    
+
     func updateUiEditDate() {
         guard let schedule = selectedSchedule else { return }
-        selectedSchedule = ScheduleModel(
-            uid: schedule.uid,
-            index: schedule.index,
-            title: schedule.title,
-            memo: schedule.memo,
-            editDate: Date(), 
-            d_day: schedule.d_day,
-            planList: schedule.planList
-        )
+        selectedSchedule = schedule.copy(editDate: Date())
     }
     
     // ScheduleVM.swift
@@ -241,17 +246,17 @@ final class ScheduleVM: ObservableObject {
             )
             
             updatedPlanList[planIndex] = updatedPlan
-            
-            selectedSchedule = ScheduleModel(
-                uid: schedule.uid,
-                index: schedule.index,
-                title: schedule.title,
-                memo: schedule.memo,
+
+            // [2026-05-26] copy() — chatHistory 자동 preserve.
+            selectedSchedule = schedule.copy(
                 editDate: schedule.editDate,
-                d_day: schedule.d_day,
                 planList: updatedPlanList
             )
-            
+
+            if currentPlanModel?.uid == planUID {
+                currentPlanModel = updatedPlan
+            }
+
             print("ScheduleVM, updateUiPlanMemo // Success : Plan 메모 메모리 업데이트 완료")
         }
     }
@@ -267,26 +272,29 @@ final class ScheduleVM: ObservableObject {
     }
     
     
-    // 편집 시작 (일정 선택시)
+    /// 편집 시작 (일정 선택시).
+    /// 편집 세션당 1회만 원본 백업. 뷰 재생성으로 onAppear가 재실행되어도
+    /// isEditing 가드가 originalSchedule 덮어쓰기를 방지.
     func startEditing(_ schedule: ScheduleModel) {
-        /*
-         원본 백업
-         왜 originalTitle,Memo,DDay를 변수 선언했냐면 planview에서 실제로 수정이 일어났다는걸을 확인한 이후에 로컬과 서버에 변경요청해야한다.
-         하지만 originalTitle,Memo,DDay없이 실질적으로 수정이 어디서 일어났는지 확인하기가 어려워 확인용으로 변수 선언함.
-         */
+        guard !isEditing else { return }
         selectedSchedule = schedule
         originalSchedule = schedule
+        isEditing = true
     }
-    
+
     // 편집 완료 (확인 버튼)
     func finishEditing() {
         guard let schedule = selectedSchedule else { return }
-        updateSchedule(schedule: schedule) // selectedSchedule 그대로 저장
+        updateSchedule(schedule: schedule)
+        isEditing = false
+        originalSchedule = nil
     }
-    
+
     // 편집 취소
     func cancelEditing() {
-        selectedSchedule = originalSchedule // 원본으로 복구
+        selectedSchedule = originalSchedule
+        isEditing = false
+        originalSchedule = nil
     }
 
     
@@ -310,12 +318,8 @@ final class ScheduleVM: ObservableObject {
                     return true
                 }
                 
-                // 파일 ID 배열 비교
-                let originalFileIDs = Set(originalPlan.files.map { $0.id })
-                let currentFileIDs = Set(currentPlan.files.map { $0.id })
-                
-                if originalFileIDs != currentFileIDs {
-                    print("🔍 Plan 파일 변경 감지: \(originalPlan.files.count)개 → \(currentPlan.files.count)개 (내용 변경)")
+                // 파일 배열 통째 비교 (추가/삭제 + 모든 필드 변경 감지)
+                if currentPlan.files != originalPlan.files {
                     return true
                 }
             }
@@ -337,16 +341,8 @@ final class ScheduleVM: ObservableObject {
         }
         
         // ✅ 전체 schedule 업데이트 (plan 포함)
-        let updatedSchedule = ScheduleModel(
-            uid: schedule.uid,
-            index: schedule.index,
-            title: schedule.title,
-            memo: schedule.memo,
-            editDate: Date(),
-            d_day: schedule.d_day,
-            planList: schedule.planList
-        )
-        
+        // [2026-05-26] copy() — chatHistory 자동 preserve.
+        let updatedSchedule = schedule.copy(editDate: Date())
         updateSchedule(schedule: updatedSchedule)
         completion(true)
         return true
@@ -355,6 +351,7 @@ final class ScheduleVM: ObservableObject {
     func clearSelection() {
         selectedSchedule = nil
         originalSchedule = nil
+        isEditing = false
     }
 
     
@@ -425,39 +422,27 @@ final class ScheduleVM: ObservableObject {
             )
             
             updatedPlanList[planIndex] = updatedPlan
-            
-            // selectedSchedule 업데이트
-            let newSchedule = ScheduleModel(
-                uid: schedule.uid,
-                index: schedule.index,
-                title: schedule.title,
-                memo: schedule.memo,
+
+            // [2026-05-26] copy() — chatHistory 자동 preserve.
+            selectedSchedule = schedule.copy(
                 editDate: schedule.editDate,
-                d_day: schedule.d_day,
                 planList: updatedPlanList
             )
-            
-            selectedSchedule = newSchedule
             print("ScheduleVM, updatePlanFiles // Success : Plan 파일 업데이트 완료 - \(newFiles.count)개")
         }
     }
     
     internal func removeCurrentSchedulePlan(planUID: String) {
         guard let schedule = selectedSchedule else { return }
-            
+
         let updatedPlanList = schedule.planList.filter { $0.uid != planUID }
-        
-        let newScheduleModel = ScheduleModel(
-            uid: schedule.uid,
-            index: schedule.index,
-            title: schedule.title,
-            memo: schedule.memo,
+
+        // [2026-05-26] copy() — chatHistory 자동 preserve.
+        // updateModel wrap 제거 (newModel.chatHistory를 그대로 복사하던 패스스루였음).
+        selectedSchedule = schedule.copy(
             editDate: schedule.editDate,
-            d_day: schedule.d_day,
             planList: updatedPlanList
         )
-        
-        selectedSchedule = schedule.updateModel(newScheduleModel)
         print("ScheduleVM, removeCurrentSchedulePlan // Success : Plan 제거 완료")
     }
     
@@ -477,21 +462,13 @@ final class ScheduleVM: ObservableObject {
             
             updatedPlanList[planIndex] = updatedPlan
 
-            let newSchedule = ScheduleModel(
-                uid: schedule.uid,
-                index: schedule.index,
-                title: schedule.title,
-                memo: schedule.memo,
+            // [2026-05-26] copy() — chatHistory 자동 preserve.
+            selectedSchedule = schedule.copy(
                 editDate: schedule.editDate,
-                d_day: schedule.d_day,
                 planList: updatedPlanList
             )
-            
-            selectedSchedule = newSchedule
             print("ScheduleVM, updatePlanFiles // Success : Plan 파일 업데이트 완료 - \(newFiles.count)개")
         }
-        
-    
     }
     
     

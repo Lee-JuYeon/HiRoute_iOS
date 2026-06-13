@@ -154,12 +154,47 @@ struct SheetReviewCellOptionView : View {
         .padding(.horizontal, 16)
     }
     
+    // [2026-05-27 Phase A.9] 사용자 차단 — Apple App Store §1.2 UGC 앱 필수.
+    @State private var showBlockConfirm = false
+
+    @ViewBuilder
+    private func blockUserButton() -> some View {
+        Button {
+            showBlockConfirm = true
+        } label: {
+            Text("이 사용자 차단")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(Color.getColour(.label_strong))
+                .padding(.vertical, 16)
+                .frame(maxWidth: .infinity)
+                .background(Color.getColour(.background_white))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.getColour(.line_alternative), lineWidth: 1)
+                )
+                .cornerRadius(12)
+                .customElevation(.normal)
+        }
+        .padding(.horizontal, 16)
+        .alert(isPresented: $showBlockConfirm) {
+            Alert(
+                title: Text("사용자 차단"),
+                message: Text("이 사용자의 모든 리뷰가 숨겨집니다. 마이페이지에서 해제 가능합니다."),
+                primaryButton: .destructive(Text("차단")) {
+                    BlockedUsersService.shared.block(reviewModel.userUid)
+                },
+                secondaryButton: .cancel(Text("취소"))
+            )
+        }
+    }
+
     var body: some View {
         VStack(
             alignment: .center,
             spacing: 12
         ) {
             reportButton()
+            blockUserButton()
         }
         .background(Color.getColour(.background_white))
         .padding(.vertical, 16)

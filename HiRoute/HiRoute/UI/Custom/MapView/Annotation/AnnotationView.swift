@@ -12,28 +12,27 @@ struct AnnotationView: View {
     let onClick: (PlaceModel) -> Void
     
     var body: some View {
-        Button(action: {
-            onClick(model)
-        }) {
-            VStack(spacing: 2) {
-                Image(systemName: model.iconName)
-                    .foregroundColor(model.iconColor)
-                    .font(.title2)
-                    .background(
-                        Circle()
-                            .fill(Color.white)
-                            .frame(width: 30, height: 30)
-                            .shadow(radius: 2)
-                    )
-                
-                Text(model.title)
-                    .font(.caption)
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 4)
-                    .background(Color.white.opacity(0.8))
-                    .cornerRadius(4)
-            }
+        VStack(spacing: 2) {
+            Image("icon_map_pin")
+                .renderingMode(.template)
+                .resizable()
+                .foregroundColor(.black)
+                .frame(width: 26, height: 32)
+                .overlay(
+                    Image(systemName: model.iconName)
+                        .foregroundColor(.white)
+                        .font(.system(size: 11))
+                        .offset(y: -3)
+                )
+
+            Text(model.title)
+                .font(.system(size: 9))
+                .foregroundColor(Color.getColour(.label_strong))
+                .lineLimit(1)
+                .fixedSize()
         }
-        .buttonStyle(PlainButtonStyle())
+        .onTapGesture {
+            onClick(model)
+        }
     }
 }

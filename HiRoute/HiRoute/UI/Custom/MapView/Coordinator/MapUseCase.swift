@@ -13,4 +13,5 @@ protocol MapUseCase {
     func getAnnotations() -> [PlaceModel]
     func getHotPlaces() -> [HotPlaceModel]
     func getRecommendPlaces() -> [PlaceModel]
+    func getGeoObjects() -> [GeoObjectModel]
 }

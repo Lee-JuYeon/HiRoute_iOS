@@ -18,8 +18,8 @@ struct DashedPath: View {
             Path { path in
                 let coordinates = visitPlaces.sorted(by: { $0.index < $1.index }).map { visitPlace in
                     CLLocationCoordinate2D(
-                        latitude: visitPlace.placeModel.address.addressLat,
-                        longitude: visitPlace.placeModel.address.addressLon
+                        latitude: visitPlace.placeModel.address.lat,
+                        longitude: visitPlace.placeModel.address.lon
                     )
                 }
                 

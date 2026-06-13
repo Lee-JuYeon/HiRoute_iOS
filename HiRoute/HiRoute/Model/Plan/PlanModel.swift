@@ -5,7 +5,7 @@
 //  Created by Jupond on 7/17/25.
 //
 
-struct PlanModel : Codable, Identifiable {
+struct PlanModel : Codable, Identifiable, Hashable {
     var id: String { uid }
     let uid : String
     let index : Int

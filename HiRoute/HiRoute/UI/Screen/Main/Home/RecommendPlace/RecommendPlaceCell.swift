@@ -10,15 +10,18 @@ import SwiftUI
 struct RecommendPlaceCell : View {
     
     let model: PlaceModel
+    let isBookmarked: Bool
     let onCellClickEvent: (PlaceModel) -> Void
-    let onBookMarkClickEvent: (String) -> Bool
-    
+    let onBookMarkClickEvent: (String) -> Void
+
     init(
         model: PlaceModel,
+        isBookmarked: Bool,
         onCellClickEvent: @escaping (PlaceModel) -> Void,
-        onBookMarkClickEvent: @escaping (String) -> Bool
+        onBookMarkClickEvent: @escaping (String) -> Void
     ) {
         self.model = model
+        self.isBookmarked = isBookmarked
         self.onCellClickEvent = onCellClickEvent
         self.onBookMarkClickEvent = onBookMarkClickEvent
     }
@@ -33,43 +36,33 @@ struct RecommendPlaceCell : View {
     @ViewBuilder
     private func bookMarkButton() -> some View {
         Button {
-            let newState = onBookMarkClickEvent(model.uid)
-            
-            // 햅틱 피드백
+            onBookMarkClickEvent(model.uid)
+
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.impactOccurred()
-            
-            print("🔖 북마크 \(newState ? "추가" : "제거"): \(model.title)")
         } label: {
-            Image(model.bookMarks.contains(where: { bookMarkModel in
-                bookMarkModel.userUID == DummyPack.shared.myDataUID
-            }) ? "icon_bookmark_on" : "icon_bookmark_off")
+            Image(isBookmarked ? "icon_bookmark_on" : "icon_bookmark_off")
+                .renderingMode(.template)
                 .resizable()
+                .foregroundColor(Color.getColour(.label_strong))
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 24, height: 24)
                 .customElevation(.normal)
-
         }
-        .scaleEffect(model.bookMarks.contains(where: { bookMarkModel in
-            bookMarkModel.userUID == DummyPack.shared.myDataUID
-        }) ? 1.1 : 1.0)
-        .animation(.spring(response: 0.3), value: model.bookMarks.contains(where: { bookMarkModel in
-            bookMarkModel.userUID == DummyPack.shared.myDataUID
-        }))
-        .padding([.top, .trailing], 5) // 우측 상단에서 5dp 띄우기
+        .scaleEffect(isBookmarked ? 1.1 : 1.0)
+        .animation(.spring(response: 0.3), value: isBookmarked)
+        .padding([.top, .trailing], 5)
     }
     
     @ViewBuilder
     private func placeContent() -> some View {
         VStack(spacing: 0) {
             ServerImageView(
-                setImageURL: model.thumbnailImageURL ?? ""
+                setImageURL: model.thumbnailImage?.imageUrl ?? ""
             )
-            .frame(
-                width: imageSize,
-                height: imageSize
-            )
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .frame(width: 150, height: imageSize)
+            .clipped()
+            .aiWatermark(isAiGenerated: model.thumbnailImage?.isAiGenerated ?? false, size: .thumbnail)
 
             
             VStack(alignment: .leading, spacing: 4) {
@@ -96,7 +89,7 @@ struct RecommendPlaceCell : View {
                         .aspectRatio(contentMode: ContentMode.fit)
                         .frame(width: 12, height: 12)
 
-                    Text("\(model.stars.count)・\(model.address.sido)")
+                    Text("\((model.stars ?? []).count)・\(model.address.addressBlock1 ?? "")")
                         .font(.system(size: 12))
                         .foregroundColor(Color.secondary)
                 }

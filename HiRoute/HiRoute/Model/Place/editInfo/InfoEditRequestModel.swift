@@ -9,8 +9,8 @@ import Foundation
 
 struct InfoEditRequestModel : Codable {
     var id : String
-    var userUID : String
-    var placeUID : String
+    var userUid : String
+    var placeUid : String
     var requestDate : Date
     var requestText : String
 }

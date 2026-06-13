@@ -15,8 +15,9 @@ enum ScheduleError: Error, LocalizedError {
     case duplicateSchedule
     case notFound
     case networkError
+    case reorderFailed
     case unknown
-    
+
     var errorDescription: String? {
         switch self {
         case .noCurrentSchedule:
@@ -35,6 +36,8 @@ enum ScheduleError: Error, LocalizedError {
             return "중복된 일정입니다"
         case .networkError:
             return "네트워크 오류"
+        case .reorderFailed:
+            return "일정 순서 변경에 실패했습니다"
         case .unknown:
             return "알 수 없는 오류가 발생했습니다"
         }

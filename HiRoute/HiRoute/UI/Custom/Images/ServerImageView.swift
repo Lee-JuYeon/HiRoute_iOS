@@ -9,12 +9,12 @@ import SwiftUI
 
 struct ServerImageView : View {
     
-    let imageURL : String
+    let imageUrl : String
 
     init(
         setImageURL: String,
     ) {
-        self.imageURL = setImageURL
+        self.imageUrl = setImageURL
     }
     
     // URLSession + Combine 사용
@@ -42,8 +42,13 @@ struct ServerImageView : View {
         guard !isLoading else { return }
         
         isLoading = true
-        
-        URLSession.shared.dataTask(with: url) { data, response, error in
+
+        // [SEC] 첫-파티(api.nunulala.com)는 핀된 세션 경유(MITM 방어), 서드파티 CDN은 일반 세션.
+        // (핀된 세션은 서드파티 호스트의 핀 불일치로 거부하므로 호스트별 분기 필수.)
+        let session = PinnedURLSessionProvider.isFirstParty(url)
+            ? PinnedURLSessionProvider.shared.imageSession
+            : URLSession.shared
+        session.dataTask(with: url) { data, response, error in
             DispatchQueue.main.async {
                 self.isLoading = false
                 
@@ -59,13 +64,17 @@ struct ServerImageView : View {
     }
     
     var body: some View {
-        if #available(iOS 15.0, *) {
-            AsyncImage(url: URL(string: imageURL)) { phase in
+        // 첫-파티(api.nunulala.com)는 AsyncImage(.shared, 핀 불가) 대신 핀된 세션 수동 로더 사용.
+        // 서드파티 CDN은 iOS 15+에서 AsyncImage 허용(핀 대상 아님).
+        if PinnedURLSessionProvider.isFirstParty(URL(string: imageUrl)) {
+            manualLoaderView
+        } else if #available(iOS 15.0, *) {
+            AsyncImage(url: URL(string: imageUrl)) { phase in
                 switch phase {
                 case .success(let image):
                     image
                         .resizable()
-                        .aspectRatio(contentMode: .fit)
+                        .aspectRatio(contentMode: .fill)
                         .clipped()
                 case .failure(_):
                     errorView
@@ -75,24 +84,28 @@ struct ServerImageView : View {
                     EmptyView()
                 }
             }
-        }else{
-            Group {
-                if let image = image {
-                    successView(image)
-                } else if isLoading {
-                    loadingView
-                } else {
-                    errorView
-                }
+        } else {
+            manualLoaderView
+        }
+    }
+
+    private var manualLoaderView: some View {
+        Group {
+            if let image = image {
+                successView(image)
+            } else if isLoading {
+                loadingView
+            } else {
+                errorView
             }
-            .onAppear {
-                loadImage(from: imageURL)
-            }
-            .onChange(of: imageURL) { newURL in
-                image = nil
-                isLoading = false
-                loadImage(from: newURL)  // 직접 사용
-            }
+        }
+        .onAppear {
+            loadImage(from: imageUrl)
+        }
+        .onChange(of: imageUrl) { newURL in
+            image = nil
+            isLoading = false
+            loadImage(from: newURL)  // 직접 사용
         }
     }
     
@@ -109,16 +122,17 @@ struct ServerImageView : View {
     private func successView(_ uiImage: UIImage) -> some View {
         Image(uiImage: uiImage)
             .resizable()
-            .aspectRatio(contentMode: .fit)
-            .clipped()
-    }
-    
-    private let placeHolder : String = ""
-    private var errorView: some View {
-        Image(placeHolder)
-            .resizable()
             .aspectRatio(contentMode: .fill)
             .clipped()
+    }
 
+    private var errorView: some View {
+        Rectangle()
+            .fill(Color.gray.opacity(0.15))
+            .overlay(
+                Image(systemName: "photo")
+                    .font(.system(size: 24))
+                    .foregroundColor(Color.gray.opacity(0.5))
+            )
     }
 }

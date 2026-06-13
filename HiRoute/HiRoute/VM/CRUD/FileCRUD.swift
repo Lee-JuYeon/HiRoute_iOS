@@ -92,47 +92,50 @@ struct FileCRUD {
      */
     func read(fileUID: String) {
         guard let vm = vm else { return }
-        
+
         print("FileCRUD, read // Info : 단일 파일 조회 - \(fileUID)")
-        
+
         vm.planService.getFile(fileUID: fileUID)
             .receive(on: DispatchQueue.main)
             .sink(
-                receiveCompletion: { completion in
+                receiveCompletion: { [weak vm] completion in
                     switch completion {
                     case .finished:
                         print("FileCRUD, read // Success : 단일 파일 조회 완료")
-                        
+
                     case .failure(let error):
-                        vm.handleError(error)
+                        vm?.handleError(error)
                         print("FileCRUD, read // Exception : 단일 파일 조회 실패 - \(error.localizedDescription)")
                     }
                 },
-                receiveValue: { file in
-                    
+                receiveValue: { [weak vm] file in
+                    _ = vm // 일관성 유지
                     print("FileCRUD, read // Success : 파일 조회 결과 - \(file.fileName)")
                 }
             )
             .store(in: &vm.cancellables)
     }
     
+    /**
+     * 파일 목록 조회 (Plan 단위)
+     */
     func readAll(planUID: String){
         guard let vm = vm else { return }
 
         print("FileCRUD, read // Info : Plan 파일 목록 조회 - \(planUID)")
-        
+
         let readFilesPublisher: AnyPublisher<[FileModel], Error> = vm.planService.getAttachedFiles(planUID: planUID)
-        
+
         readFilesPublisher
             .receive(on: DispatchQueue.main)
             .sink(
-                receiveCompletion: { completion in
+                receiveCompletion: { [weak vm] completion in
                     switch completion {
                     case .finished:
                         print("FileCRUD, read // Success : 파일 목록 조회 완료")
-                        
+
                     case .failure(let error):
-                        vm.handleError(error)
+                        vm?.handleError(error)
                         print("FileCRUD, read // Exception : 파일 목록 조회 실패 - \(error.localizedDescription)")
                     }
                 },

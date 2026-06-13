@@ -28,6 +28,8 @@ struct FileListView: View {
     @State private var selectedFileURL: URL?
     @State private var showFileDetail = false
     @State private var selectedFileModel: FileModel?
+    @State private var showAIAlert: Bool = false
+    @State private var pendingFileModel: FileModel? = nil
        
     
     @ViewBuilder
@@ -51,6 +53,7 @@ struct FileListView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
                     .cornerRadius(12)
+                    .aiWatermark(isAiGenerated: fileModel.isAiGenerated)
             } else {
                 defaultFileIcon(fileModel.fileType)
             }
@@ -136,10 +139,10 @@ struct FileListView: View {
                 }) {
                     Image(systemName: "trash")
                         .renderingMode(.template)
-                        .font(.system(size: 16))
-                        .foregroundColor(Color.getColour(.status_destructive))
+                        .font(.system(size: 14))
+                        .foregroundColor(Color.getColour(.background_white))
                         .frame(width: 32, height: 32)
-                        .background(Color.getColour(.status_destructive).opacity(0.1))
+                        .background(Color.getColour(.label_strong))
                         .clipShape(Circle())
                 }
             }
@@ -297,19 +300,53 @@ struct FileListView: View {
                 isPresented: Binding(
                     get: { selectedFileModel != nil },
                     set: { _ in selectedFileModel = nil }
-                )
+                ),
+                onAIToggled: { newValue in
+                    if let index = fileList.firstIndex(where: { $0.id == fileModel.id }) {
+                        fileList[index].isAiGenerated = newValue
+                        onFilesChanged?(fileList)
+                    }
+                }
             )
         }
         .onReceive(Just(selectedFileURL)) { newURL in
             if let url = newURL,
                let fileModel = FileCacheManager.shared.saveFile(from: url) {
-                fileList.append(fileModel)
-                currentIndex = fileList.count - 1
                 selectedFileURL = nil
-                
-                // 파일 추가시에도 변경사항 알림
-                onFilesChanged?(fileList)
+                if fileModel.isImageFile {
+                    // 이미지 파일 → AI 여부 확인 후 추가
+                    pendingFileModel = fileModel
+                    showAIAlert = true
+                } else {
+                    // 비이미지 파일 → 바로 추가
+                    fileList.append(fileModel)
+                    currentIndex = fileList.count - 1
+                    onFilesChanged?(fileList)
+                }
             }
+        }
+        .alert(isPresented: $showAIAlert) {
+            Alert(
+                title: Text("AI 생성 이미지"),
+                message: Text("이 사진은 AI로 생성된 이미지인가요?"),
+                primaryButton: .default(Text("네")) {
+                    if var model = pendingFileModel {
+                        model.isAiGenerated = true
+                        fileList.append(model)
+                        currentIndex = fileList.count - 1
+                        onFilesChanged?(fileList)
+                    }
+                    pendingFileModel = nil
+                },
+                secondaryButton: .default(Text("아니요")) {
+                    if let model = pendingFileModel {
+                        fileList.append(model)
+                        currentIndex = fileList.count - 1
+                        onFilesChanged?(fileList)
+                    }
+                    pendingFileModel = nil
+                }
+            )
         }
     }
 }

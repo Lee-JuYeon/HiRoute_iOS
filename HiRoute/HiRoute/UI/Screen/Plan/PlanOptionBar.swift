@@ -17,7 +17,7 @@ struct PlanOptionBar : View {
     
     @ViewBuilder
     private func backButton() -> some View {
-        ImageButton(imageURL : "icon_back",imageSize: 30) {
+        ImageButton(imageUrl : "icon_back",imageSize: 30) {
             onBack()
         }
     }

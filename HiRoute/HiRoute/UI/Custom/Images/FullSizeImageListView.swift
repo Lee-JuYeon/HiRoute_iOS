@@ -8,46 +8,49 @@
 import SwiftUI
 
 struct FullSizeImageListView : View {
-    
-    let setImageList : [ReviewImageModel]
+
+    private let imageList: [ImageModel]?
+    private let useNavigation: Bool
+    @EnvironmentObject private var placeVM: PlaceVM
+    @EnvironmentObject private var navigationVM: NavigationVM
     @Environment(\.presentationMode) var presentationMode
     @State private var currentIndex = 0
 
+    /// fullScreenCover용 — 파라미터로 이미지 전달
+    init(setImageList: [ImageModel]) {
+        self.imageList = setImageList
+        self.useNavigation = false
+    }
+
+    /// 네비게이션용 — PlaceVM.currentPlaceImages 사용
+    init() {
+        self.imageList = nil
+        self.useNavigation = true
+    }
+
+    private var images: [ImageModel] {
+        imageList ?? placeVM.fullScreenImages
+    }
+
     var body: some View {
-        ZStack(alignment: .topLeading){
+        FullSizeImageView(onClose: {
+            if useNavigation {
+                navigationVM.goBack()
+            } else {
+                presentationMode.wrappedValue.dismiss()
+            }
+        }) {
             TabView(selection: $currentIndex) {
-                ForEach(0..<setImageList.count, id: \.self) { index in
-                    let imageModel = setImageList[index]
-                    ServerImageView(setImageURL: imageModel.imageURL)
+                ForEach(Array(images.enumerated()), id: \.element.id) { index, imageModel in
+                    ServerImageView(setImageURL: imageModel.imageUrl)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .clipped()
+                        .aiWatermark(isAiGenerated: imageModel.isAiGenerated, size: .normal)
                         .tag(index)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .automatic))
-            
-            // 닫기 버튼
-            ZStack {
-                Circle()
-                    .fill(Color.getColour(.label_strong))
-                
-                Circle()
-                    .stroke(Color.getColour(.label_alternative), lineWidth: 1)
-                
-                Image("icon_close")
-                    .renderingMode(.template)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 16, height: 16)
-                    .foregroundColor(Color.getColour(.background_white))
-            }
-            .frame(width: 32, height: 32)
-            .padding(EdgeInsets(top: 44, leading: 16, bottom: 0, trailing: 0))
-            .onTapGesture {
-                presentationMode.wrappedValue.dismiss()
-            }
         }
-        .background(Color.getColour(.label_strong))
     }
 }
 

@@ -4,13 +4,16 @@
 //
 //  Created by Jupond on 11/26/25.
 //
-enum ServiceError: Error {
+import Foundation
+
+enum ServiceError: Error, LocalizedError {
     case dataNotFound
     case invalidData
     case networkError
     case unauthorized
-    
-    var localizedDescription: String {
+    case unsupportedFeature
+
+    var errorDescription: String? {
         switch self {
         case .dataNotFound:
             return "데이터를 찾을 수 없습니다"
@@ -20,6 +23,8 @@ enum ServiceError: Error {
             return "네트워크 오류가 발생했습니다"
         case .unauthorized:
             return "권한이 없습니다"
+        case .unsupportedFeature:
+            return "현재 지원하지 않는 기능입니다"
         }
     }
 }

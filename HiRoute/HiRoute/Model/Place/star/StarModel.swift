@@ -6,7 +6,8 @@
 //
 
 
-struct StarModel : Codable {
-    var userUID : String
+struct StarModel : Codable, Hashable, Identifiable {
+    var id : String { userUid }
+    var userUid : String
     var star : Int
 }

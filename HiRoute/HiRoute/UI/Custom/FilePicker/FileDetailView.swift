@@ -9,21 +9,37 @@ import SwiftUI
 struct FileDetailView: View {
     let fileModel: FileModel
     @Binding var isPresented: Bool
+    private let onAIToggled: ((Bool) -> Void)?
     @State private var scale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
-    
+    @State private var localIsAI: Bool
+
+    init(
+        fileModel: FileModel,
+        isPresented: Binding<Bool>,
+        onAIToggled: ((Bool) -> Void)? = nil
+    ) {
+        self.fileModel = fileModel
+        self._isPresented = isPresented
+        self.onAIToggled = onAIToggled
+        self._localIsAI = State(initialValue: fileModel.isAiGenerated)
+    }
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
                 // 상단 바
                 topBar()
-                
+
                 // 파일 내용
                 fileContentView()
                     .clipped()
             }
+        }
+        .onChange(of: localIsAI) { newValue in
+            onAIToggled?(newValue)
         }
     }
     
@@ -52,7 +68,12 @@ struct FileDetailView: View {
                 .multilineTextAlignment(.center)
             
             Spacer()
-            
+
+            // AI 라벨링 토글 (이미지 파일만)
+            if fileModel.isImageFile {
+                AIToggleCapsule(isAiGenerated: $localIsAI)
+            }
+
             // 다운로드 버튼
             Button(action: {
                 downloadFile()

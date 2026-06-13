@@ -1,5 +1,5 @@
 //
-//  AnnotationModel.swift
+//  PlaceModel.swift
 //  HiRoute
 //
 //  Created by Jupond on 7/20/25.
@@ -7,54 +7,63 @@
 import SwiftUI
 import CoreLocation
 
-struct PlaceModel: Codable {
+struct PlaceModel: Codable, Identifiable, Hashable {
+    var id: String { uid }
     let uid: String
-    let address: AddressModel // 주소
+    let address: AddressModel
     let type: PlaceType
-    let title: String // api 제공
-    let subtitle: String? // api제공
-    let thumbnailImageURL : String? // 썸네일 이미지 주소
-    
-    var workingTimes : [WorkingTimeModel] // 운영시간
-    var reviews : [ReviewModel] // 리뷰
-    
-    var bookMarks : [BookMarkModel] // 북마크한 유저 uid리스트
-    var stars : [StarModel] // 별점 리스트
-    
+    var subtype: String? = nil
+    var typeDisplayText: String? = nil
+    var subtypeDisplayText: String? = nil
+    let title: String
+    var subtitle: String? = nil
+    var thumbnailImage: ImageModel? = nil
+    var workingTimes: [WorkingTimeModel]? = nil
+    var reviews: [ReviewModel]? = nil
+    var bookMarks: [BookMarkModel]? = nil
+    var stars: [StarModel]? = nil
+    var placeImages: [ImageModel]? = nil
+
     var iconName: String {
         switch type {
         case .hospital: return "cross.fill"
         case .store: return "cart.fill"
         case .restaurant: return "fork.knife"
         case .cafe: return "cup.and.saucer.fill"
+        case .park: return "leaf.fill"
+        case .theater: return "film.fill"
+        case .hotel: return "bed.double.fill"
+        case .school: return "book.fill"
+        case .landmark: return "flag.fill"
+        case .temple: return "house.fill"
+        case .pharmacy: return "staroflife.fill"
         }
     }
-    
+
     var iconColor: Color {
         switch type {
         case .hospital: return .red
         case .store: return .blue
         case .restaurant: return .orange
         case .cafe: return .purple
+        case .park: return .green
+        case .theater: return .pink
+        case .hotel: return .blue
+        case .school: return .yellow
+        case .landmark: return .gray
+        case .temple: return .orange
+        case .pharmacy: return .green
         }
     }
 }
+
 extension PlaceModel {
     static func empty() -> PlaceModel {
         return PlaceModel(
             uid: "",
-            address: AddressModel(
-            addressUID: "", addressLat: 0.0, addressLon: 0.0, addressTitle: "", sido: "", gungu: "", dong: "", fullAddress: ""),
-            type: .restaurant, // 기본값
-            title: "",
-            subtitle: nil,
-            thumbnailImageURL: nil,
-            workingTimes: [],
-            reviews: [],
-            bookMarks: [],
-            stars: []
+            address: .empty(),
+            type: .restaurant,
+            title: ""
         )
     }
-   
-
 }

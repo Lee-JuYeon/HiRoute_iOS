@@ -7,28 +7,42 @@
 
 import SwiftUI
 
+/// 리뷰 리스트 뷰 (리뷰 작성 버튼 + 필터 + 리뷰 목록)
+///
+/// ## Event 패턴 적용 (Prop Drilling 제거)
+/// [변경 전] 2개의 콜백 파라미터를 상위 뷰로부터 전달받음:
+///   - callBackClickCell: (ReviewModel) -> Void  (리뷰 셀 클릭)
+///   - callBackWriteReview: () -> Void            (리뷰 작성 버튼 클릭)
+///   PlaceView → PlaceBottomSection → ReviewListView 순서로 2단계 릴레이.
+///
+/// [변경 후] @EnvironmentObject로 PlaceVM에 직접 접근.
+///   - placeVM.events.writeReview()
+///   콜백 파라미터 2개 제거.
+///   init 파라미터: setPlaceModel, setNationalityType만 유지 (데이터 전달).
 struct ReviewListView : View {
-    
+
+    /// 리뷰를 표시할 장소 모델 (읽기 전용)
     private var model : PlaceModel
+    /// 사용자 국적 (리뷰 표시 언어/형식 결정용)
     private var nationalityType : NationalityType
-    private var callBackClickCell : (ReviewModel) -> Void
-    private var callBackWriteReview : () -> Void
+
+    /// PlaceVM에 @EnvironmentObject로 접근.
+    /// 리뷰 작성 버튼 클릭 시 placeVM.events.writeReview() 호출.
+    @EnvironmentObject private var placeVM : PlaceVM
+    @EnvironmentObject private var navigationVM : NavigationVM
+
     init(
         setPlaceModel : PlaceModel,
-        setNationalityType : NationalityType,
-        setOnClickCell : @escaping (ReviewModel) -> Void,
-        setOnClickWriteReview : @escaping () -> Void
+        setNationalityType : NationalityType
     ){
         self.model = setPlaceModel
         self.nationalityType = setNationalityType
-        self.callBackClickCell = setOnClickCell
-        self.callBackWriteReview = setOnClickWriteReview
     }
-    
+
     @ViewBuilder
     private func reviewWriteButton() -> some View {
         Button {
-            callBackWriteReview()
+            navigationVM.navigateTo(setDestination: .reviewWrite)
         } label: {
             HStack(alignment: .center, spacing: 0){
                 VStack(alignment: HorizontalAlignment.leading, spacing: 4, content: {
@@ -38,7 +52,7 @@ struct ReviewListView : View {
                         .fontWeight(.light)
                         .lineLimit(1)
                         .multilineTextAlignment(.leading)
-                    
+
                     HStack(alignment: .center, spacing: 4){
                         Text("리뷰 작성하기")
                             .font(.system(size: 16))
@@ -46,7 +60,7 @@ struct ReviewListView : View {
                             .fontWeight(.bold)
                             .lineLimit(1)
                             .multilineTextAlignment(.leading)
-                        
+
                         Image("icon_arrow")
                             .renderingMode(.template)
                             .resizable()
@@ -57,9 +71,9 @@ struct ReviewListView : View {
 
                     }
                 })
-                
+
                 Spacer()
-                
+
                 Image("img_review_write")
                     .renderingMode(.template)
                     .resizable()
@@ -68,7 +82,7 @@ struct ReviewListView : View {
                     .frame(width: 60, height: 40)
 
             }
-           
+
 
         }
         .frame(
@@ -79,7 +93,22 @@ struct ReviewListView : View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .padding(EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12))
     }
-    
+
+    /// 현재 필터 타입에 따라 정렬된 리뷰 목록
+    /// placeVM.placeReviews (API에서 별도 로드) 사용
+    private var sortedReviews: [ReviewModel] {
+        switch reviewListFilterType {
+        case .new:
+            return placeVM.placeReviews.sorted { ($0.visitDate ?? "") > ($1.visitDate ?? "") }
+        case .recommend:
+            return placeVM.placeReviews.sorted { ($0.usefulList ?? []).count > ($1.usefulList ?? []).count }
+        case .manyStar:
+            return placeVM.placeReviews.sorted { $0.rating > $1.rating }
+        case .littleStar:
+            return placeVM.placeReviews.sorted { $0.rating < $1.rating }
+        }
+    }
+
     @State private var reviewListFilterType : ReviewListFilterType = .new
     @State private var expandFilterSheet : Bool = false
     @ViewBuilder
@@ -91,7 +120,7 @@ struct ReviewListView : View {
                 .fontWeight(.bold)
                 .lineLimit(1)
                 .multilineTextAlignment(.leading)
-            
+
             Image("icon_arrow")
                 .renderingMode(.template)
                 .resizable()
@@ -105,39 +134,45 @@ struct ReviewListView : View {
             expandFilterSheet = true
         }
     }
-    
-//    @State private var onlyPhotoReview : Bool = false
-//    @ViewBuilder
-//    private func photoReviewFilterView() -> some View {
-//        HStack(alignment : VerticalAlignment.center, spacing: 0){
-//            Image(onlyPhotoReview ? "true colour" : "false gray" )
-//            Text("사진 리뷰만")
-//        }
-//    }
-    
+
     var body: some View {
         ScrollView(Axis.Set.vertical){
             LazyVStack(alignment: .leading, spacing: 0){
                 reviewWriteButton()
                 listFilterView()
-                
-                ForEach(model.reviews, id: \.reviewUID){ reviewModel in
+
+                ForEach(sortedReviews, id: \.reviewUid){ reviewModel in
                     ReviewCell(
                         setModel : reviewModel,
                         setNationalityType: nationalityType,
-                        onCallBackOption : { reviewUID in
-                            
+                        onCallBackOption : { reviewUid in
+
                         },
-                        onCallBackUseful : { userUID in
-                            
+                        onCallBackUseful : { userUid in
+
                         }
                     )
+                    .onAppear {
+                        if reviewModel.reviewUid == sortedReviews.last?.reviewUid {
+                            placeVM.loadMoreReviews(placeUid: model.uid)
+                        }
+                    }
+                }
+
+                if placeVM.isLoadingMoreReviews {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
+                    }
+                    .padding(.vertical, 16)
                 }
             }
         }
         .bottomSheet(isOpen: $expandFilterSheet) {
             SheetReviewListFilter { filterType in
                 reviewListFilterType = filterType
+                expandFilterSheet = false
             }
         }
     }

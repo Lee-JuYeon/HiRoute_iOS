@@ -12,13 +12,13 @@ struct AddressEntityMapper {
         guard let entity = entity else { return nil }
         
         return AddressModel(
-            addressUID: entity.addressUID ?? "",
-            addressLat: entity.addressLat,
-            addressLon: entity.addressLon,
+            uid: entity.addressUID ?? "",
+            lat: entity.addressLat,
+            lon: entity.addressLon,
             addressTitle: entity.addressTitle ?? "",
-            sido: entity.sido ?? "",
-            gungu: entity.gungu ?? "",
-            dong: entity.dong ?? "",
+            addressBlock1: entity.sido ?? "",
+            addressBlock2: entity.gungu ?? "",
+            addressBlock3: entity.dong ?? "",
             fullAddress: entity.fullAddress ?? ""
         )
     }
@@ -31,13 +31,13 @@ struct AddressEntityMapper {
     
     static func toEntity(_ model: AddressModel, context: NSManagedObjectContext) -> AddressEntity {
         let entity = AddressEntity(context: context)
-        entity.addressUID = model.addressUID
-        entity.addressLat = model.addressLat
-        entity.addressLon = model.addressLon
+        entity.addressUID = model.uid
+        entity.addressLat = model.lat
+        entity.addressLon = model.lon
         entity.addressTitle = model.addressTitle
-        entity.sido = model.sido
-        entity.gungu = model.gungu
-        entity.dong = model.dong
+        entity.sido = model.addressBlock1
+        entity.gungu = model.addressBlock2
+        entity.dong = model.addressBlock3
         entity.fullAddress = model.fullAddress
         return entity
     }
