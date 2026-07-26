@@ -1,0 +1,18 @@
+# 새 이슈/PR을 자동으로 nunulala 프로젝트(#8)에 추가한다.
+# 필요: 저장소 시크릿 ADD_TO_PROJECT_PAT (project 스코프 PAT).
+#   생성: github.com/settings/tokens → Fine-grained → Projects: Read and write
+#   등록: 이 레포 Settings → Secrets → Actions → New: ADD_TO_PROJECT_PAT
+name: Add to nunulala project
+on:
+  issues:
+    types: [opened]
+  pull_request:
+    types: [opened]
+jobs:
+  add-to-project:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/add-to-project@v1.0.2
+        with:
+          project-url: https://github.com/users/Lee-JuYeon/projects/8
+          github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
